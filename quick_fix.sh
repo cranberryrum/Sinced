@@ -9,6 +9,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_FILE="${PROJECT_DIR}/Sinced2.xcodeproj"
 
 # Step 1: Clean derived data
 echo "${YELLOW}Step 1: Cleaning build artifacts...${NC}"
@@ -27,7 +29,7 @@ echo ""
 
 # Step 3: Clean build
 echo "${YELLOW}Step 3: Cleaning project...${NC}"
-cd /Users/adityakolte/Desktop/Sinced2
+cd "${PROJECT_DIR}"
 xcodebuild -scheme Sinced2 -sdk iphonesimulator clean 2>&1 | grep -E "(CLEAN|error)" | tail -5
 echo "${GREEN}✅ Project cleaned${NC}"
 echo ""
@@ -51,7 +53,7 @@ echo ""
 echo "${YELLOW}📋 Next Steps (IMPORTANT - Follow in Order):${NC}"
 echo ""
 echo "1️⃣  ${YELLOW}Open Xcode:${NC}"
-echo "   open /Users/adityakolte/Desktop/Sinced2/Sinced2.xcodeproj"
+echo "   open \"${PROJECT_FILE}\""
 echo ""
 echo "2️⃣  ${YELLOW}Select Scheme:${NC}"
 echo "   Make sure 'Sinced2' (not WidgetSinced2Extension) is selected"
