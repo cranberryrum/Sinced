@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>Kolte.Sinced2</string>
+	<key>CFBundleName</key>
+	<string>Sinced2</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>GeistMono-Black.ttf</string>
+		<string>GeistMono-Bold.ttf</string>
+		<string>GeistMono-ExtraBold.ttf</string>
+		<string>GeistMono-ExtraLight.ttf</string>
+		<string>GeistMono-Light.ttf</string>
+		<string>GeistMono-Medium.ttf</string>
+		<string>GeistMono-Regular.ttf</string>
+		<string>GeistMono-SemiBold.ttf</string>
+		<string>GeistMono-Thin.ttf</string>
+	</array>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Sinced needs access to save your event cards to your photo library for sharing.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+		<key>UISceneConfigurations</key>
+		<dict/>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+</dict>
+</plist>

@@ -2,16 +2,50 @@
 //  Sinced2App.swift
 //  Sinced2
 //
-//  Created by Aditya Kolte on 31/10/25.
+//  Main app entry point
 //
 
 import SwiftUI
+import UserNotifications
 
 @main
 struct Sinced2App: App {
+    @StateObject private var viewModel = EventViewModel()
+    @State private var selectedEventId: UUID?
+    @State private var showEventDetail = false
+    @Namespace private var animation
+    
+    init() {
+        // Fix any existing large images for widgets
+        StorageManager.shared.fixLargeImages()
+        
+        // Initialize notification manager (sets up delegate)
+        _ = NotificationManager.shared
+    }
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if !viewModel.hasCompletedOnboarding {
+                OnboardingView()
+                    .environmentObject(viewModel)
+                    .preferredColorScheme(.light)
+            } else {
+                MainTabView()
+                    .environmentObject(viewModel)
+                    .preferredColorScheme(.light)
+                    .onReceive(NotificationCenter.default.publisher(for: .didTapEventNotification)) { notification in
+                        if let eventId = notification.userInfo?["eventId"] as? UUID {
+                            selectedEventId = eventId
+                            showEventDetail = true
+                        }
+                    }
+                    .sheet(isPresented: $showEventDetail) {
+                        if let eventId = selectedEventId,
+                           let event = viewModel.events.first(where: { $0.id == eventId }) {
+                            EventDetailView(event: event, viewModel: viewModel)
+                        }
+                    }
+            }
         }
     }
 }

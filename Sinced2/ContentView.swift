@@ -2,20 +2,14 @@
 //  ContentView.swift
 //  Sinced2
 //
-//  Created by Aditya Kolte on 31/10/25.
+//  Legacy content view - replaced by EventListView
 //
 
 import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        EventListView()
     }
 }
 

@@ -6,7 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		48A525412F161ED900CDB8C9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 48A525242F161EB800CDB8C9 /* WidgetKit.framework */; };
+		48A525422F161ED900CDB8C9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 48A525262F161EB800CDB8C9 /* SwiftUI.framework */; };
+		48A525512F161EDA00CDB8C9 /* WidgetSinced2Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 48A525402F161ED900CDB8C9 /* WidgetSinced2Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1B2C3D4E5F60718293A4B5E /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D4E5F60718293A4B5D /* Lottie */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		48A5254F2F161EDA00CDB8C9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C333529D2EB4D39E007ECEC4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 48A5253F2F161ED900CDB8C9;
+			remoteInfo = WidgetSinced2Extension;
+		};
 		C33352B32EB4D3A1007ECEC4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = C333529D2EB4D39E007ECEC4 /* Project object */;
@@ -23,13 +37,35 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		48A5253B2F161EB900CDB8C9 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				48A525512F161EDA00CDB8C9 /* WidgetSinced2Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		48A525242F161EB800CDB8C9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		48A525262F161EB800CDB8C9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		48A525402F161ED900CDB8C9 /* WidgetSinced2Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WidgetSinced2Extension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C33352A52EB4D39E007ECEC4 /* Sinced2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sinced2.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C33352B22EB4D3A1007ECEC4 /* Sinced2Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Sinced2Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C33352BC2EB4D3A2007ECEC4 /* Sinced2UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Sinced2UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		48A525432F161ED900CDB8C9 /* WidgetSinced2 */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WidgetSinced2;
+			sourceTree = "<group>";
+		};
 		C33352A72EB4D39E007ECEC4 /* Sinced2 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Sinced2;
@@ -48,10 +84,20 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		48A5253D2F161ED900CDB8C9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				48A525422F161ED900CDB8C9 /* SwiftUI.framework in Frameworks */,
+				48A525412F161ED900CDB8C9 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C33352A22EB4D39E007ECEC4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1B2C3D4E5F60718293A4B5E /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,12 +118,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		48A525232F161EB800CDB8C9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				48A525242F161EB800CDB8C9 /* WidgetKit.framework */,
+				48A525262F161EB800CDB8C9 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		C333529C2EB4D39E007ECEC4 = {
 			isa = PBXGroup;
 			children = (
 				C33352A72EB4D39E007ECEC4 /* Sinced2 */,
 				C33352B52EB4D3A1007ECEC4 /* Sinced2Tests */,
 				C33352BF2EB4D3A2007ECEC4 /* Sinced2UITests */,
+				48A525432F161ED900CDB8C9 /* WidgetSinced2 */,
+				48A525232F161EB800CDB8C9 /* Frameworks */,
 				C33352A62EB4D39E007ECEC4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +145,7 @@
 				C33352A52EB4D39E007ECEC4 /* Sinced2.app */,
 				C33352B22EB4D3A1007ECEC4 /* Sinced2Tests.xctest */,
 				C33352BC2EB4D3A2007ECEC4 /* Sinced2UITests.xctest */,
+				48A525402F161ED900CDB8C9 /* WidgetSinced2Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,6 +153,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		48A5253F2F161ED900CDB8C9 /* WidgetSinced2Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 48A525532F161EDA00CDB8C9 /* Build configuration list for PBXNativeTarget "WidgetSinced2Extension" */;
+			buildPhases = (
+				48A5253C2F161ED900CDB8C9 /* Sources */,
+				48A5253D2F161ED900CDB8C9 /* Frameworks */,
+				48A5253E2F161ED900CDB8C9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				48A525432F161ED900CDB8C9 /* WidgetSinced2 */,
+			);
+			name = WidgetSinced2Extension;
+			packageProductDependencies = (
+			);
+			productName = WidgetSinced2Extension;
+			productReference = 48A525402F161ED900CDB8C9 /* WidgetSinced2Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		C33352A42EB4D39E007ECEC4 /* Sinced2 */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C33352C62EB4D3A2007ECEC4 /* Build configuration list for PBXNativeTarget "Sinced2" */;
@@ -102,16 +182,19 @@
 				C33352A12EB4D39E007ECEC4 /* Sources */,
 				C33352A22EB4D39E007ECEC4 /* Frameworks */,
 				C33352A32EB4D39E007ECEC4 /* Resources */,
+				48A5253B2F161EB900CDB8C9 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				48A525502F161EDA00CDB8C9 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C33352A72EB4D39E007ECEC4 /* Sinced2 */,
 			);
 			name = Sinced2;
 			packageProductDependencies = (
+				A1B2C3D4E5F60718293A4B5D /* Lottie */,
 			);
 			productName = Sinced2;
 			productReference = C33352A52EB4D39E007ECEC4 /* Sinced2.app */;
@@ -170,9 +253,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2600;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					48A5253F2F161ED900CDB8C9 = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					C33352A42EB4D39E007ECEC4 = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
@@ -195,6 +281,9 @@
 			);
 			mainGroup = C333529C2EB4D39E007ECEC4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A1B2C3D4E5F60718293A4B5C /* XCRemoteSwiftPackageReference "lottie-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C33352A62EB4D39E007ECEC4 /* Products */;
 			projectDirPath = "";
@@ -203,11 +292,19 @@
 				C33352A42EB4D39E007ECEC4 /* Sinced2 */,
 				C33352B12EB4D3A1007ECEC4 /* Sinced2Tests */,
 				C33352BB2EB4D3A2007ECEC4 /* Sinced2UITests */,
+				48A5253F2F161ED900CDB8C9 /* WidgetSinced2Extension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		48A5253E2F161ED900CDB8C9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C33352A32EB4D39E007ECEC4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -232,6 +329,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		48A5253C2F161ED900CDB8C9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C33352A12EB4D39E007ECEC4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -256,6 +360,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		48A525502F161EDA00CDB8C9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 48A5253F2F161ED900CDB8C9 /* WidgetSinced2Extension */;
+			targetProxy = 48A5254F2F161EDA00CDB8C9 /* PBXContainerItemProxy */;
+		};
 		C33352B42EB4D3A1007ECEC4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = C33352A42EB4D39E007ECEC4 /* Sinced2 */;
@@ -269,6 +378,68 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		48A525542F161EDA00CDB8C9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WidgetSinced2/WidgetSinced2.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4PXC3P5GF3;
+				EXCLUDED_SOURCE_FILE_NAMES = Info.plist;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WidgetSinced2/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Kolte.Sinced2.WidgetSinced2;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		48A525552F161EDA00CDB8C9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WidgetSinced2/WidgetSinced2.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4PXC3P5GF3;
+				EXCLUDED_SOURCE_FILE_NAMES = Info.plist;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WidgetSinced2/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Kolte.Sinced2.WidgetSinced2;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		C33352C42EB4D3A2007ECEC4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -322,7 +493,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -380,7 +551,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -395,11 +566,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Sinced2/Sinced2.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4PXC3P5GF3;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -427,11 +600,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Sinced2/Sinced2.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4PXC3P5GF3;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -462,7 +637,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4PXC3P5GF3;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Kolte.Sinced2Tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -484,7 +659,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4PXC3P5GF3;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Kolte.Sinced2Tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -541,6 +716,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		48A525532F161EDA00CDB8C9 /* Build configuration list for PBXNativeTarget "WidgetSinced2Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				48A525542F161EDA00CDB8C9 /* Debug */,
+				48A525552F161EDA00CDB8C9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		C33352A02EB4D39E007ECEC4 /* Build configuration list for PBXProject "Sinced2" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -578,6 +762,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1B2C3D4E5F60718293A4B5C /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1B2C3D4E5F60718293A4B5D /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1B2C3D4E5F60718293A4B5C /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C333529D2EB4D39E007ECEC4 /* Project object */;
 }
