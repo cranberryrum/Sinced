@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AddEventBottomSheet: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var viewModel: EventViewModel
     @Binding var isPresented: Bool
     
@@ -38,11 +39,14 @@ struct AddEventBottomSheet: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.black.opacity(0.6))
-                        .frame(width: 24, height: 24)
-                        .background(Color(hex: "f3f3f3"))
+                        .foregroundColor(.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(Color(UIColor.secondarySystemBackground))
                         .clipShape(Circle())
+                        .frame(width: 44, height: 44)
                 }
+                .accessibilityLabel("Close")
+                .buttonStyle(FluidPressButtonStyle())
             }
             .padding(.horizontal, 16)
             .padding(.top, 24)
@@ -54,14 +58,14 @@ struct AddEventBottomSheet: View {
                     HStack(spacing: 8) {
                         TextField("eg: last cigarette, no coffee", text: $eventTitle)
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color(hex: "313131"))
+                            .foregroundColor(.primary)
                             .tracking(-0.64)
                             .focused($isTextFieldFocused)
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 58)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(hex: "f7f7f7"))
+                    .background(Color(UIColor.secondarySystemBackground))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.black.opacity(0.04), lineWidth: 1)
@@ -139,6 +143,8 @@ struct AddEventBottomSheet: View {
                                                 customImage: selectedImage
                                             )
                                         }
+                                        .accessibilityLabel(theme == .custom ? "Choose a custom image" : "\(theme.rawValue) theme")
+                                        .accessibilityValue(selectedTheme == theme ? "Selected" : "Not selected")
                                         .buttonStyle(ThemeCardButtonStyle())
                                     }
                                 }
@@ -171,7 +177,6 @@ struct AddEventBottomSheet: View {
             .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .preferredColorScheme(.light)
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(image: $selectedImage, sourceType: .photoLibrary, requireSquareAspect: true)
                 .onDisappear {
@@ -197,31 +202,32 @@ struct AddEventBottomSheet: View {
     }
     
     private var isSaveEnabled: Bool {
-        !eventTitle.isEmpty
+        !eventTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     // MARK: - Helper Functions
     
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM yyyy"
+        formatter.dateStyle = .medium
         return formatter.string(from: date)
     }
     
     private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "hh:mm a"
+        formatter.timeStyle = .short
         return formatter.string(from: date)
     }
     
     private func saveEvent() {
-        guard !eventTitle.isEmpty else { return }
+        let trimmedTitle = eventTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
 
         // Convert UIImage to Data if image is selected (only for custom theme)
         let imageData = selectedTheme == .custom ? selectedImage?.jpegData(compressionQuality: 0.8) : nil
         
         let newEvent = SinceEvent(
-            title: eventTitle,
+            title: trimmedTitle,
             startedAt: startDate,
             imageData: imageData,
             cardTheme: selectedTheme
@@ -340,18 +346,20 @@ struct DatePickerSheet: View {
             
             Spacer()
         }
-        .background(Color.white)
-        .preferredColorScheme(.light)
+        .background(Color(UIColor.systemBackground))
     }
 }
 
 // MARK: - Theme Card Button Style
 
 struct ThemeCardButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.94 : 1.0)
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .animation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.2), value: configuration.isPressed)
     }
 }
 
@@ -361,6 +369,7 @@ struct ThemeCarouselItem: View {
     let theme: CardTheme
     let isSelected: Bool
     let customImage: UIImage?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     var body: some View {
         ZStack {
@@ -397,7 +406,7 @@ struct ThemeCarouselItem: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isSelected ? Color.primaryBlue : Color.clear, lineWidth: 3)
         )
-        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
+        .animation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.25), value: isSelected)
     }
 }
 

@@ -11,7 +11,9 @@ import UniformTypeIdentifiers
 
 struct EventListView: View {
     @EnvironmentObject var viewModel: EventViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedEvent: SinceEvent?
+    @State private var eventPendingDeletion: SinceEvent?
     @State private var showingCreateEvent = false
     @State private var draggingEvent: SinceEvent?
     
@@ -53,48 +55,55 @@ struct EventListView: View {
                     ScrollView(.vertical, showsIndicators: false) {
                         LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(viewModel.events) { event in
-                                HomeEventCardView(event: event)
+                                Button {
+                                    HapticManager.shared.light()
+                                    selectedEvent = event
+                                } label: {
+                                    HomeEventCardView(event: event)
                                     .frame(height: cardHeight)
-                                    .contentShape(Rectangle())
-                                    .scaleEffect(draggingEvent?.id == event.id ? 0.96 : 1.0)
-                                    .zIndex(draggingEvent?.id == event.id ? 1 : 0)
-                                    .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.86), value: draggingEvent?.id)
-                                    .onTapGesture {
-                                        HapticManager.shared.light()
-                                        selectedEvent = event
-                                    }
-                                    .onDrag {
-                                        draggingEvent = event
-                                        HapticManager.shared.light()
-                                        return NSItemProvider(object: event.id.uuidString as NSString)
-                                    } preview: {
-                                        HomeEventCardView(event: event)
-                                            .frame(height: cardHeight)
-                                            .clipShape(RoundedRectangle(cornerRadius: 24))
-                                            .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
-                                            .background(Color.clear)
-                                    }
-                                    .onDrop(
-                                        of: [UTType.text],
-                                        delegate: EventReorderDropDelegate(
-                                            targetEvent: event,
-                                            viewModel: viewModel,
-                                            draggingEvent: $draggingEvent
-                                        )
+                                }
+                                .buttonStyle(FluidPressButtonStyle())
+                                .scaleEffect(draggingEvent?.id == event.id && !reduceMotion ? 0.96 : 1.0)
+                                .zIndex(draggingEvent?.id == event.id ? 1 : 0)
+                                .animation(
+                                    AppMotion.spring(reduceMotion: reduceMotion, response: 0.24, dampingFraction: 0.9),
+                                    value: draggingEvent?.id
+                                )
+                                .accessibilityLabel("\(event.title), started \(event.smartFormattedStartDate)")
+                                .accessibilityHint("Opens event details")
+                                .onDrag {
+                                    draggingEvent = event
+                                    HapticManager.shared.light()
+                                    return NSItemProvider(object: event.id.uuidString as NSString)
+                                } preview: {
+                                    HomeEventCardView(event: event)
+                                        .frame(height: cardHeight)
+                                        .clipShape(RoundedRectangle(cornerRadius: 24))
+                                        .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
+                                        .background(Color.clear)
+                                }
+                                .onDrop(
+                                    of: [UTType.text],
+                                    delegate: EventReorderDropDelegate(
+                                        targetEvent: event,
+                                        viewModel: viewModel,
+                                        draggingEvent: $draggingEvent,
+                                        reduceMotion: reduceMotion
                                     )
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            viewModel.deleteEvent(event)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                        
-                                        Button {
-                                            viewModel.archiveEvent(event)
-                                        } label: {
-                                            Label("Archive", systemImage: "archivebox")
-                                        }
+                                )
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        eventPendingDeletion = event
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
                                     }
+                                    
+                                    Button {
+                                        viewModel.archiveEvent(event)
+                                    } label: {
+                                        Label("Archive", systemImage: "archivebox")
+                                    }
+                                }
                             }
                             
                             Button {
@@ -148,7 +157,16 @@ struct EventListView: View {
                     .presentationDetents([.height(440)])
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(36)
-                    .presentationBackground(.white)
+                .presentationBackground(.regularMaterial)
+            }
+            .sheet(item: $eventPendingDeletion) { event in
+                DeleteConfirmationSheet(eventTitle: event.title) {
+                    eventPendingDeletion = nil
+                    viewModel.deleteEvent(event)
+                    showSuccessToast(title: event.title)
+                }
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -169,7 +187,7 @@ private struct AddEventPlaceholderCard: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Color.white)
+                .fill(Color(UIColor.secondarySystemBackground))
             
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(
@@ -179,18 +197,20 @@ private struct AddEventPlaceholderCard: View {
             
             Image(systemName: "plus")
                 .font(.system(size: 32, weight: .regular))
-                .foregroundColor(.black.opacity(0.85))
+                .foregroundColor(.primary)
         }
         .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
 private struct AddPlaceholderButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1.0)
             .opacity(configuration.isPressed ? 0.88 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: configuration.isPressed)
+            .animation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.2), value: configuration.isPressed)
     }
 }
 
@@ -198,6 +218,7 @@ private struct EventReorderDropDelegate: DropDelegate {
     let targetEvent: SinceEvent
     let viewModel: EventViewModel
     @Binding var draggingEvent: SinceEvent?
+    let reduceMotion: Bool
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
         DropProposal(operation: .move)
@@ -212,7 +233,7 @@ private struct EventReorderDropDelegate: DropDelegate {
             return false
         }
 
-        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.86)) {
+        withAnimation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.24, dampingFraction: 0.9)) {
             viewModel.moveEvent(
                 fromOffsets: IndexSet(integer: fromIndex),
                 toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
@@ -221,7 +242,7 @@ private struct EventReorderDropDelegate: DropDelegate {
         viewModel.persistActiveEventOrder()
         HapticManager.shared.medium()
 
-        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.86)) {
+        withAnimation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.24, dampingFraction: 0.9)) {
             draggingEvent = nil
         }
         return true

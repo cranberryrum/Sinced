@@ -11,6 +11,7 @@ struct ResetSheetView: View {
     let event: SinceEvent
     @ObservedObject var viewModel: EventViewModel
     @Environment(\.dismiss) var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     @State private var resetDate = Date()
     @State private var note = ""
@@ -69,7 +70,7 @@ struct ResetSheetView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.primaryBlue)
                     .opacity(lastNowTap.timeIntervalSinceNow > -1.5 ? 1 : 0.4)
-                    .animation(.easeInOut(duration: 0.2), value: lastNowTap)
+                    .animation(AppMotion.smooth(reduceMotion: reduceMotion, duration: 0.2), value: lastNowTap)
                 
                 Text("Your current streak will be saved to history.")
                     .font(.roundedCaption)
@@ -93,7 +94,7 @@ struct ResetSheetView: View {
         .presentationDetents([.height(360)])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(32)
-        .presentationBackground(.white)
+        .presentationBackground(.regularMaterial)
     }
     
     private func resetEvent() {
@@ -102,14 +103,8 @@ struct ResetSheetView: View {
         
         viewModel.resetEvent(event, at: resetDate, note: finalNote)
         
-        // Haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
-        
-        // Dismiss with animation
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-            dismiss()
-        }
+        HapticManager.shared.success()
+        dismiss()
     }
 }
 

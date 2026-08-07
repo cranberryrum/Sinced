@@ -25,27 +25,28 @@ struct Sinced2App: App {
     
     var body: some Scene {
         WindowGroup {
-            if !viewModel.hasCompletedOnboarding {
-                OnboardingView()
-                    .environmentObject(viewModel)
-                    .preferredColorScheme(.light)
-            } else {
-                MainTabView()
-                    .environmentObject(viewModel)
-                    .preferredColorScheme(.light)
-                    .onReceive(NotificationCenter.default.publisher(for: .didTapEventNotification)) { notification in
-                        if let eventId = notification.userInfo?["eventId"] as? UUID {
-                            selectedEventId = eventId
-                            showEventDetail = true
+            Group {
+                if !viewModel.hasCompletedOnboarding {
+                    OnboardingView()
+                        .environmentObject(viewModel)
+                } else {
+                    MainTabView()
+                        .environmentObject(viewModel)
+                        .onReceive(NotificationCenter.default.publisher(for: .didTapEventNotification)) { notification in
+                            if let eventId = notification.userInfo?["eventId"] as? UUID {
+                                selectedEventId = eventId
+                                showEventDetail = true
+                            }
                         }
-                    }
-                    .sheet(isPresented: $showEventDetail) {
-                        if let eventId = selectedEventId,
-                           let event = viewModel.events.first(where: { $0.id == eventId }) {
-                            EventDetailView(event: event, viewModel: viewModel)
+                        .sheet(isPresented: $showEventDetail) {
+                            if let eventId = selectedEventId,
+                               let event = viewModel.events.first(where: { $0.id == eventId }) {
+                                EventDetailView(event: event, viewModel: viewModel)
+                            }
                         }
-                    }
+                }
             }
+            .tint(.primaryBlue)
         }
     }
 }
