@@ -97,7 +97,7 @@ struct EventListView: View {
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
-                                    
+
                                     Button {
                                         viewModel.archiveEvent(event)
                                     } label: {
@@ -157,7 +157,7 @@ struct EventListView: View {
                     .presentationDetents([.height(440)])
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(36)
-                .presentationBackground(.regularMaterial)
+                    .presentationBackground(.regularMaterial)
             }
             .sheet(item: $eventPendingDeletion) { event in
                 DeleteConfirmationSheet(eventTitle: event.title) {
