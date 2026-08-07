@@ -10,6 +10,7 @@ import Lottie
 
 struct OnboardingView: View {
     @EnvironmentObject private var viewModel: EventViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showName = false
     @State private var lottieOpacity: Double = 1
     @State private var nameOpacity: Double = 0
@@ -29,16 +30,16 @@ struct OnboardingView: View {
             Color(UIColor.systemBackground)
                 .ignoresSafeArea()
 
-            if !showName {
+            if !showName && !reduceMotion {
                 LottiePlayerView(
                     name: "Fadedproper",
                     loopMode: .playOnce,
                     contentMode: .scaleAspectFit
                 ) {
-                    withAnimation(.easeInOut(duration: 0.45)) {
+                    withAnimation(AppMotion.smooth(reduceMotion: reduceMotion)) {
                         lottieOpacity = 0
                     }
-                    withAnimation(.easeInOut(duration: 0.45).delay(0.1)) {
+                    withAnimation(AppMotion.smooth(reduceMotion: reduceMotion).delay(0.1)) {
                         nameOpacity = 1
                         showName = true
                     }
@@ -51,11 +52,16 @@ struct OnboardingView: View {
                 .transition(.opacity)
             }
 
-            if showName {
+            if showName || reduceMotion {
                 nameView
-                    .opacity(nameOpacity)
+                    .opacity(reduceMotion ? 1 : nameOpacity)
                     .transition(.opacity)
             }
+        }
+        .onAppear {
+            guard reduceMotion else { return }
+            showName = true
+            nameOpacity = 1
         }
     }
     
@@ -91,6 +97,7 @@ struct OnboardingView: View {
                 Button(action: {
                     let sanitizedName = trimmedName
                     guard !sanitizedName.isEmpty else { return }
+                    HapticManager.shared.success()
                     viewModel.updateUserName(sanitizedName)
                     viewModel.completeOnboarding()
                 }) {

@@ -60,6 +60,8 @@ struct Toast: ViewModifier {
     let message: String
     let icon: String?
     let style: ToastStyle
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     
     func body(content: Content) -> some View {
         ZStack {
@@ -74,10 +76,18 @@ struct Toast: ViewModifier {
                             Group {
                                 if style.position == .top {
                                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(style.backgroundColor)
+                                        .fill(reduceTransparency ? AnyShapeStyle(style.backgroundColor) : AnyShapeStyle(.regularMaterial))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                .fill(style.backgroundColor)
+                                        )
                                 } else {
                                     Capsule()
-                                        .fill(style.backgroundColor)
+                                        .fill(reduceTransparency ? AnyShapeStyle(style.backgroundColor) : AnyShapeStyle(.regularMaterial))
+                                        .overlay(
+                                            Capsule()
+                                                .fill(style.backgroundColor)
+                                        )
                                 }
                             }
                         )
@@ -94,10 +104,10 @@ struct Toast: ViewModifier {
                             maxHeight: .infinity,
                             alignment: style.position == .top ? .top : .bottom
                         )
-                        .transition(style.transition)
+                        .transition(reduceMotion ? .opacity : style.transition)
                 }
                 .allowsHitTesting(false)
-                .animation(style.animation, value: isShowing)
+                .animation(reduceMotion ? .easeOut(duration: 0.16) : style.animation, value: isShowing)
             }
         }
     }
@@ -163,13 +173,20 @@ class ToastManager: ObservableObject {
         self.icon = icon
         self.style = style
         
-        withAnimation(style.animation) {
+        let animation: Animation = UIAccessibility.isReduceMotionEnabled
+            ? .easeOut(duration: 0.16)
+            : style.animation
+
+        withAnimation(animation) {
             isShowing = true
         }
         
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
-            withAnimation(self.style.animation) {
+            let animation: Animation = UIAccessibility.isReduceMotionEnabled
+                ? .easeOut(duration: 0.16)
+                : self.style.animation
+            withAnimation(animation) {
                 self.isShowing = false
             }
         }

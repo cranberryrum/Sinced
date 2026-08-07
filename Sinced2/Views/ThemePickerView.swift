@@ -33,11 +33,14 @@ struct ThemePickerView: View {
                 Button(action: { dismiss() }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.black.opacity(0.6))
-                        .frame(width: 24, height: 24)
-                        .background(Color(hex: "f3f3f3"))
+                        .foregroundColor(.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(Color(UIColor.secondarySystemBackground))
                         .clipShape(Circle())
+                        .frame(width: 44, height: 44)
                 }
+                .accessibilityLabel("Close")
+                .buttonStyle(FluidPressButtonStyle())
             }
             .padding(.horizontal, 16)
             .padding(.top, 24)
@@ -48,35 +51,42 @@ struct ThemePickerView: View {
                     // Theme Grid
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(CardTheme.displayThemes) { theme in
-                            ThemePreviewCard(
-                                theme: theme,
-                                isSelected: selectedTheme == theme && customImage == nil
-                            )
-                            .onTapGesture {
+                            Button {
                                 HapticManager.shared.light()
                                 selectedTheme = theme
                                 customImage = nil
                                 dismiss()
+                            } label: {
+                                ThemePreviewCard(
+                                    theme: theme,
+                                    isSelected: selectedTheme == theme && customImage == nil
+                                )
                             }
+                            .buttonStyle(FluidPressButtonStyle(pressedScale: 0.96))
+                            .accessibilityLabel("\(theme.rawValue) theme")
+                            .accessibilityValue(selectedTheme == theme && customImage == nil ? "Selected" : "Not selected")
                         }
                         
                         // Custom Image Option
-                        CustomImageCard(
-                            image: customImage,
-                            isSelected: selectedTheme == .custom && customImage != nil
-                        )
-                        .onTapGesture {
+                        Button {
                             HapticManager.shared.light()
                             onSelectImage()
+                        } label: {
+                            CustomImageCard(
+                                image: customImage,
+                                isSelected: selectedTheme == .custom && customImage != nil
+                            )
                         }
+                        .buttonStyle(FluidPressButtonStyle(pressedScale: 0.96))
+                        .accessibilityLabel("Choose a custom image")
+                        .accessibilityValue(selectedTheme == .custom && customImage != nil ? "Selected" : "Not selected")
                     }
                     .padding(.horizontal, 16)
                 }
                 .padding(.bottom, 24)
             }
         }
-        .background(Color.white)
-        .preferredColorScheme(.light)
+        .background(Color(UIColor.systemBackground))
     }
 }
 
@@ -145,7 +155,7 @@ struct CustomImageCard: View {
             } else {
                 // Placeholder
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(hex: "f7f7f7"))
+                    .fill(Color(UIColor.secondarySystemBackground))
                 
                 VStack(spacing: 8) {
                     Image(systemName: "photo.badge.plus")

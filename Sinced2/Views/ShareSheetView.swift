@@ -12,6 +12,7 @@ import PhotosUI
 struct ShareSheetView: View {
     let event: SinceEvent
     @Environment(\.dismiss) var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isSharing = false
     @State private var showingSaveSuccess = false
     @State private var renderedImage: UIImage?
@@ -39,8 +40,8 @@ struct ShareSheetView: View {
                         .scaleEffect(isChangingTheme ? 0.97 : (isSharing ? 0.95 : 1.0))
                         .blur(radius: isChangingTheme ? 3 : 0)
                         .opacity(isChangingTheme ? 0.8 : 1.0)
-                        .animation(.spring(response: 0.22, dampingFraction: 0.95), value: isChangingTheme)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSharing)
+                        .animation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.22), value: isChangingTheme)
+                        .animation(AppMotion.spring(reduceMotion: reduceMotion), value: isSharing)
                 }
                 .padding(.horizontal, 40)
                 .padding(.vertical, 30) // Extra vertical padding for shadows
@@ -58,6 +59,8 @@ struct ShareSheetView: View {
                             }) {
                                 themeDot(for: theme)
                             }
+                            .accessibilityLabel("\(theme.rawValue) theme")
+                            .accessibilityValue(selectedTheme == theme ? "Selected" : "Not selected")
                             .buttonStyle(ThemeDotButtonStyle())
                         }
                     }
@@ -84,6 +87,7 @@ struct ShareSheetView: View {
                                 .fill(Color.primaryBlue)
                         )
                     }
+                    .buttonStyle(FluidPressButtonStyle())
                     .disabled(isSharing)
                     
                     // Save to Photos Button
@@ -102,6 +106,7 @@ struct ShareSheetView: View {
                                 .fill(showingSaveSuccess ? Color.green.opacity(0.1) : Color.primaryBlue.opacity(0.1))
                         )
                     }
+                    .buttonStyle(FluidPressButtonStyle())
                     .disabled(isSharing || showingSaveSuccess)
                 }
                 .padding(.horizontal, 20)
@@ -199,8 +204,8 @@ struct ShareSheetView: View {
                 .stroke(Color.primaryBlue, lineWidth: 2)
                 .frame(width: 44, height: 44)
                 .opacity(selectedTheme == theme ? 1 : 0)
-                .scaleEffect(selectedTheme == theme ? 1.0 : 0.8)
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedTheme)
+                .scaleEffect(selectedTheme == theme || reduceMotion ? 1.0 : 0.8)
+                .animation(AppMotion.spring(reduceMotion: reduceMotion), value: selectedTheme)
         }
     }
     
@@ -233,12 +238,17 @@ struct ShareSheetView: View {
     }
     
     private func animateThemeChange() {
-        withAnimation(.spring(response: 0.22, dampingFraction: 0.95)) {
+        guard !reduceMotion else {
+            isChangingTheme = false
+            return
+        }
+
+        withAnimation(AppMotion.spring(reduceMotion: false, response: 0.22)) {
             isChangingTheme = true
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.spring(response: 0.22, dampingFraction: 0.95)) {
+            withAnimation(AppMotion.spring(reduceMotion: false, response: 0.22)) {
                 isChangingTheme = false
             }
         }
@@ -383,7 +393,7 @@ struct ShareSheetView: View {
                 
                 await MainActor.run {
                     // Show success feedback
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(AppMotion.spring(reduceMotion: reduceMotion)) {
                         showingSaveSuccess = true
                     }
                     
@@ -395,7 +405,7 @@ struct ShareSheetView: View {
                     
                     // Reset after delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        withAnimation {
+                        withAnimation(AppMotion.spring(reduceMotion: reduceMotion)) {
                             showingSaveSuccess = false
                         }
                     }
@@ -413,10 +423,13 @@ struct ShareSheetView: View {
 
 /// Button style for theme dots with touch scale effect
 struct ThemeDotButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.92 : 1.0)
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .animation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.2), value: configuration.isPressed)
     }
 }
 

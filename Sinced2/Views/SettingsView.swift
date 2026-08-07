@@ -276,6 +276,8 @@ private struct SheetAction: Identifiable {
 }
 
 private struct SubtleButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.roundedHeadline)
@@ -287,8 +289,8 @@ private struct SubtleButtonStyle: ButtonStyle {
                     .fill(Color(UIColor.secondarySystemBackground))
             )
             .opacity(configuration.isPressed ? 0.75 : 1)
-            .scaleEffect(configuration.isPressed ? 0.99 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1.0)
+            .animation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.25), value: configuration.isPressed)
     }
 }
 

@@ -7,13 +7,32 @@
 
 import SwiftUI
 
+/// Shared motion values keep interactions responsive while respecting Reduce Motion.
+enum AppMotion {
+    static func spring(
+        reduceMotion: Bool,
+        response: Double = 0.32,
+        dampingFraction: Double = 0.9
+    ) -> Animation {
+        reduceMotion
+            ? .easeOut(duration: 0.16)
+            : .spring(response: response, dampingFraction: dampingFraction)
+    }
+
+    static func smooth(reduceMotion: Bool, duration: Double = 0.35) -> Animation {
+        reduceMotion ? .easeOut(duration: 0.16) : .smooth(duration: duration)
+    }
+}
+
 /// Card background style matching Apple's design guidelines
 struct CardBackground: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     func body(content: Content) -> some View {
         content
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(UIColor.secondarySystemBackground))
+                    .fill(reduceTransparency ? AnyShapeStyle(Color(UIColor.secondarySystemBackground)) : AnyShapeStyle(.thinMaterial))
             )
     }
 }
@@ -21,6 +40,7 @@ struct CardBackground: ViewModifier {
 /// Primary button style
 struct PrimaryButtonStyle: ButtonStyle {
     var color: Color = .primaryBlue
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -32,14 +52,16 @@ struct PrimaryButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(color)
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.86 : 1.0)
+            .animation(AppMotion.spring(reduceMotion: reduceMotion), value: configuration.isPressed)
     }
 }
 
 /// Secondary button style
 struct SecondaryButtonStyle: ButtonStyle {
     var color: Color = .primaryBlue
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -51,8 +73,25 @@ struct SecondaryButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(color, lineWidth: 2)
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.82 : 1.0)
+            .animation(AppMotion.spring(reduceMotion: reduceMotion), value: configuration.isPressed)
+    }
+}
+
+/// Immediate touch-down feedback for tappable cards and compact controls.
+struct FluidPressButtonStyle: ButtonStyle {
+    var pressedScale: CGFloat = 0.97
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? pressedScale : 1)
+            .opacity(configuration.isPressed ? 0.84 : 1)
+            .animation(
+                AppMotion.spring(reduceMotion: reduceMotion, response: 0.2, dampingFraction: 0.92),
+                value: configuration.isPressed
+            )
     }
 }
 

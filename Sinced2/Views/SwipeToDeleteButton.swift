@@ -10,6 +10,7 @@ import SwiftUI
 struct SwipeToDeleteButton: View {
     let onDelete: () -> Void
     let title: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     @State private var dragOffset: CGFloat = 0
     @State private var hasTriggered = false
@@ -66,28 +67,39 @@ struct SwipeToDeleteButton: View {
                         let translation = max(0, value.translation.width)
                         dragOffset = min(translation, maxOffset)
                     }
-                    .onEnded { _ in
+                    .onEnded { value in
                         guard !hasTriggered else { return }
-                        if dragOffset >= maxOffset * completionThreshold {
-                            hasTriggered = true
-                            HapticManager.shared.warning()
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                dragOffset = maxOffset
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                onDelete()
-                            }
+                        let projectedOffset = max(dragOffset, value.predictedEndTranslation.width)
+                        if projectedOffset >= maxOffset * completionThreshold {
+                            completeDelete(maxOffset: maxOffset)
                         } else {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            withAnimation(AppMotion.spring(reduceMotion: reduceMotion)) {
                                 dragOffset = 0
                             }
                             HapticManager.shared.light()
                         }
                     }
             )
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: dragOffset)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Delete event")
+            .accessibilityHint("Swipe right to confirm, or use the Delete action")
+            .accessibilityAction(named: "Delete") {
+                completeDelete(maxOffset: maxOffset)
+            }
         }
         .frame(height: height)
+    }
+
+    private func completeDelete(maxOffset: CGFloat) {
+        guard !hasTriggered else { return }
+        hasTriggered = true
+        HapticManager.shared.warning()
+        withAnimation(AppMotion.spring(reduceMotion: reduceMotion)) {
+            dragOffset = maxOffset
+        }
+        DispatchQueue.main.async {
+            onDelete()
+        }
     }
 }
 

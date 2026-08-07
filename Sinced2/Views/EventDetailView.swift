@@ -13,6 +13,7 @@ struct EventDetailView: View {
     @ObservedObject var viewModel: EventViewModel
     let onDeleteSuccess: ((String) -> Void)?
     @Environment(\.dismiss) var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     @State private var showingResetSheet = false
     @State private var showingShareSheet = false
@@ -52,7 +53,7 @@ struct EventDetailView: View {
                             Picker("Time Unit", selection: Binding(
                                 get: { localEvent.widgetTimeUnit },
                                 set: { newValue in
-                                    withAnimation(.smooth(duration: 0.35)) {
+                                    withAnimation(AppMotion.smooth(reduceMotion: reduceMotion)) {
                                         localEvent.widgetTimeUnit = newValue
                                     }
                                     viewModel.updateEvent(localEvent)
@@ -85,10 +86,7 @@ struct EventDetailView: View {
                         .padding(.vertical, 24)
                         .padding(.horizontal, 20)
                         .frame(maxWidth: .infinity)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(Color(UIColor.secondarySystemBackground))
-                        )
+                        .cardBackground()
                         .padding(.horizontal, 20)
                         
                         // Primary Action - Reset Timer
@@ -109,6 +107,7 @@ struct EventDetailView: View {
                                     .fill(Color.primaryBlue)
                             )
                         }
+                        .buttonStyle(FluidPressButtonStyle())
                         .frame(maxWidth: geometry.size.width - 40)
                         .padding(.horizontal, 20)
                         
@@ -141,6 +140,7 @@ struct EventDetailView: View {
                                         .fill(Color.green.opacity(0.1))
                                 )
                             }
+                            .buttonStyle(FluidPressButtonStyle())
                             
                             // Delete
                             Button(action: {
@@ -162,6 +162,7 @@ struct EventDetailView: View {
                                         .fill(Color.red.opacity(0.1))
                                 )
                             }
+                            .buttonStyle(FluidPressButtonStyle())
                         }
                         .frame(maxWidth: geometry.size.width - 40)
                         .padding(.horizontal, 20)
@@ -262,11 +263,8 @@ struct EventDetailView: View {
     }
     
     private func confirmDelete() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            showingDeleteSheet = false
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        showingDeleteSheet = false
+        DispatchQueue.main.async {
             handleDelete()
         }
     }

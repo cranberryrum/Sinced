@@ -13,14 +13,25 @@ struct AnimatedTickerView: View {
     let fontSize: CGFloat
     let fontWeight: Font.Weight
     let color: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     var body: some View {
+        Group {
+            if reduceMotion {
+                label
+            } else {
+                label
+                    .contentTransition(.numericText())
+                    .animation(AppMotion.smooth(reduceMotion: false), value: text)
+            }
+        }
+    }
+
+    private var label: some View {
         Text(text)
             .font(.system(size: fontSize, weight: fontWeight, design: .rounded))
             .monospacedDigit()
             .foregroundColor(color)
-            .contentTransition(.numericText())
-            .animation(.smooth(duration: 0.35), value: text)
     }
 }
 
@@ -28,6 +39,7 @@ struct AnimatedTickerView: View {
 struct AnimatedTimeDisplay: View {
     let event: SinceEvent
     let currentTime: Date
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     var body: some View {
         VStack(spacing: 8) {
@@ -42,7 +54,7 @@ struct AnimatedTimeDisplay: View {
                 .font(.roundedBody)
                 .foregroundColor(.secondary)
                 .contentTransition(.interpolate)
-                .animation(.smooth(duration: 0.35), value: event.widgetTimeUnit)
+                .animation(AppMotion.smooth(reduceMotion: reduceMotion), value: event.widgetTimeUnit)
         }
     }
     
@@ -82,14 +94,25 @@ struct AnimatedNumberOnly: View {
     let number: Int
     let fontSize: CGFloat
     let color: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     var body: some View {
+        Group {
+            if reduceMotion {
+                label
+            } else {
+                label
+                    .contentTransition(.numericText(value: Double(number)))
+                    .animation(AppMotion.smooth(reduceMotion: false), value: number)
+            }
+        }
+    }
+
+    private var label: some View {
         Text(numberString)
             .font(.system(size: fontSize, weight: .bold, design: .rounded))
             .monospacedDigit()
             .foregroundColor(color)
-            .contentTransition(.numericText(value: Double(number)))
-            .animation(.smooth(duration: 0.35), value: number)
             .fixedSize(horizontal: true, vertical: true)
     }
     
