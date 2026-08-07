@@ -33,8 +33,10 @@ struct OnboardingView: View {
                 LottiePlayerView(
                     name: "Fadedproper",
                     loopMode: .playOnce,
-                    contentMode: .scaleAspectFit
+                    contentMode: .scaleAspectFit,
+                    hapticCues: LottieHapticCue.fadedProperOnboarding
                 ) {
+                    HapticManager.shared.soft()
                     withAnimation(.easeInOut(duration: 0.45)) {
                         lottieOpacity = 0
                     }
@@ -49,6 +51,9 @@ struct OnboardingView: View {
                 .opacity(lottieOpacity)
                 .ignoresSafeArea()
                 .transition(.opacity)
+                .onAppear {
+                    HapticManager.shared.prepare()
+                }
             }
 
             if showName {

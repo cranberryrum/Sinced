@@ -2,13 +2,13 @@
 //  ColorExtensions.swift
 //  Sinced2
 //
-//  Color utilities
+//  Color utilities and shared design tokens
 //
 
 import SwiftUI
 
 extension Color {
-    // MARK: - Blue Color Scheme
+    // MARK: - Brand / Accent
     
     /// Primary blue - main actions and highlights
     static let primaryBlue = Color(hex: "007AFF")
@@ -27,6 +27,23 @@ extension Color {
     
     /// Muted blue - disabled states
     static let mutedBlue = Color(hex: "8E8E93")
+    
+    // MARK: - Surfaces & Neutrals (light UI)
+    
+    /// Soft input / chip surface
+    static let surfaceMuted = Color(hex: "F5F5F7")
+    
+    /// Slightly stronger muted fill (close buttons, pills)
+    static let surfaceSubtle = Color(hex: "EFEFF1")
+    
+    /// Soft border stroke
+    static let borderSubtle = Color.black.opacity(0.06)
+    
+    /// Secondary label used in forms / sheets
+    static let textTertiary = Color(hex: "8E8E93")
+    
+    /// Primary body text on light surfaces
+    static let textPrimarySoft = Color(hex: "1C1C1E")
     
     /// Initialize Color from hex string
     init(hex: String) {
@@ -67,5 +84,3 @@ extension UIColor {
         }
     }
 }
-
-
