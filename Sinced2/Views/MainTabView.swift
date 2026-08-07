@@ -47,11 +47,12 @@ struct TabButton: View {
     @Binding var currentTab: Tab
     let icon: String
     let title: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     var body: some View {
         Button(action: {
             HapticManager.shared.light()
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            withAnimation(AppMotion.spring(reduceMotion: reduceMotion, response: 0.4)) {
                 currentTab = tab
             }
         }) {
@@ -70,6 +71,7 @@ struct TabButton: View {
             .background(currentTab == tab ? Color.primaryBlue.opacity(0.1) : Color.clear)
             .clipShape(Capsule())
         }
+        .buttonStyle(FluidPressButtonStyle())
     }
 }
 
