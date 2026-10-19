@@ -121,6 +121,8 @@ class EventViewModel: ObservableObject {
     func updateUserName(_ name: String) {
         userName = name
         UserDefaults.standard.set(name, forKey: "userName")
+        // Queued reminders use the name, so rebuild them
+        NotificationManager.shared.refreshAllReminders()
     }
     
     /// Load onboarding state

@@ -128,14 +128,14 @@ class NotificationManager: NSObject, ObservableObject {
     private func createNotificationContent(for event: SinceEvent, firingAt fireDate: Date) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         
-        // Days since event at delivery time, not at scheduling time
-        let elapsed = fireDate.timeIntervalSince(event.startedAt)
-        let days = max(0, Int(elapsed / 86400))
-        let dayText = days == 1 ? "day" : "days"
-        
-        // Format: "10 days" as title, "Since no smoking" as body
-        content.title = "\(days) \(dayText)"
-        content.body = "Since \(event.title.lowercased())"
+        // Day count is for the delivery date; the line is picked per event and day
+        let copy = NotificationCopy.make(
+            for: event,
+            firingAt: fireDate,
+            userName: UserDefaults.standard.string(forKey: "userName") ?? ""
+        )
+        content.title = copy.title
+        content.body = copy.body
         
         // Use custom notification sound
         content.sound = UNNotificationSound(named: UNNotificationSoundName("NotifSound.wav"))
