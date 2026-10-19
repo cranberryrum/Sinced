@@ -61,8 +61,51 @@ struct SelectEventIntent: WidgetConfigurationIntent {
     }
 }
 
-// MARK: - Legacy Configuration (for backwards compatibility)
-struct ConfigurationAppIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Configuration" }
-    static var description: IntentDescription { "This is an example widget." }
+// MARK: - Second Event Entity (pair widget)
+/// Same events as `EventEntity`, but its default is the *second* event, so a
+/// new pair widget shows two different events instead of the first one twice.
+struct SecondEventEntity: AppEntity {
+    var id: String
+    var title: String
+    
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Event"
+    static var defaultQuery = SecondEventEntityQuery()
+    
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(title)")
+    }
+}
+
+struct SecondEventEntityQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [SecondEventEntity] {
+        StorageManager.shared.loadEvents()
+            .filter { !$0.isArchived && identifiers.contains($0.id.uuidString) }
+            .map { SecondEventEntity(id: $0.id.uuidString, title: $0.title) }
+    }
+    
+    func suggestedEntities() async throws -> [SecondEventEntity] {
+        StorageManager.shared.loadEvents()
+            .filter { !$0.isArchived }
+            .map { SecondEventEntity(id: $0.id.uuidString, title: $0.title) }
+    }
+    
+    func defaultResult() async -> SecondEventEntity? {
+        let events = StorageManager.shared.loadEvents().filter { !$0.isArchived }
+        guard events.count > 1 else { return nil }
+        return SecondEventEntity(id: events[1].id.uuidString, title: events[1].title)
+    }
+}
+
+// MARK: - Pair Widget Configuration Intent
+struct SelectEventPairIntent: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Select Events"
+    static var description: IntentDescription = "Choose the two events to show side by side"
+    
+    @Parameter(title: "First event")
+    var firstEvent: EventEntity?
+    
+    @Parameter(title: "Second event")
+    var secondEvent: SecondEventEntity?
+    
+    init() {}
 }

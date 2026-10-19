@@ -11,10 +11,11 @@ import SwiftUI
 @main
 struct WidgetSinced2Bundle: WidgetBundle {
     var body: some Widget {
-        // Main small widget with event selection
+        // Main small widget with event selection (also used in StandBy)
         SinceSmallWidget()
-        
-        // Control widget (if implemented)
-        WidgetSinced2Control()
+        // Medium widget with two events side by side
+        SincePairWidget()
+        // Lock Screen: circular, rectangular and inline
+        SinceLockScreenWidget()
     }
 }

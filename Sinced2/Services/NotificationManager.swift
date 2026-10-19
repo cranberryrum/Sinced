@@ -63,85 +63,74 @@ class NotificationManager: NSObject, ObservableObject {
     
     // MARK: - Schedule Notifications
     
-    /// Schedule reminders for an event based on its settings
+    /// iOS keeps at most 64 pending local notifications per app; leave some headroom.
+    private static let maxPendingNotifications = 60
+    private static let identifierPrefix = "sinced-"
+    
+    private var pendingRefresh: DispatchWorkItem?
+    
+    /// Schedule reminders for an event based on its settings.
+    /// All events share the system's pending-notification budget, so this
+    /// rebuilds the whole schedule rather than just this event.
     func scheduleReminders(for event: SinceEvent) {
-        // First, cancel any existing notifications for this event
-        cancelReminders(for: event)
-        
-        guard notificationsEnabled, event.reminderSettings.isEnabled else {
-            print("NotificationManager: Reminders disabled for event \(event.title)")
-            return
-        }
-        
-        switch event.reminderSettings.reminderType {
-        case .daily:
-            scheduleDailyReminder(for: event)
-        case .weekly:
-            scheduleWeeklyReminders(for: event)
-        }
+        refreshAllReminders()
     }
     
-    /// Schedule a daily reminder at the user's selected time
-    private func scheduleDailyReminder(for event: SinceEvent) {
-        // Get the user's selected time from reminder settings
+    /// Upcoming fire dates for an event, soonest first
+    private func upcomingFireDates(for event: SinceEvent, limit: Int, from now: Date) -> [Date] {
         let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: event.reminderSettings.dailyReminderTime)
-        let minute = calendar.component(.minute, from: event.reminderSettings.dailyReminderTime)
+        let settings = event.reminderSettings
+        var dates: [Date] = []
         
-        var dateComponents = DateComponents()
-        dateComponents.hour = hour
-        dateComponents.minute = minute
-        
-        let content = createNotificationContent(for: event)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        
-        let identifier = notificationIdentifier(for: event, suffix: "daily")
-        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-        
-        notificationCenter.add(request) { error in
-            if let error = error {
-                print("NotificationManager: Error scheduling daily reminder - \(error.localizedDescription)")
-            } else {
-                print("NotificationManager: Scheduled daily reminder for \(event.title) at \(hour):\(String(format: "%02d", minute))")
+        switch settings.reminderType {
+        case .daily:
+            var dayOffset = 0
+            while dates.count < limit {
+                guard let day = calendar.date(byAdding: .day, value: dayOffset, to: now),
+                      let fireDate = calendar.date(bySettingHour: settings.dailyHour, minute: settings.dailyMinute, second: 0, of: day) else { break }
+                if fireDate > now { dates.append(fireDate) }
+                dayOffset += 1
+            }
+            
+        case .weekly:
+            let weekdays = Set(settings.weeklyDays.map(\.rawValue))
+            guard !weekdays.isEmpty else { return [] }
+            var dayOffset = 0
+            while dates.count < limit {
+                guard let day = calendar.date(byAdding: .day, value: dayOffset, to: now) else { break }
+                dayOffset += 1
+                guard weekdays.contains(calendar.component(.weekday, from: day)) else { continue }
+                let (hour, minute) = weeklyReminderTime(for: event, on: day)
+                guard let fireDate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) else { break }
+                if fireDate > now { dates.append(fireDate) }
             }
         }
+        
+        return dates
     }
     
-    /// Schedule weekly reminders for selected days
-    private func scheduleWeeklyReminders(for event: SinceEvent) {
-        for weekday in event.reminderSettings.weeklyDays {
-            // Generate a random hour between 9 AM and 8 PM
-            let randomHour = Int.random(in: 9...20)
-            let randomMinute = Int.random(in: 0...59)
-            
-            var dateComponents = DateComponents()
-            dateComponents.weekday = weekday.rawValue
-            dateComponents.hour = randomHour
-            dateComponents.minute = randomMinute
-            
-            let content = createNotificationContent(for: event)
-            let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-            
-            let identifier = notificationIdentifier(for: event, suffix: "weekly-\(weekday.rawValue)")
-            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-            
-            notificationCenter.add(request) { error in
-                if let error = error {
-                    print("NotificationManager: Error scheduling weekly reminder - \(error.localizedDescription)")
-                } else {
-                    print("NotificationManager: Scheduled weekly reminder for \(event.title) on \(weekday.fullName) at \(randomHour):\(randomMinute)")
-                }
-            }
+    /// A "random" time between 9:00 and 20:59 that is stable for a given event
+    /// and day, so rebuilding the schedule never moves (or duplicates) a reminder.
+    private func weeklyReminderTime(for event: SinceEvent, on day: Date) -> (hour: Int, minute: Int) {
+        let components = Calendar.current.dateComponents([.year, .month, .day], from: day)
+        let key = "\(event.id.uuidString)-\(components.year ?? 0)-\(components.month ?? 0)-\(components.day ?? 0)"
+        // FNV-1a: deterministic across launches, unlike Swift's Hasher
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in key.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
         }
+        let minutesAfterNine = Int(hash % 720)
+        return (9 + minutesAfterNine / 60, minutesAfterNine % 60)
     }
     
-    /// Create notification content for an event
-    private func createNotificationContent(for event: SinceEvent) -> UNMutableNotificationContent {
+    /// Create notification content for an event as of the moment it will be delivered
+    private func createNotificationContent(for event: SinceEvent, firingAt fireDate: Date) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         
-        // Calculate days since event
-        let elapsed = event.elapsedTime
-        let days = Int(elapsed / 86400)
+        // Days since event at delivery time, not at scheduling time
+        let elapsed = fireDate.timeIntervalSince(event.startedAt)
+        let days = max(0, Int(elapsed / 86400))
         let dayText = days == 1 ? "day" : "days"
         
         // Format: "10 days" as title, "Since no smoking" as body
@@ -162,71 +151,95 @@ class NotificationManager: NSObject, ObservableObject {
     }
     
     /// Generate a unique identifier for a notification
-    private func notificationIdentifier(for event: SinceEvent, suffix: String) -> String {
-        return "sinced-\(event.id.uuidString)-\(suffix)"
+    private func notificationIdentifier(for event: SinceEvent, fireDate: Date) -> String {
+        return "\(Self.identifierPrefix)\(event.id.uuidString)-\(Int(fireDate.timeIntervalSince1970))"
     }
     
     // MARK: - Cancel Notifications
     
-    /// Cancel all reminders for a specific event
+    /// Cancel all reminders for a specific event, including ones already in
+    /// Notification Center (so they can't be tapped after a delete/archive)
     func cancelReminders(for event: SinceEvent) {
-        let baseIdentifier = "sinced-\(event.id.uuidString)"
+        let baseIdentifier = "\(Self.identifierPrefix)\(event.id.uuidString)"
         
-        // Get all pending notifications and filter by event ID
         notificationCenter.getPendingNotificationRequests { [weak self] requests in
             let identifiersToRemove = requests
                 .filter { $0.identifier.hasPrefix(baseIdentifier) }
                 .map { $0.identifier }
-            
             self?.notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
-            print("NotificationManager: Cancelled \(identifiersToRemove.count) reminders for event \(event.title)")
+        }
+        notificationCenter.getDeliveredNotifications { [weak self] notifications in
+            let identifiersToRemove = notifications
+                .map { $0.request.identifier }
+                .filter { $0.hasPrefix(baseIdentifier) }
+            self?.notificationCenter.removeDeliveredNotifications(withIdentifiers: identifiersToRemove)
         }
     }
     
     /// Cancel all scheduled notifications
     func cancelAllReminders() {
+        pendingRefresh?.cancel()
         notificationCenter.removeAllPendingNotificationRequests()
-        print("NotificationManager: Cancelled all reminders")
     }
     
     // MARK: - Refresh All Notifications
     
-    /// Refresh all notifications based on current event settings
-    func refreshAllReminders(events: [SinceEvent]) {
-        guard notificationsEnabled else {
-            cancelAllReminders()
-            return
+    /// Rebuild the notification schedule for all events.
+    /// Each reminder is a one-shot notification whose day count is computed for
+    /// its own delivery date, so call this whenever the app becomes active to
+    /// keep the schedule topped up.
+    func refreshAllReminders() {
+        // Coalesce bursts of calls (e.g. update + settings save) into one rebuild.
+        // Events are read when the rebuild runs, so it never uses a stale list.
+        pendingRefresh?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.rebuildSchedule(events: StorageManager.shared.loadEvents())
         }
-        
-        // Cancel all first
-        cancelAllReminders()
-        
-        // Reschedule for events with enabled reminders
-        for event in events where event.reminderSettings.isEnabled {
-            scheduleReminders(for: event)
-        }
+        pendingRefresh = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
     }
     
-    // MARK: - Debug
-    
-    /// Print all pending notifications (for debugging)
-    func printPendingNotifications() {
-        notificationCenter.getPendingNotificationRequests { requests in
-            print("NotificationManager: \(requests.count) pending notifications:")
-            for request in requests {
-                if let trigger = request.trigger as? UNCalendarNotificationTrigger {
-                    print("  - \(request.identifier): \(trigger.dateComponents)")
+    private func rebuildSchedule(events: [SinceEvent]) {
+        notificationCenter.removeAllPendingNotificationRequests()
+        
+        guard notificationsEnabled else { return }
+        
+        let reminderEvents = events.filter { !$0.isArchived && $0.reminderSettings.isEnabled }
+        let now = Date()
+        
+        // Share the budget by date rather than per event: take the soonest
+        // reminders across all events, so busy schedules stay covered for as
+        // long as possible.
+        let upcoming = reminderEvents
+            .flatMap { event in
+                upcomingFireDates(for: event, limit: Self.maxPendingNotifications, from: now)
+                    .map { (event: event, fireDate: $0) }
+            }
+            .sorted { $0.fireDate < $1.fireDate }
+            .prefix(Self.maxPendingNotifications)
+        
+        for (event, fireDate) in upcoming {
+            let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: notificationIdentifier(for: event, fireDate: fireDate),
+                content: createNotificationContent(for: event, firingAt: fireDate),
+                trigger: trigger
+            )
+            notificationCenter.add(request) { error in
+                if let error = error {
+                    print("NotificationManager: Error scheduling reminder - \(error.localizedDescription)")
                 }
             }
         }
     }
     
-    func setNotificationsEnabled(_ enabled: Bool, events: [SinceEvent]) {
+    func setNotificationsEnabled(_ enabled: Bool) {
         notificationsEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: NotificationManager.notificationsEnabledKey)
         
         if enabled {
-            refreshAllReminders(events: events)
+            refreshAllReminders()
         } else {
             cancelAllReminders()
         }

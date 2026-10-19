@@ -11,9 +11,7 @@ import UserNotifications
 @main
 struct Sinced2App: App {
     @StateObject private var viewModel = EventViewModel()
-    @State private var selectedEventId: UUID?
-    @State private var showEventDetail = false
-    @Namespace private var animation
+    @Environment(\.scenePhase) private var scenePhase
     
     init() {
         // Fix any existing large images for widgets
@@ -35,16 +33,24 @@ struct Sinced2App: App {
                     .preferredColorScheme(.light)
                     .onReceive(NotificationCenter.default.publisher(for: .didTapEventNotification)) { notification in
                         if let eventId = notification.userInfo?["eventId"] as? UUID {
-                            selectedEventId = eventId
-                            showEventDetail = true
+                            viewModel.openEvent(id: eventId)
                         }
                     }
-                    .sheet(isPresented: $showEventDetail) {
-                        if let eventId = selectedEventId,
-                           let event = viewModel.events.first(where: { $0.id == eventId }) {
-                            EventDetailView(event: event, viewModel: viewModel)
-                        }
+                    // Widget taps open sinced://event/<id>
+                    .onOpenURL { url in
+                        guard url.scheme == "sinced", url.host == "event",
+                              let eventId = UUID(uuidString: url.lastPathComponent) else { return }
+                        viewModel.openEvent(id: eventId)
                     }
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                // Pick up permission changes made in iOS Settings
+                NotificationManager.shared.checkAuthorizationStatus()
+                // Reminders are scheduled a limited number of days ahead with
+                // pre-computed day counts, so top them up whenever the app is opened
+                viewModel.refreshAllNotifications()
             }
         }
     }

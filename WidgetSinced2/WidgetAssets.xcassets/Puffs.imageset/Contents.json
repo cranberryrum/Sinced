@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "Puffs.png",
+      "filename" : "Puffs.svg",
       "idiom" : "universal"
     }
   ],
@@ -10,7 +10,7 @@
     "version" : 1
   },
   "properties" : {
-    "preserves-vector-representation" : false,
+    "preserves-vector-representation" : true,
     "template-rendering-intent" : "original"
   }
 }

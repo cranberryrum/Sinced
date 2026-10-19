@@ -12,16 +12,17 @@ import Combine
 /// ObservableObject that manages event state and business logic
 class EventViewModel: ObservableObject {
     @Published var events: [SinceEvent] = []
+    @Published var archivedEvents: [SinceEvent] = []
     @Published var hasCompletedOnboarding: Bool = false
     @Published var userName: String = ""
+    /// Event to open from a notification tap or widget tap
+    @Published var eventToOpen: SinceEvent?
     
     private let storageManager = StorageManager.shared
     private let notificationManager = NotificationManager.shared
     private var timer: Timer?
     
     init() {
-        // Fix large images for widget compatibility
-        storageManager.fixLargeImages()
         loadEvents()
         loadOnboardingState()
         loadUserName()
@@ -33,7 +34,9 @@ class EventViewModel: ObservableObject {
     
     /// Load events from storage
     func loadEvents() {
-        events = storageManager.loadEvents().filter { !$0.isArchived }
+        let allEvents = storageManager.loadEvents()
+        events = allEvents.filter { !$0.isArchived }
+        archivedEvents = allEvents.filter { $0.isArchived }
     }
     
     /// Add a new event
@@ -44,7 +47,7 @@ class EventViewModel: ObservableObject {
         
         // Schedule reminders if enabled
         if event.reminderSettings.isEnabled {
-            notificationManager.scheduleReminders(for: event)
+            refreshAllNotifications()
         }
     }
     
@@ -54,7 +57,7 @@ class EventViewModel: ObservableObject {
         loadEvents()
         
         // Reschedule notifications with new settings
-        notificationManager.scheduleReminders(for: event)
+        refreshAllNotifications()
     }
     
     /// Delete an event
@@ -64,6 +67,9 @@ class EventViewModel: ObservableObject {
         
         storageManager.deleteEvent(event)
         loadEvents()
+        
+        // Give the freed reminder slots to other events
+        refreshAllNotifications()
     }
     
     /// Archive an event
@@ -73,6 +79,16 @@ class EventViewModel: ObservableObject {
         
         storageManager.toggleArchive(event)
         loadEvents()
+        
+        // Restores reminders if the event was unarchived
+        refreshAllNotifications()
+    }
+    
+    /// Bring an archived event back to the home screen
+    func unarchiveEvent(_ event: SinceEvent) {
+        guard event.isArchived else { return }
+        archiveEvent(event)
+        triggerHaptic()
     }
 
     /// Reorder active events
@@ -91,11 +107,8 @@ class EventViewModel: ObservableObject {
         loadEvents()
         triggerHaptic()
         
-        // Reschedule notifications after reset (message will update)
-        if let updatedEvent = events.first(where: { $0.id == event.id }),
-           updatedEvent.reminderSettings.isEnabled {
-            notificationManager.scheduleReminders(for: updatedEvent)
-        }
+        // Reschedule notifications after reset (day counts start over)
+        refreshAllNotifications()
     }
     
     /// Complete onboarding
@@ -134,9 +147,14 @@ class EventViewModel: ObservableObject {
     }
     
     /// Refresh all notification schedules
-    private func refreshAllNotifications() {
-        let allEvents = storageManager.loadEvents()
-        notificationManager.refreshAllReminders(events: allEvents)
+    func refreshAllNotifications() {
+        notificationManager.refreshAllReminders()
+    }
+    
+    /// Open an event's detail sheet if it still exists and isn't archived
+    func openEvent(id: UUID) {
+        loadEvents()
+        eventToOpen = events.first { $0.id == id }
     }
     
     deinit {

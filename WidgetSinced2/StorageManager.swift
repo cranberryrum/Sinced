@@ -14,7 +14,7 @@ class StorageManager {
     static let shared = StorageManager()
     
     // AppGroup identifier for sharing data with widget
-    private let appGroupIdentifier = "group.com.kolte.sinced2"
+    private let appGroupIdentifier = "group.com.adityakolte.sinced2.x7q3"
     
     private let fileName = "events.json"
     
@@ -24,13 +24,11 @@ class StorageManager {
     private var fileURL: URL {
         // Try to use AppGroup container for widget sharing
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
-            print("StorageManager: Using AppGroup container: \(containerURL.path)")
             
             // Ensure the container directory exists
             try? FileManager.default.createDirectory(at: containerURL, withIntermediateDirectories: true, attributes: nil)
             
             let fileURL = containerURL.appendingPathComponent(fileName)
-            print("StorageManager: File URL: \(fileURL.path)")
             return fileURL
         }
         
@@ -40,29 +38,40 @@ class StorageManager {
         return documentsPath.appendingPathComponent(fileName)
     }
     
-    /// Load all events from storage
+    /// Load all events from storage.
+    /// Records that can't be decoded are skipped rather than failing the whole
+    /// list, and the original file is backed up first so nothing is lost when
+    /// the remaining events are saved again.
     func loadEvents() -> [SinceEvent] {
-        print("StorageManager: Loading events from: \(fileURL.path)")
-        print("StorageManager: File exists: \(FileManager.default.fileExists(atPath: fileURL.path))")
-        
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            print("StorageManager: No events file found, returning empty array")
             return []
         }
         
         do {
             let data = try Data(contentsOf: fileURL)
-            print("StorageManager: Loaded \(data.count) bytes of data")
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            let events = try decoder.decode([SinceEvent].self, from: data)
-            print("StorageManager: Successfully decoded \(events.count) events")
+            let results = try decoder.decode([LossyDecodable<SinceEvent>].self, from: data)
+            let events = results.compactMap(\.value)
+            if events.count < results.count {
+                print("StorageManager: Skipped \(results.count - events.count) unreadable events")
+                backUpUnreadableFile(data)
+            }
             return events
         } catch {
-            print("StorageManager: Error loading events: \(error.localizedDescription)")
-            print("StorageManager: Error details: \(error)")
+            print("StorageManager: Error loading events: \(error)")
+            if let data = try? Data(contentsOf: fileURL) {
+                backUpUnreadableFile(data)
+            }
             return []
         }
+    }
+    
+    /// Keep a copy of an events file that couldn't be fully read
+    private func backUpUnreadableFile(_ data: Data) {
+        let backupURL = fileURL.deletingLastPathComponent()
+            .appendingPathComponent("events.unreadable-\(Int(Date().timeIntervalSince1970)).json")
+        try? data.write(to: backupURL, options: .atomic)
     }
     
     /// Save events to storage
@@ -74,21 +83,16 @@ class StorageManager {
             let data = try encoder.encode(events)
             try data.write(to: fileURL, options: [.atomic])
             
-            print("StorageManager: Successfully saved \(events.count) events to \(fileURL.path)")
-            print("StorageManager: File size: \(data.count) bytes")
             
             // Notify widget to update
-            print("StorageManager: Reloading all widget timelines")
             WidgetCenter.shared.reloadAllTimelines()
         } catch {
             print("StorageManager: Error saving events: \(error.localizedDescription)")
-            print("StorageManager: Error details: \(error)")
         }
     }
     
     /// Force widget to reload immediately
     func forceWidgetReload() {
-        print("StorageManager: Forcing immediate widget reload")
         WidgetCenter.shared.reloadAllTimelines()
     }
     
@@ -144,7 +148,7 @@ class StorageManager {
     func resetEvent(_ event: SinceEvent, at date: Date = Date(), note: String? = nil) {
         var events = loadEvents()
         if let index = events.firstIndex(where: { $0.id == event.id }) {
-            let reset = Reset(at: events[index].startedAt, note: note)
+            let reset = Reset(at: date, note: note, previousStart: events[index].startedAt)
             events[index].history.insert(reset, at: 0)
             events[index].startedAt = date
             saveEvents(events)
@@ -153,8 +157,8 @@ class StorageManager {
     
     /// Get a specific event by ID (useful for widgets)
     func getEvent(byId id: UUID) -> SinceEvent? {
-        let events = loadEvents()
-        return events.first { $0.id == id }
+        // Archived events are hidden in the app, so hide them on the widget too
+        return loadEvents().first { $0.id == id && !$0.isArchived }
     }
     
     /// Fix large images that exceed widget memory limits
@@ -166,7 +170,6 @@ class StorageManager {
         for i in 0..<events.count {
             if let imageData = events[i].imageData {
                 if let recompressed = recompressImageIfNeeded(imageData) {
-                    print("StorageManager: Recompressed image for event: \(events[i].title)")
                     events[i].imageData = recompressed
                     needsSave = true
                 }
@@ -174,7 +177,6 @@ class StorageManager {
         }
         
         if needsSave {
-            print("StorageManager: Saving \(events.count) events with recompressed images")
             saveEvents(events)
         }
     }
@@ -192,7 +194,6 @@ class StorageManager {
             return nil
         }
         
-        print("StorageManager: Image too large (area: \(imageArea)), recompressing...")
         
         // Reprocess to safe size
         return processImageForWidget(image)
@@ -226,3 +227,11 @@ class StorageManager {
     }
 }
 
+/// Decodes a value if possible, otherwise records nil instead of throwing
+private struct LossyDecodable<Value: Decodable>: Decodable {
+    let value: Value?
+    
+    init(from decoder: Decoder) throws {
+        value = try? Value(from: decoder)
+    }
+}

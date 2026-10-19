@@ -27,7 +27,8 @@ enum CardTheme: String, Codable, CaseIterable, Identifiable {
         case .circles: return Color(hex: "4D4AFD")
         case .clouds: return Color(hex: "4B800E")
         case .puffs: return Color(hex: "C09CF9")
-        case .custom: return Color.clear
+        // Shown only if a custom photo is missing; keeps white text readable
+        case .custom: return Color(hex: "313131")
         }
     }
     
@@ -153,7 +154,15 @@ struct ReminderSettings: Codable, Hashable {
     var isEnabled: Bool
     var reminderType: ReminderType
     var weeklyDays: [Weekday] // Only used when reminderType is .weekly
-    var dailyReminderTime: Date // Time of day for daily reminders (only hour/minute components used)
+    /// Wall-clock time for daily reminders. Stored as hour/minute (not a Date)
+    /// so the reminder stays at e.g. 9:00 after a time zone change.
+    var dailyHour: Int
+    var dailyMinute: Int
+    
+    /// The daily reminder time as a Date today (for pickers and formatting)
+    var dailyReminderTime: Date {
+        Calendar.current.date(bySettingHour: dailyHour, minute: dailyMinute, second: 0, of: Date()) ?? Date()
+    }
     
     init(isEnabled: Bool = false, reminderType: ReminderType = .daily, weeklyDays: [Weekday] = [.monday], dailyReminderTime: Date? = nil) {
         self.isEnabled = isEnabled
@@ -161,34 +170,52 @@ struct ReminderSettings: Codable, Hashable {
         self.weeklyDays = weeklyDays
         // Default to 9:00 AM if no time specified
         if let time = dailyReminderTime {
-            self.dailyReminderTime = time
+            let components = Calendar.current.dateComponents([.hour, .minute], from: time)
+            self.dailyHour = components.hour ?? 9
+            self.dailyMinute = components.minute ?? 0
         } else {
-            var components = DateComponents()
-            components.hour = 9
-            components.minute = 0
-            self.dailyReminderTime = Calendar.current.date(from: components) ?? Date()
+            self.dailyHour = 9
+            self.dailyMinute = 0
         }
     }
     
-    // Custom decoding to handle migration from old format without dailyReminderTime
+    // Tolerant decoding: missing or unknown values fall back to defaults
+    // instead of failing (and losing) the whole event list.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
-        reminderType = try container.decode(ReminderType.self, forKey: .reminderType)
-        weeklyDays = try container.decode([Weekday].self, forKey: .weeklyDays)
-        // Handle migration: default to 9 AM if not present
-        if let time = try? container.decode(Date.self, forKey: .dailyReminderTime) {
-            dailyReminderTime = time
+        isEnabled = (try? container.decodeIfPresent(Bool.self, forKey: .isEnabled)) ?? false
+        let typeRaw = (try? container.decodeIfPresent(String.self, forKey: .reminderType)) ?? nil
+        reminderType = typeRaw.flatMap(ReminderType.init(rawValue:)) ?? .daily
+        let dayValues = (try? container.decodeIfPresent([Int].self, forKey: .weeklyDays)) ?? nil
+        let days = (dayValues ?? []).compactMap(Weekday.init(rawValue:))
+        weeklyDays = days.isEmpty ? [.monday] : days
+        
+        if let hour = try? container.decodeIfPresent(Int.self, forKey: .dailyHour),
+           let minute = try? container.decodeIfPresent(Int.self, forKey: .dailyMinute) {
+            dailyHour = hour
+            dailyMinute = minute
+        } else if let legacyTime = try? container.decodeIfPresent(Date.self, forKey: .dailyReminderTime) {
+            // Migration from builds that stored an absolute Date
+            let components = Calendar.current.dateComponents([.hour, .minute], from: legacyTime)
+            dailyHour = components.hour ?? 9
+            dailyMinute = components.minute ?? 0
         } else {
-            var components = DateComponents()
-            components.hour = 9
-            components.minute = 0
-            dailyReminderTime = Calendar.current.date(from: components) ?? Date()
+            dailyHour = 9
+            dailyMinute = 0
         }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(isEnabled, forKey: .isEnabled)
+        try container.encode(reminderType, forKey: .reminderType)
+        try container.encode(weeklyDays, forKey: .weeklyDays)
+        try container.encode(dailyHour, forKey: .dailyHour)
+        try container.encode(dailyMinute, forKey: .dailyMinute)
     }
     
     private enum CodingKeys: String, CodingKey {
-        case isEnabled, reminderType, weeklyDays, dailyReminderTime
+        case isEnabled, reminderType, weeklyDays, dailyReminderTime, dailyHour, dailyMinute
     }
 }
 
@@ -208,7 +235,8 @@ struct SinceEvent: Identifiable, Codable, Hashable {
     
     /// Computed property for time elapsed since the event started
     var elapsedTime: TimeInterval {
-        return Date().timeIntervalSince(startedAt)
+        // Never negative, even if a start date ends up in the future
+        return max(0, Date().timeIntervalSince(startedAt))
     }
     
     /// Returns a formatted relative time string (e.g., "3h 22m", "2d 5h")
@@ -309,6 +337,50 @@ struct SinceEvent: Identifiable, Codable, Hashable {
         self.cardTheme = cardTheme
     }
     
+    /// Older builds saved each reset with `at` = when the reset streak had
+    /// started, instead of when the reset happened. History is newest first,
+    /// and each reset happened when the next (newer) streak started, so the
+    /// real reset time can be recovered from its neighbour.
+    private static func migrateLegacyResets(_ history: [Reset], currentStart: Date) -> [Reset] {
+        var migrated = history
+        for index in migrated.indices where migrated[index].previousStart == nil {
+            let nextStreakStart = index == 0
+                ? currentStart
+                : (migrated[index - 1].previousStart ?? migrated[index - 1].at)
+            migrated[index].previousStart = migrated[index].at
+            migrated[index].at = nextStreakStart
+        }
+        return migrated
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case id, title, startedAt, colorHex, goalDays, history, isArchived
+        case imageData, widgetTimeUnit, reminderSettings, cardTheme
+    }
+    
+    // Tolerant decoding: only id/title/startedAt are required. Anything else
+    // that's missing or unrecognised (e.g. a field added in a later version)
+    // falls back to its default instead of failing the whole event list.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        startedAt = try container.decode(Date.self, forKey: .startedAt)
+        colorHex = (try? container.decodeIfPresent(String.self, forKey: .colorHex)) ?? nil
+        goalDays = (try? container.decodeIfPresent(Int.self, forKey: .goalDays)) ?? nil
+        history = Self.migrateLegacyResets(
+            (try? container.decodeIfPresent([Reset].self, forKey: .history)) ?? [],
+            currentStart: startedAt
+        )
+        isArchived = (try? container.decodeIfPresent(Bool.self, forKey: .isArchived)) ?? false
+        imageData = (try? container.decodeIfPresent(Data.self, forKey: .imageData)) ?? nil
+        let unitRaw = (try? container.decodeIfPresent(String.self, forKey: .widgetTimeUnit)) ?? nil
+        widgetTimeUnit = unitRaw.flatMap(WidgetTimeUnit.init(rawValue:)) ?? .days
+        reminderSettings = (try? container.decodeIfPresent(ReminderSettings.self, forKey: .reminderSettings)) ?? ReminderSettings()
+        let themeRaw = (try? container.decodeIfPresent(String.self, forKey: .cardTheme)) ?? nil
+        cardTheme = themeRaw.flatMap(CardTheme.init(rawValue:)) ?? .mosaic
+    }
+    
     /// Generate notification title (e.g., "10 days")
     func notificationTitle() -> String {
         let elapsed = elapsedTime
@@ -391,8 +463,11 @@ struct SinceEvent: Identifiable, Codable, Hashable {
 /// Represents a reset event in the timeline
 struct Reset: Identifiable, Codable, Hashable {
     let id: UUID
+    /// When the reset happened
     var at: Date
     var note: String?
+    /// When the streak that was reset had started (nil for entries saved by older builds)
+    var previousStart: Date?
     
     /// Returns formatted reset date string
     var formattedDate: String {
@@ -402,10 +477,11 @@ struct Reset: Identifiable, Codable, Hashable {
         return formatter.string(from: at)
     }
     
-    init(id: UUID = UUID(), at: Date = Date(), note: String? = nil) {
+    init(id: UUID = UUID(), at: Date = Date(), note: String? = nil, previousStart: Date? = nil) {
         self.id = id
         self.at = at
         self.note = note
+        self.previousStart = previousStart
     }
 }
 

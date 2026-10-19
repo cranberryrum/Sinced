@@ -73,6 +73,8 @@ struct ShareableCardView: View {
                 .font(.system(size: cardSize.width * 0.07, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.6)
                 .padding(.horizontal, cardSize.width * 0.1)
                 .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
             
@@ -141,6 +143,8 @@ struct ShareableCardView: View {
                 Text("Since \(event.title)")
                     .font(.system(size: cardSize.width * 0.053, weight: .medium, design: .rounded))
                     .foregroundColor(.white.opacity(0.6))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
                     .padding(.top, cardSize.height * 0.005)
             }
             .padding(.leading, 16 * (cardSize.width / 375.0))

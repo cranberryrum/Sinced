@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 enum Tab {
     case home
@@ -33,6 +34,10 @@ struct MainTabView: View {
                 }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onReceive(viewModel.$eventToOpen.compactMap { $0 }) { _ in
+            // Events open from the home tab
+            selectedTab = .home
+        }
         .toast(
             isShowing: $toastManager.isShowing,
             message: toastManager.message,

@@ -47,7 +47,7 @@ struct AnimatedTimeDisplay: View {
     }
     
     private func getTimeValue() -> Int {
-        let elapsed = currentTime.timeIntervalSince(event.startedAt)
+        let elapsed = max(0, currentTime.timeIntervalSince(event.startedAt))
         
         switch event.widgetTimeUnit {
         case .hours:

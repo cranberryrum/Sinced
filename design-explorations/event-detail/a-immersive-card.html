@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A · Immersive Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Nunito:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .screen { background: var(--t-bg); transition: background .4s; }
+  .hero-bg { position: absolute; inset: 0 0 auto 0; height: 640px; background-size: cover; background-position: center top; z-index: 0; }
+  .hero-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,0) 30%, rgba(0,0,0,0) 70%, rgba(0,0,0,.12)); }
+  .scroll { z-index: 1; }
+
+  .topbar { position: absolute; top: 56px; left: 16px; right: 16px; z-index: 60; display: flex; justify-content: space-between; }
+  .glass {
+    width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center;
+    background: rgba(255,255,255,.22); backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4); color: #fff;
+  }
+  .menu {
+    position: absolute; top: 48px; right: 0; width: 220px; background: rgba(250,250,252,.92); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    border-radius: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.25); overflow: hidden; transform-origin: top right;
+    transform: scale(.6); opacity: 0; pointer-events: none; transition: transform .28s cubic-bezier(.2,.9,.3,1.1), opacity .2s;
+  }
+  .menu.open { transform: none; opacity: 1; pointer-events: auto; }
+  .menu button { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; background: none; padding: 12px 16px; font: 16px var(--round); text-align: left; }
+  .menu button + button { border-top: .5px solid var(--ios-sep); }
+  .menu .danger { color: var(--red); }
+  .menu hr { border: 0; height: 8px; background: rgba(0,0,0,.06); margin: 0; }
+
+  .hero { height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding-top: 40px; color: #fff; text-align: center; }
+  .units { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(0,0,0,.18); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); margin-bottom: 18px; }
+  .units button { border: 0; background: none; color: rgba(255,255,255,.85); font: 600 13.5px var(--round); padding: 6px 12px; border-radius: 999px; transition: background .25s, color .25s; }
+  .units button.on { background: #fff; color: #111; }
+  .count { font: 500 64px/1 var(--mono); letter-spacing: -0.08em; text-shadow: 0 2px 4px rgba(0,0,0,.25); font-variant-numeric: tabular-nums; }
+  .count small { font-size: 64px; }
+  .since { font-size: 21px; font-weight: 600; color: rgba(255,255,255,.72); text-shadow: 0 2px 4px rgba(0,0,0,.2); margin-top: -4px; }
+  .badge { font-weight: 700; font-size: 15.5px; letter-spacing: -0.02em; padding: 5px 16px; border-radius: 999px; background: var(--t-badge); color: var(--t-badge-text); }
+  .live { font: 500 13px var(--mono); color: rgba(255,255,255,.7); letter-spacing: .02em; margin-top: 4px; }
+
+  .panel { position: relative; background: #fff; border-radius: 36px 36px 0 0; padding: 10px 20px 150px; min-height: 600px; box-shadow: 0 -10px 30px rgba(0,0,0,.08); }
+  .milestone { background: var(--ios-bg); border-radius: 22px; padding: 18px; margin-top: 8px; }
+  .ms-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .label { font-size: 13px; font-weight: 700; color: var(--ios-2); text-transform: uppercase; letter-spacing: .04em; }
+  .ms-title { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin: 2px 0 12px; }
+  .ms-when { font-size: 14.5px; color: var(--ios-2); font-weight: 600; }
+  .bar { height: 10px; border-radius: 5px; background: rgba(0,0,0,.07); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 5px; background: var(--t-bg); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+  .bar-legend { display: flex; justify-content: space-between; font: 500 12px var(--mono); color: var(--ios-2); margin-top: 6px; }
+  .best { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 14px 16px; border-radius: 18px; background: color-mix(in srgb, var(--t-bg) 12%, white); }
+  .best .ico { font-size: 22px; }
+  .best b { display: block; font-size: 15.5px; }
+  .best span { font-size: 13.5px; color: var(--ios-2); }
+
+  .sec-h { display: flex; justify-content: space-between; align-items: baseline; margin: 28px 4px 10px; }
+  .sec-h h4 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  .sec-h span { font-size: 14px; color: var(--ios-2); font-weight: 600; }
+  .group { background: var(--ios-bg); border-radius: 18px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px; }
+  .row + .row { border-top: .5px solid var(--ios-sep); margin-left: 54px; padding-left: 0; }
+  .row .ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: #fff; flex: none; font-size: 15px; }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .txt b { display: block; font-size: 16px; font-weight: 600; }
+  .row .txt span { display: block; font-size: 13.5px; color: var(--ios-2); }
+  .row .chev { color: var(--ios-3); font-size: 18px; }
+  .row .ic.swatch { background-size: cover; border: 1px solid rgba(0,0,0,.06); }
+  .toggle { width: 51px; height: 31px; border-radius: 16px; background: var(--green); border: 0; position: relative; flex: none; transition: background .25s; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 22px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.2); transition: left .25s cubic-bezier(.3,.7,.3,1); }
+  .toggle.off { background: rgba(120,120,128,.16); }
+  .toggle.off::after { left: 2px; }
+
+  .timeline { position: relative; padding-left: 26px; }
+  .timeline::before { content: ""; position: absolute; left: 7px; top: 10px; bottom: 10px; width: 2px; background: var(--ios-sep); border-radius: 1px; }
+  .t-item { position: relative; padding: 10px 0 14px; }
+  .t-item::before { content: ""; position: absolute; left: -24px; top: 16px; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2.5px solid var(--t-bg); }
+  .t-item.now::before { background: var(--t-bg); }
+  .t-item .d { font-size: 13px; color: var(--ios-2); font-weight: 600; }
+  .t-item .l { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .t-item .n { font-size: 14.5px; color: var(--ios-2); font-style: italic; margin-top: 2px; }
+
+  .dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 50; padding: 18px 20px 34px; display: flex; gap: 12px; background: linear-gradient(180deg, rgba(255,255,255,0), #fff 30%); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+  .dock.hidden { transform: translateY(120%); }
+  .dock .share { width: 56px; height: 56px; border-radius: 18px; border: 0; background: var(--ios-bg); display: grid; place-items: center; flex: none; }
+  .dock .reset { flex: 1; height: 56px; border: 0; border-radius: 18px; background: #111; color: #fff; font: 700 17px var(--round); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .dock .reset:active, .dock .share:active { transform: scale(.97); }
+</style>
+</head>
+<body>
+<header id="chrome"></header>
+<main class="stage">
+  <div class="device">
+    <div class="screen" id="screen">
+      <div class="hero-bg" id="heroBg"></div>
+      <div class="topbar">
+        <button class="glass" aria-label="Close"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6l5 5 5-5"/></svg></button>
+        <div style="position:relative">
+          <button class="glass" id="moreBtn" aria-label="More"><svg width="18" height="4" viewBox="0 0 18 4" fill="currentColor"><circle cx="2" cy="2" r="2"/><circle cx="9" cy="2" r="2"/><circle cx="16" cy="2" r="2"/></svg></button>
+          <div class="menu" id="menu">
+            <button>Edit name <span>✎</span></button>
+            <button>Change start date <span>◷</span></button>
+            <button>Change theme <span>◐</span></button>
+            <hr>
+            <button class="danger" id="delBtn">Delete event <span>⌫</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="scroll" id="scroll">
+        <section class="hero">
+          <div class="units" id="units"></div>
+          <div class="count" id="count"></div>
+          <div class="since">Since No smoking</div>
+          <div class="badge" id="badge"></div>
+          <div class="live" id="live"></div>
+        </section>
+        <section class="panel">
+          <div class="grabber"></div>
+
+          <div class="milestone">
+            <div class="ms-top"><span class="label">Next milestone</span><span class="ms-when" id="msWhen"></span></div>
+            <div class="ms-title" id="msTitle"></div>
+            <div class="bar"><i id="msBar"></i></div>
+            <div class="bar-legend"><span id="msFrom"></span><span id="msLeft"></span><span id="msTo"></span></div>
+          </div>
+          <div class="best" id="best"></div>
+
+          <div class="sec-h"><h4>Settings</h4></div>
+          <div class="group">
+            <div class="row">
+              <div class="ic" style="background:#FF9500">🔔</div>
+              <div class="txt"><b>Reminders</b><span id="remSub">Weekly · Mon, Thu</span></div>
+              <button class="toggle" id="remToggle" aria-label="Reminders"></button>
+            </div>
+            <div class="row">
+              <div class="ic swatch" id="themeSw"></div>
+              <div class="txt"><b>Card theme</b><span id="themeName"></span></div>
+              <span class="chev">›</span>
+            </div>
+            <div class="row">
+              <div class="ic" style="background:var(--blue)">▦</div>
+              <div class="txt"><b>Widget</b><span id="widgetSub"></span></div>
+              <span class="chev">›</span>
+            </div>
+          </div>
+
+          <div class="sec-h"><h4>History</h4><span id="histCount"></span></div>
+          <div class="timeline" id="timeline"></div>
+        </section>
+      </div>
+      <div class="dock" id="dock">
+        <button class="share" aria-label="Share"><svg width="20" height="22" viewBox="0 0 20 22" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14V2M5.5 6.5 10 2l4.5 4.5M6 9.5H4a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6.5a2 2 0 0 0-2-2h-2"/></svg></button>
+        <button class="reset" id="resetBtn"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9a6.5 6.5 0 1 0 2-4.7M2.5 2.5v3.5H6"/></svg>Reset timer</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="notes">
+    <p class="eyebrow">Variant A</p>
+    <h1>Immersive card</h1>
+    <p class="thesis">The home card grows into the page. Opening an event feels like picking up the card itself. The time and theme fill the top, and a sheet underneath holds everything else. Reset and Share stay pinned to the bottom.</p>
+
+    <h2>Information architecture</h2>
+    <ol class="ia">
+      <li><b>Hero: identity and live time</b><small>Unit switch, big mono counter, "Since …", start-date badge, live d/h/m/s. The theme background is kept from the home card.</small></li>
+      <li><b>Progress</b><small>The next milestone with a bar between the previous and next marks. A "personal best" callout appears when the current streak beats the longest one.</small></li>
+      <li><b>Settings</b><small>Reminders (inline toggle), card theme and widget as one inset list. Each row opens its own sheet.</small></li>
+      <li><b>History</b><small>A vertical timeline of past streaks, with how long each lasted and the reset note.</small></li>
+      <li class="persist"><b>Pinned: Reset and Share</b><small>The dock hides while you scroll down and comes back when you scroll up. Delete and edit move into the ••• menu.</small></li>
+    </ol>
+
+    <h2>Trade-offs</h2>
+    <div class="tradeoffs">
+      <div><h3>Why pick it</h3><ul>
+        <li>Continuous with the home card, so a zoom/matched-geometry transition works naturally</li>
+        <li>The most emotional of the three; the theme carries the page</li>
+        <li>The one main action is always within thumb reach</li>
+        <li>Delete moves off the main surface</li>
+      </ul></div>
+      <div><h3>Watch out for</h3><ul>
+        <li>The hero takes about 55% of the first screen</li>
+        <li>Not much room for stats or insights later</li>
+        <li>Custom photo themes need a scrim for legibility</li>
+      </ul></div>
+    </div>
+    <p class="try"><b>Try:</b> switch units on the card, scroll the sheet up (the dock hides), open ••• to see where edit and delete live, and tap Reset timer for the reset sheet. Change the card theme in the top bar.</p>
+  </aside>
+</main>
+
+<script src="shared.js"></script>
+<script>
+  const S = Sinced, E = S.event;
+  const $ = (id) => document.getElementById(id);
+  const screen = $("screen");
+  S.mountChrome("a-immersive-card.html");
+  S.mountFrame(screen, { light: true });
+
+  $("units").innerHTML = S.UNITS.map((u) => `<button data-u="${u}">${u}</button>`).join("");
+  $("units").onclick = (e) => { const u = e.target.dataset.u; if (u) { E.unit = u; render(); } };
+
+  const moreBtn = $("moreBtn"), menu = $("menu");
+  moreBtn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle("open"); };
+  screen.addEventListener("click", (e) => { if (!menu.contains(e.target) && e.target !== moreBtn) menu.classList.remove("open"); });
+  $("delBtn").onclick = () => { menu.classList.remove("open"); S.toast(screen, "Opens delete confirmation"); };
+  $("resetBtn").onclick = () => S.resetSheet(screen);
+  $("remToggle").onclick = () => { E.reminders.enabled = !E.reminders.enabled; render(); };
+
+  let lastY = 0;
+  $("scroll").addEventListener("scroll", (e) => {
+    const y = e.target.scrollTop;
+    $("dock").classList.toggle("hidden", y > lastY && y > 380);
+    lastY = y;
+  });
+
+  function render() {
+    const t = S.t, ms = S.elapsed(), p = S.parts(ms), st = S.stats();
+    $("heroBg").style.backgroundImage = `url(${S.asset(S.theme, "tall")})`;
+    $("units").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.u === E.unit));
+    const uv = S.unitValue(E.unit, ms);
+    $("count").textContent = `${uv.value} ${uv.word.toUpperCase()}`;
+    $("badge").textContent = "Started on " + S.fmtDate(E.startedAt);
+    $("live").textContent = `${p.d}d ${S.pad(p.h)}h ${S.pad(p.m)}m ${S.pad(p.s)}s`;
+
+    const m = S.nextMilestone(ms);
+    if (m) {
+      $("msTitle").textContent = `${m.days}-day milestone`;
+      $("msWhen").textContent = S.fmtDate(m.date, { weekday: "short" });
+      $("msBar").style.width = (m.progress * 100).toFixed(1) + "%";
+      $("msFrom").textContent = m.prev + "d";
+      $("msTo").textContent = m.days + "d";
+      $("msLeft").textContent = S.short(m.remaining) + " to go";
+    }
+    $("best").innerHTML = st.isBest
+      ? `<span class="ico">🏆</span><div><b>Your longest streak yet</b><span>Previous best was ${S.short(st.longestPast)}. Every minute now is a new record.</span></div>`
+      : `<span class="ico">🎯</span><div><b>${S.short(st.longestPast - ms)} to beat your best</b><span>Longest streak: ${S.short(st.longestPast)}</span></div>`;
+
+    $("remToggle").classList.toggle("off", !E.reminders.enabled);
+    $("remSub").textContent = E.reminders.enabled ? `${E.reminders.type} · ${E.reminders.days.join(", ")}` : "Off";
+    $("themeSw").style.backgroundImage = `url(${S.asset(S.theme, "square")})`;
+    $("themeName").textContent = t.name;
+    $("widgetSub").textContent = `Shows ${E.unit.toLowerCase()} · Small, Medium`;
+
+    $("histCount").textContent = `${E.history.length} resets`;
+    $("timeline").innerHTML =
+      `<div class="t-item now"><div class="d">${S.fmtDate(E.startedAt)} → now</div><div class="l">Current streak · ${S.short(ms)}</div></div>` +
+      E.history.map((h) => `<div class="t-item"><div class="d">${S.fmtDate(h.start)} → ${S.fmtDate(h.at)}</div><div class="l">Lasted ${S.short(h.length)}</div>${h.note ? `<div class="n">“${h.note}”</div>` : ""}</div>`).join("");
+  }
+  S.onChange(render);
+  S.tick(render);
+</script>
+</body>
+</html>

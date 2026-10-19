@@ -14,6 +14,8 @@ struct EventListView: View {
     @State private var selectedEvent: SinceEvent?
     @State private var showingCreateEvent = false
     @State private var draggingEvent: SinceEvent?
+    @State private var eventPendingDelete: SinceEvent?
+    @State private var eventBeingEdited: SinceEvent?
     
     private var isEmptyState: Bool {
         viewModel.events.isEmpty
@@ -83,8 +85,14 @@ struct EventListView: View {
                                         )
                                     )
                                     .contextMenu {
+                                        Button {
+                                            eventBeingEdited = event
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        
                                         Button(role: .destructive) {
-                                            viewModel.deleteEvent(event)
+                                            eventPendingDelete = event
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }
@@ -111,6 +119,11 @@ struct EventListView: View {
                         .padding(.bottom, 120) // Space for bottom nav
                     }
                     .ignoresSafeArea()
+                    // A drop outside any card would otherwise leave the dragged card shrunk
+                    .onDrop(of: [UTType.text], isTargeted: nil) { _ in
+                        draggingEvent = nil
+                        return false
+                    }
                 }
 
                 // Top gradient fade
@@ -134,6 +147,30 @@ struct EventListView: View {
                 }
                 
             }
+            .confirmationDialog(
+                "Delete \(eventPendingDelete?.title ?? "event")?",
+                isPresented: Binding(
+                    get: { eventPendingDelete != nil },
+                    set: { if !$0 { eventPendingDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let event = eventPendingDelete {
+                        viewModel.deleteEvent(event)
+                        showSuccessToast(title: event.title)
+                    }
+                    eventPendingDelete = nil
+                }
+            } message: {
+                Text("This removes the event and its history.")
+            }
+            // Opened from a notification or widget tap
+            .onReceive(viewModel.$eventToOpen.compactMap { $0 }) { event in
+                showingCreateEvent = false
+                selectedEvent = event
+                viewModel.eventToOpen = nil
+            }
             .sheet(item: $selectedEvent) { event in
                 EventDetailView(
                     event: event,
@@ -142,6 +179,20 @@ struct EventListView: View {
                         showSuccessToast(title: title)
                     }
                 )
+            }
+            .sheet(item: $eventBeingEdited) { event in
+                AddEventBottomSheet(
+                    viewModel: viewModel,
+                    isPresented: Binding(
+                        get: { eventBeingEdited != nil },
+                        set: { if !$0 { eventBeingEdited = nil } }
+                    ),
+                    editingEvent: event
+                )
+                .presentationDetents([.height(440)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(36)
+                .presentationBackground(.white)
             }
             .sheet(isPresented: $showingCreateEvent) {
                 AddEventBottomSheet(viewModel: viewModel, isPresented: $showingCreateEvent)
@@ -296,7 +347,7 @@ struct HomeEventCardView: View {
     }
     
     private func widgetTimeValue(for date: Date) -> String {
-        let elapsed = date.timeIntervalSince(event.startedAt)
+        let elapsed = max(0, date.timeIntervalSince(event.startedAt))
         
         switch event.widgetTimeUnit {
         case .hours:

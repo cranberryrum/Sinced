@@ -16,7 +16,15 @@ struct ResetSheetView: View {
     @State private var note = ""
     @State private var lastNowTap = Date.distantPast
     
+    /// Valid reset dates. Guards against a start date in the future (older
+    /// data), which would make `startedAt...now` an invalid range and crash.
+    private var resetRange: ClosedRange<Date> {
+        let now = Date()
+        return min(event.startedAt, now)...now
+    }
+    
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 Text("Reset time")
@@ -34,12 +42,12 @@ struct ResetSheetView: View {
             }
             
             HStack(spacing: 14) {
-                DatePicker("", selection: $resetDate, in: event.startedAt...Date(), displayedComponents: .date)
+                DatePicker("", selection: $resetDate, in: resetRange, displayedComponents: .date)
                     .datePickerStyle(.compact)
                     .labelsHidden()
                     .frame(maxWidth: .infinity, alignment: .leading)
                 
-                DatePicker("", selection: $resetDate, in: event.startedAt...Date(), displayedComponents: .hourAndMinute)
+                DatePicker("", selection: $resetDate, in: resetRange, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.compact)
                     .labelsHidden()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -90,7 +98,10 @@ struct ResetSheetView: View {
         .padding(.horizontal, 20)
         .padding(.top, 20)
         .padding(.bottom, 28)
-        .presentationDetents([.height(360)])
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        // Extra detent so large Dynamic Type can still reach the button
+        .presentationDetents([.height(360), .large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(32)
         .presentationBackground(.white)
@@ -100,7 +111,7 @@ struct ResetSheetView: View {
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalNote = trimmedNote.isEmpty ? nil : trimmedNote
         
-        viewModel.resetEvent(event, at: resetDate, note: finalNote)
+        viewModel.resetEvent(event, at: min(resetDate, Date()), note: finalNote)
         
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .light)
