@@ -14,6 +14,15 @@ struct DeleteConfirmationSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
+        // Scroll only when the content doesn't fit (e.g. large Dynamic Type),
+        // so the swipe gesture isn't competing with a scroll view normally
+        ViewThatFits(in: .vertical) {
+            content
+            ScrollView { content }
+        }
+    }
+    
+    private var content: some View {
         VStack(spacing: 18) {
             VStack(spacing: 8) {
                 Image(systemName: "trash.fill")

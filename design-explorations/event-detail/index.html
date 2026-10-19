@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Detail Explorations</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 48px 24px 96px; }
+  .intro h1 { font-size: 44px; letter-spacing: -0.035em; line-height: 1.05; margin: 0 0 14px; text-wrap: balance; }
+  .intro p { font-size: 18px; color: var(--muted); max-width: 680px; margin: 0; text-wrap: pretty; }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 40px; }
+  @media (max-width: 900px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+  .card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); padding: 20px; text-decoration: none; transition: transform .2s, box-shadow .2s; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -20px rgba(0,0,0,.3); }
+  .card .eyebrow { margin-bottom: 4px; }
+  .card h2 { font-size: 22px; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .card p { font-size: 14.5px; color: var(--muted); margin: 0 0 18px; }
+  .card .go { margin-top: auto; font-weight: 600; font-size: 14px; }
+
+  /* Wireframe thumbnails: a schematic of each IA */
+  .wf { height: 280px; border-radius: 22px; background: #f2f2f7; margin-bottom: 18px; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; position: relative; border: 5px solid #111; width: 150px; align-self: center; }
+  .wf div { border-radius: 6px; background: #fff; flex: none; font: 600 8.5px/1.2 var(--mono); color: #8a8a90; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .wf .t { background: var(--t-bg); color: #fff; }
+  .wf .k { background: #111; color: #fff; }
+  .wf .row { display: flex; gap: 4px; background: none; }
+  .wf .row > div { flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14.5px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  th, td { text-align: left; padding: 12px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+  thead th { border-top: 0; font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--chip); }
+  tbody th { font-weight: 600; width: 22%; }
+  td { color: var(--muted); }
+  .scroller { overflow-x: auto; }
+  .scroller table { min-width: 720px; }
+  h3.sec { font-size: 13px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 56px 0 0; }
+  .rec { margin-top: 16px; border: 1px solid var(--line); border-left: 4px solid var(--t-bg); border-radius: 14px; background: var(--panel); padding: 16px 20px; font-size: 15.5px; }
+  .rec p { margin: 0; }
+  .rec p + p { margin-top: 8px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header id="chrome"></header>
+<div class="wrap">
+  <section class="intro">
+    <p class="eyebrow">Sinced · Event detail</p>
+    <h1>Three directions for the event detail page</h1>
+    <p>All three show the same event (streak #5 of "No smoking", a personal best at 23 days) and all use the fields in <code>SinceEvent</code>: time unit, milestones, reset history with notes, reminders and card theme. What changes is the information architecture: what comes first, where actions live, and how history is told.</p>
+  </section>
+
+  <div class="cards">
+    <a class="card" href="a-immersive-card.html">
+      <div class="wf">
+        <div class="t" style="height:118px">HERO<br>counter · unit · badge</div>
+        <div style="height:30px">milestone bar</div>
+        <div style="height:22px">settings list</div>
+        <div style="height:40px">history</div>
+        <div class="row" style="position:absolute;left:10px;right:10px;bottom:10px"><div style="flex:0 0 22px;height:22px"></div><div class="k" style="height:22px">RESET</div></div>
+      </div>
+      <p class="eyebrow">Variant A</p>
+      <h2>Immersive card</h2>
+      <p>The home card expands into the page. The theme and time get the first screen; a sheet below holds progress, settings and history. Reset is pinned to the bottom.</p>
+      <span class="go">Open prototype →</span>
+    </a>
+    <a class="card" href="b-insights-dashboard.html">
+      <div class="wf">
+        <div style="height:16px;justify-content:flex-start;padding-left:4px">▢ title</div>
+        <div style="height:46px;flex-direction:column;gap:4px">D : H : M : S<span style="color:#fff;background:#007aff;padding:1px 6px;border-radius:3px;margin-top:3px">reset</span></div>
+        <div class="row"><div style="height:26px">stat</div><div style="height:26px">stat</div></div>
+        <div class="row"><div style="height:26px">stat</div><div style="height:26px">stat</div></div>
+        <div style="height:22px">milestone ladder</div>
+        <div style="height:46px">streak chart</div>
+        <div style="height:30px">widget + unit</div>
+      </div>
+      <p class="eyebrow">Variant B</p>
+      <h2>Insights dashboard</h2>
+      <p>A progress report. A live clock with reset, four derived stats, a milestone ladder, a chart of every streak, and a widget preview that holds the unit picker.</p>
+      <span class="go">Open prototype →</span>
+    </a>
+    <a class="card" href="c-journey-tabs.html">
+      <div class="wf" style="background:#fff">
+        <div style="height:18px;justify-content:flex-start;padding-left:4px;background:none;color:#111;font-size:11px">No smoking</div>
+        <div class="row"><div class="k" style="height:14px">Now</div><div style="height:14px;background:#eee">Journey</div><div style="height:14px;background:#eee">Settings</div></div>
+        <div style="height:104px;background:none"><div class="t" style="width:96px;height:96px;border-radius:50%;box-shadow:0 0 0 5px #eee">23</div></div>
+        <div style="height:14px;background:#f2f2f7">unit · next milestone</div>
+        <div style="height:22px;background:#f2f2f7">stat strip</div>
+        <div class="k" style="height:24px">HOLD TO RESET</div>
+      </div>
+      <p class="eyebrow">Variant C</p>
+      <h2>Journey tabs</h2>
+      <p>Three tabs for three jobs: <b>Now</b> (ring + hold-to-reset), <b>Journey</b> (history as chapters with milestones and notes) and <b>Settings</b>.</p>
+      <span class="go">Open prototype →</span>
+    </a>
+  </div>
+
+  <h3 class="sec">Side by side</h3>
+  <div class="scroller">
+  <table>
+    <thead><tr><th></th><th>A · Immersive card</th><th>B · Insights dashboard</th><th>C · Journey tabs</th></tr></thead>
+    <tbody>
+      <tr><th>Structure</th><td>Hero + one scrolling sheet</td><td>Single scroll of cards</td><td>Segmented tabs, each short</td></tr>
+      <tr><th>First thing you see</th><td>Themed card, big counter</td><td>Live D:H:M:S clock</td><td>Progress ring to next milestone</td></tr>
+      <tr><th>Reset</th><td>Pinned dock, confirm sheet</td><td>Inside the counter card, confirm sheet</td><td>Hold-to-reset (1.2s), no sheet</td></tr>
+      <tr><th>Time unit picker</th><td>Pills on the hero</td><td>Next to the widget preview</td><td>Under the ring, mirrored in Settings</td></tr>
+      <tr><th>History</th><td>Timeline list with notes</td><td>Bar chart of streaks + note on tap</td><td>Chapters with milestones reached</td></tr>
+      <tr><th>Reminders</th><td>Toggle row → sheet</td><td>Configured inline</td><td>Settings tab</td></tr>
+      <tr><th>Delete</th><td>••• overflow menu</td><td>Bottom of page</td><td>End of Settings tab</td></tr>
+      <tr><th>Theme's role</th><td>The whole page</td><td>Accent (thumb, chart, widget)</td><td>Ring + disc pattern</td></tr>
+      <tr><th>New data needed</th><td>None</td><td>None (stats come from <code>history</code>)</td><td>None</td></tr>
+      <tr><th>Build effort</th><td>Low–medium</td><td>High (chart, empty states)</td><td>Medium (tabs, hold gesture)</td></tr>
+      <tr><th>Best when</th><td>The app is about feeling and delight</td><td>Users want to track and understand patterns</td><td>The page will grow with more features</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sec">A starting opinion</h3>
+  <div class="rec">
+    <p><b>C's structure, with A's hero feel.</b> Tabs keep the motivating view clean as features get added, and chapters make reset history encouraging instead of a list of failures.</p>
+    <p>B's streak chart and stats could fit into the Journey tab later without changing the IA. Test hold-to-reset with a few users before committing; a confirm sheet is the safe fallback.</p>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>Sinced.mountChrome("index.html");</script>
+</body>
+</html>

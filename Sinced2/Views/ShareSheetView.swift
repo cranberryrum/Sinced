@@ -21,6 +21,12 @@ struct ShareSheetView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var previewImageData: Data?
     @State private var showPhotoPicker = false
+    @State private var saveError: SaveError?
+    
+    private enum SaveError: Identifiable {
+        case permissionDenied, failed
+        var id: Self { self }
+    }
     
     init(event: SinceEvent) {
         self.event = event
@@ -131,6 +137,27 @@ struct ShareSheetView: View {
         .onChange(of: selectedPhotoItem) { _, newItem in
             Task {
                 await loadPreviewImage(from: newItem)
+            }
+        }
+        .alert(item: $saveError) { error in
+            switch error {
+            case .permissionDenied:
+                return Alert(
+                    title: Text("Can't save to Photos"),
+                    message: Text("Allow Sinced to add photos in Settings to save your card."),
+                    primaryButton: .default(Text("Open Settings")) {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .failed:
+                return Alert(
+                    title: Text("Couldn't save image"),
+                    message: Text("Something went wrong saving your card. Please try again."),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
     }
@@ -319,8 +346,11 @@ struct ShareSheetView: View {
                     .openInIBooks
                 ]
                 
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let window = windowScene.windows.first,
+                let windowScene = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .first { $0.activationState == .foregroundActive }
+                if let windowScene,
+                   let window = windowScene.windows.first(where: \.isKeyWindow) ?? windowScene.windows.first,
                    let rootViewController = window.rootViewController {
                     
                     // Find the topmost presented view controller
@@ -358,6 +388,7 @@ struct ShareSheetView: View {
             
             guard let imageData = optimizedImageData else {
                 isSharing = false
+                saveError = .failed
                 return
             }
             
@@ -367,7 +398,7 @@ struct ShareSheetView: View {
             guard status == .authorized || status == .limited else {
                 await MainActor.run {
                     isSharing = false
-                    // Could show an alert here asking user to enable permissions in Settings
+                    saveError = .permissionDenied
                 }
                 return
             }
@@ -403,8 +434,7 @@ struct ShareSheetView: View {
             } catch {
                 await MainActor.run {
                     isSharing = false
-                    // Handle error - could show an alert
-                    print("Error saving photo: \(error)")
+                    saveError = .failed
                 }
             }
         }

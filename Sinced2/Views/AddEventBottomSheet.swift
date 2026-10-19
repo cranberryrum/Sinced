@@ -7,25 +7,48 @@
 
 import SwiftUI
 
+/// Sheet for adding a new event, or editing an existing one when `editingEvent` is set
 struct AddEventBottomSheet: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: EventViewModel
     @Binding var isPresented: Bool
+    /// The event being edited; nil when adding a new one
+    let editingEvent: SinceEvent?
     
-    @State private var eventTitle: String = ""
-    @State private var startDate: Date = Date()
-    @State private var selectedImage: UIImage? = nil
-    @State private var selectedTheme: CardTheme = .mosaic
+    @State private var eventTitle: String
+    @State private var startDate: Date
+    @State private var selectedImage: UIImage?
+    @State private var selectedTheme: CardTheme
+    /// Theme to fall back to if the photo picker is cancelled
+    @State private var themeBeforeCustom: CardTheme
+    /// Set when the user picks a new photo, so an unchanged photo isn't re-encoded
+    @State private var didPickNewImage = false
     @State private var showImagePicker: Bool = false
     @State private var showDatePicker: Bool = false
     @State private var showTimePicker: Bool = false
     @FocusState private var isTextFieldFocused: Bool
     
+    init(viewModel: EventViewModel, isPresented: Binding<Bool>, editingEvent: SinceEvent? = nil) {
+        self.viewModel = viewModel
+        self._isPresented = isPresented
+        self.editingEvent = editingEvent
+        
+        let theme = editingEvent?.cardTheme ?? .mosaic
+        let image = editingEvent?.imageData.flatMap(UIImage.init(data:))
+        self._eventTitle = State(initialValue: editingEvent?.title ?? "")
+        self._startDate = State(initialValue: editingEvent?.startedAt ?? Date())
+        self._selectedImage = State(initialValue: theme == .custom ? image : nil)
+        self._selectedTheme = State(initialValue: theme)
+        self._themeBeforeCustom = State(initialValue: theme == .custom ? .mosaic : theme)
+    }
+    
+    private var isEditing: Bool { editingEvent != nil }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Add an event")
+                Text(isEditing ? "Edit event" : "Add an event")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(.primaryBlue)
                     .tracking(-0.96)
@@ -57,6 +80,11 @@ struct AddEventBottomSheet: View {
                             .foregroundColor(Color(hex: "313131"))
                             .tracking(-0.64)
                             .focused($isTextFieldFocused)
+                            .onChange(of: eventTitle) { _, newValue in
+                                if newValue.count > Self.maxTitleLength {
+                                    eventTitle = String(newValue.prefix(Self.maxTitleLength))
+                                }
+                            }
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 58)
@@ -126,6 +154,9 @@ struct AddEventBottomSheet: View {
                                             HapticManager.shared.light()
                                             
                                             if theme == .custom {
+                                                if selectedTheme != .custom {
+                                                    themeBeforeCustom = selectedTheme
+                                                }
                                                 selectedTheme = .custom
                                                 showImagePicker = true
                                             } else {
@@ -155,7 +186,7 @@ struct AddEventBottomSheet: View {
             // Action Buttons
             VStack(spacing: 0) {
                 Button(action: { saveEvent() }) {
-                    Text("Save")
+                    Text(isEditing ? "Save changes" : "Save")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                         .tracking(-0.64)
@@ -163,7 +194,10 @@ struct AddEventBottomSheet: View {
                         .frame(height: 48)
                         .background(isSaveEnabled ? Color.primaryBlue : Color.mutedBlue)
                         .cornerRadius(50)
+                        // Fade between enabled/disabled instead of snapping
+                        .animation(.easeOut(duration: 0.2), value: isSaveEnabled)
                 }
+                .buttonStyle(PressableButtonStyle())
                 .disabled(!isSaveEnabled)
             }
             .padding(.horizontal, 16)
@@ -173,11 +207,16 @@ struct AddEventBottomSheet: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .preferredColorScheme(.light)
         .sheet(isPresented: $showImagePicker) {
-            ImagePicker(image: $selectedImage, sourceType: .photoLibrary, requireSquareAspect: true)
+            ImagePicker(image: Binding(
+                get: { selectedImage },
+                set: { newImage in
+                    selectedImage = newImage
+                    if newImage != nil { didPickNewImage = true }
+                }
+            ), sourceType: .photoLibrary, requireSquareAspect: true)
                 .onDisappear {
-                    if selectedImage != nil {
-                        selectedTheme = .custom
-                    }
+                    // Cancelled without a photo: don't leave an empty custom card
+                    selectedTheme = selectedImage != nil ? .custom : themeBeforeCustom
                 }
         }
         .sheet(isPresented: $showDatePicker) {
@@ -196,8 +235,20 @@ struct AddEventBottomSheet: View {
         CardTheme.displayThemes + [.custom]
     }
     
+    static let maxTitleLength = 40
+    
+    private var trimmedTitle: String {
+        eventTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
     private var isSaveEnabled: Bool {
-        !eventTitle.isEmpty
+        guard !trimmedTitle.isEmpty else { return false }
+        // When editing, only enable Save once something has actually changed
+        guard let editingEvent else { return true }
+        return trimmedTitle != editingEvent.title
+            || abs(startDate.timeIntervalSince(editingEvent.startedAt)) >= 1
+            || selectedTheme != editingEvent.cardTheme
+            || didPickNewImage
     }
     
     // MARK: - Helper Functions
@@ -215,14 +266,20 @@ struct AddEventBottomSheet: View {
     }
     
     private func saveEvent() {
-        guard !eventTitle.isEmpty else { return }
+        guard isSaveEnabled else { return }
+        
+        if let editingEvent {
+            saveChanges(to: editingEvent)
+            return
+        }
 
         // Convert UIImage to Data if image is selected (only for custom theme)
         let imageData = selectedTheme == .custom ? selectedImage?.jpegData(compressionQuality: 0.8) : nil
         
         let newEvent = SinceEvent(
-            title: eventTitle,
-            startedAt: startDate,
+            title: trimmedTitle,
+            // A start in the future would give negative counts
+            startedAt: min(startDate, Date()),
             imageData: imageData,
             cardTheme: selectedTheme
         )
@@ -234,6 +291,38 @@ struct AddEventBottomSheet: View {
         HapticManager.shared.success()
         
         isPresented = false
+    }
+    
+    /// Apply edits while keeping the event's id, history, reminders and widget unit
+    private func saveChanges(to original: SinceEvent) {
+        var updated = original
+        updated.title = trimmedTitle
+        updated.startedAt = min(startDate, Date())
+        updated.cardTheme = selectedTheme
+        
+        if selectedTheme != .custom {
+            updated.imageData = nil
+        } else if didPickNewImage {
+            updated.imageData = selectedImage?.jpegData(compressionQuality: 0.8)
+        }
+        
+        viewModel.updateEvent(updated)
+        HapticManager.shared.success()
+        isPresented = false
+    }
+}
+
+// MARK: - Pressable Button Style
+
+/// Subtle press-down feedback for primary buttons
+struct PressableButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1.0)
+            .opacity(configuration.isPressed && reduceMotion ? 0.85 : 1.0)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
 
@@ -329,11 +418,11 @@ struct DatePickerSheet: View {
             
             // Date Picker
             if mode.contains(.date) {
-                DatePicker("", selection: $date, displayedComponents: .date)
+                DatePicker("", selection: $date, in: ...Date(), displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .labelsHidden()
             } else {
-                DatePicker("", selection: $date, displayedComponents: .hourAndMinute)
+                DatePicker("", selection: $date, in: ...Date(), displayedComponents: .hourAndMinute)
                     .datePickerStyle(.wheel)
                     .labelsHidden()
             }

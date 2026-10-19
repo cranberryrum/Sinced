@@ -2,18 +2,35 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleIdentifier</key>
-	<string>Kolte.Sinced2</string>
-	<key>CFBundleName</key>
-	<string>Sinced2</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
+	<key>CFBundleDisplayName</key>
+	<string>Sinced</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.adityakolte.Sinced2</string>
+	<key>CFBundleName</key>
+	<string>Sinced2</string>
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.adityakolte.Sinced2</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sinced</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Sinced needs access to save your event cards to your photo library for sharing.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>GeistMono-Black.ttf</string>
@@ -26,8 +43,6 @@
 		<string>GeistMono-SemiBold.ttf</string>
 		<string>GeistMono-Thin.ttf</string>
 	</array>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Sinced needs access to save your event cards to your photo library for sharing.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -42,8 +57,8 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
 </dict>
 </plist>

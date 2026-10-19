@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B · Insights Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Nunito:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .content { padding: 56px 16px 60px; }
+  .top-fade { position: absolute; inset: 0 0 auto 0; height: 58px; z-index: 30; pointer-events: none; background: linear-gradient(180deg, var(--ios-bg) 62%, rgba(242,242,247,0)); }
+  .nav { display: flex; justify-content: space-between; align-items: center; height: 44px; padding: 0 4px; }
+  .nav .circle { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ios-fill); display: grid; place-items: center; }
+  .nav .done { border: 0; background: none; color: var(--blue); font: 600 17px var(--round); padding: 0; }
+  .nav .l { display: flex; gap: 8px; }
+  .head { display: flex; gap: 14px; align-items: center; margin: 6px 4px 18px; }
+  .thumb { width: 58px; height: 58px; border-radius: 16px; background-size: cover; flex: none; box-shadow: 0 0 0 .5px rgba(0,0,0,.08); }
+  .head h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+  .head p { margin: 2px 0 0; font-size: 14.5px; color: var(--ios-2); font-weight: 600; }
+
+  .card { background: var(--ios-card); border-radius: 22px; padding: 16px; margin-bottom: 12px; }
+  .card-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .cap { font-size: 12.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ios-2); }
+  .card-h a { font-size: 14px; color: var(--blue); font-weight: 600; text-decoration: none; }
+
+  .clock { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .clock div { background: var(--ios-bg); border-radius: 14px; padding: 12px 4px 8px; text-align: center; }
+  .clock b { display: block; font: 500 34px/1 var(--mono); letter-spacing: -0.06em; font-variant-numeric: tabular-nums; }
+  .clock span { font-size: 11.5px; font-weight: 700; color: var(--ios-2); text-transform: uppercase; letter-spacing: .05em; }
+  .clock div:first-child { background: var(--t-bg); color: #fff; }
+  .clock div:first-child span { color: rgba(255,255,255,.8); }
+  .started { display: flex; justify-content: space-between; align-items: center; margin: 12px 2px 14px; font-size: 14px; color: var(--ios-2); font-weight: 600; }
+  .pb { background: #e7f8ec; color: #1f8a3f; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 800; }
+  .reset { width: 100%; height: 50px; border: 0; border-radius: 14px; background: var(--blue); color: #fff; font: 700 17px var(--round); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .reset:active { transform: scale(.98); }
+
+  .bento { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .stat { background: var(--ios-card); border-radius: 20px; padding: 14px 14px 12px; }
+  .stat .cap { font-size: 11.5px; }
+  .stat b { display: block; font: 500 28px/1.1 var(--mono); letter-spacing: -0.06em; margin: 8px 0 2px; }
+  .stat small { font-size: 13px; color: var(--ios-2); font-weight: 600; }
+
+  .ladder { position: relative; height: 64px; margin: 6px 10px 0; }
+  .ladder .track { position: absolute; left: 0; right: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--ios-bg); }
+  .ladder .fill { position: absolute; left: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--t-bg); transition: width .6s; }
+  .ladder .node { position: absolute; top: 4px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .ladder .dot { width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 3px solid var(--ios-bg); display: grid; place-items: center; font-size: 11px; color: #fff; font-weight: 900; }
+  .ladder .node.done .dot { background: var(--t-bg); border-color: var(--t-bg); }
+  .ladder .node.next .dot { border-color: var(--t-bg); }
+  .ladder .node span { font: 600 12px var(--mono); color: var(--ios-2); }
+  .ladder .node.next span { color: var(--ios-label); }
+  .next-line { font-size: 14.5px; font-weight: 600; margin-top: 4px; padding-top: 12px; border-top: .5px solid var(--ios-sep); }
+  .next-line span { color: var(--ios-2); }
+
+  .chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding: 0 4px; position: relative; }
+  .chart .avg { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--ios-3); pointer-events: none; }
+  .chart .avg span { position: absolute; left: 0; top: -17px; font: 600 11px var(--mono); color: var(--ios-2); background: #fff; padding-right: 4px; }
+  .bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; border: 0; background: none; padding: 0; gap: 6px; }
+  .bar i { width: 100%; border-radius: 8px 8px 4px 4px; background: #e5e5ea; transition: height .5s cubic-bezier(.2,.8,.2,1), background .2s; }
+  .bar.cur i { background: var(--t-bg); }
+  .bar.sel i { box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px var(--ios-label); }
+  .bar em { font: 600 11px var(--mono); font-style: normal; color: var(--ios-2); }
+  .bar-x { display: flex; gap: 10px; padding: 8px 4px 0; }
+  .bar-x span { flex: 1; text-align: center; font-size: 11.5px; color: var(--ios-2); font-weight: 700; }
+  .detail { margin-top: 12px; background: var(--ios-bg); border-radius: 14px; padding: 12px 14px; min-height: 64px; }
+  .detail b { font-size: 15.5px; }
+  .detail p { margin: 2px 0 0; font-size: 14px; color: var(--ios-2); }
+  .detail q { font-style: italic; }
+
+  .widget-row { display: flex; gap: 14px; align-items: center; }
+  .widget { width: 132px; height: 132px; border-radius: 26px; background-size: cover; position: relative; flex: none; display: flex; flex-direction: column; justify-content: flex-end; padding: 12px; color: #fff; box-shadow: 0 8px 20px -8px rgba(0,0,0,.35); overflow: hidden; }
+  .widget::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(0,0,0,.35)); }
+  .widget b, .widget span { position: relative; }
+  .widget b { font: 500 22px/1 var(--mono); letter-spacing: -0.06em; }
+  .widget span { font-size: 12px; font-weight: 700; opacity: .85; margin-top: 2px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: 1; }
+  .seg button { border: 0; height: 36px; border-radius: 10px; background: var(--ios-bg); font: 600 14px var(--round); }
+  .seg button.on { background: var(--ios-label); color: #fff; }
+  .wlabel { font-size: 13px; color: var(--ios-2); font-weight: 600; margin: 0 0 8px; }
+
+  .rrow { display: flex; justify-content: space-between; align-items: center; }
+  .rrow b { font-size: 16.5px; }
+  .rrow small { display: block; font-size: 13.5px; color: var(--ios-2); font-weight: 600; }
+  .toggle { width: 51px; height: 31px; border-radius: 16px; background: var(--green); border: 0; position: relative; flex: none; transition: background .25s; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 22px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.2); transition: left .25s cubic-bezier(.3,.7,.3,1); }
+  .toggle.off { background: rgba(120,120,128,.16); }
+  .toggle.off::after { left: 2px; }
+  .rem-body { overflow: hidden; transition: max-height .35s, opacity .25s; max-height: 200px; }
+  .rem-body.off { max-height: 0; opacity: 0; }
+  .ios-seg { display: flex; background: var(--ios-fill); border-radius: 9px; padding: 2px; margin: 14px 0 12px; }
+  .ios-seg button { flex: 1; border: 0; background: none; height: 30px; border-radius: 7px; font: 600 14px var(--round); }
+  .ios-seg button.on { background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+  .days { display: flex; justify-content: space-between; }
+  .days button { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--ios-bg); font: 700 14px var(--round); color: var(--ios-2); }
+  .days button.on { background: var(--t-bg); color: #fff; }
+
+  .delete { display: block; width: 100%; border: 0; background: var(--ios-card); color: var(--red); height: 50px; border-radius: 16px; font: 600 16.5px var(--round); margin-top: 20px; }
+  .foot { text-align: center; font-size: 12.5px; color: var(--ios-2); margin: 10px 0 0; }
+</style>
+</head>
+<body>
+<header id="chrome"></header>
+<main class="stage">
+  <div class="device">
+    <div class="screen" id="screen">
+      <div class="top-fade"></div>
+      <div class="scroll">
+        <div class="content">
+          <div class="nav">
+            <div class="l">
+              <button class="circle" aria-label="Share"><svg width="15" height="17" viewBox="0 0 20 22" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14V2M5.5 6.5 10 2l4.5 4.5M6 9.5H4a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6.5a2 2 0 0 0-2-2h-2"/></svg></button>
+              <button class="circle" aria-label="Edit"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L5 14H2v-3z"/></svg></button>
+            </div>
+            <button class="done">Done</button>
+          </div>
+
+          <div class="head">
+            <div class="thumb" id="thumb"></div>
+            <div><h1>No smoking</h1><p id="headSub"></p></div>
+          </div>
+
+          <section class="card">
+            <div class="card-h"><span class="cap">Current streak</span><span class="pb" id="pb">Personal best</span></div>
+            <div class="clock" id="clock"></div>
+            <div class="started" id="started"></div>
+            <button class="reset" id="resetBtn"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9a6.5 6.5 0 1 0 2-4.7M2.5 2.5v3.5H6"/></svg>Reset timer</button>
+          </section>
+
+          <div class="bento" id="bento"></div>
+
+          <section class="card">
+            <div class="card-h"><span class="cap">Milestones</span><span class="cap" id="msCount"></span></div>
+            <div class="ladder" id="ladder"></div>
+            <div class="next-line" id="nextLine"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-h"><span class="cap">Every streak</span><a href="#" onclick="return false">All resets</a></div>
+            <div class="chart" id="chart"></div>
+            <div class="bar-x" id="barX"></div>
+            <div class="detail" id="detail"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-h"><span class="cap">On your Home Screen</span></div>
+            <div class="widget-row">
+              <div class="widget" id="widget"><b id="wVal"></b><span>Since No smoking</span></div>
+              <div style="flex:1">
+                <p class="wlabel">Count in</p>
+                <div class="seg" id="unitSeg"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="rrow"><div><b>Reminders</b><small id="remSub"></small></div><button class="toggle" id="remToggle" aria-label="Reminders"></button></div>
+            <div class="rem-body" id="remBody">
+              <div class="ios-seg" id="freq"><button>Daily</button><button class="on">Weekly</button></div>
+              <div class="days" id="days"></div>
+            </div>
+          </section>
+
+          <button class="delete">Delete event</button>
+          <p class="foot" id="foot"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="notes">
+    <p class="eyebrow">Variant B</p>
+    <h1>Insights dashboard</h1>
+    <p class="thesis">This version treats the page as a progress report. It answers "how am I doing?" with data. Reset history is shown as a chart of every streak, milestones sit on a ladder, and the unit picker moves next to the widget preview, since that's what it controls.</p>
+
+    <h2>Information architecture</h2>
+    <ol class="ia">
+      <li><b>Header: identity</b><small>Theme thumbnail, title, tracking-since date and streak number. Share and edit sit top-left, Done top-right.</small></li>
+      <li><b>Now: live clock and reset</b><small>A D : H : M : S clock that ticks every second. Reset sits inside the card for the thing it resets. A personal-best badge shows when earned.</small></li>
+      <li><b>Performance: four stats</b><small>Longest, average, resets, and time tracked. All of it comes from <code>history</code> and needs no new data.</small></li>
+      <li><b>Journey: milestones and streak chart</b><small>A 1 → 7 → 30 → 90 → 365 ladder. Bars show every streak against the average; tap a bar to read its reset note.</small></li>
+      <li><b>Surfaces: widget and reminders</b><small>A live widget preview with the unit picker (<code>widgetTimeUnit</code>). Reminders expand inline, with no extra sheet.</small></li>
+      <li><b>Manage</b><small>Delete sits at the very bottom, away from Reset.</small></li>
+    </ol>
+
+    <h2>Trade-offs</h2>
+    <div class="tradeoffs">
+      <div><h3>Why pick it</h3><ul>
+        <li>Makes reset history motivating instead of a plain log</li>
+        <li>The unit picker finally explains itself (it's for the widget)</li>
+        <li>Reminders are configured in place, so there's no extra sheet</li>
+        <li>Adding goals or insights later is easy</li>
+      </ul></div>
+      <div><h3>Watch out for</h3><ul>
+        <li>The densest variant, and the most to build</li>
+        <li>Brand and theme carry less feeling here</li>
+        <li>New events with 0 resets need empty states for the chart and stats</li>
+      </ul></div>
+    </div>
+    <p class="try"><b>Try:</b> tap the bars in the chart, change "Count in" to update the widget, turn reminders off and on, and reset to watch a new bar appear.</p>
+  </aside>
+</main>
+
+<script src="shared.js"></script>
+<script>
+  const S = Sinced, E = S.event;
+  const $ = (id) => document.getElementById(id);
+  const screen = $("screen");
+  S.mountChrome("b-insights-dashboard.html");
+  S.mountFrame(screen);
+
+  let selected = -1; // -1 = current streak
+  $("resetBtn").onclick = () => S.resetSheet(screen);
+  $("remToggle").onclick = () => { E.reminders.enabled = !E.reminders.enabled; render(); };
+  $("freq").onclick = (e) => { if (e.target.tagName === "BUTTON") { E.reminders.type = e.target.textContent; render(); } };
+  $("days").onclick = (e) => {
+    const d = e.target.dataset.d; if (!d) return;
+    const i = E.reminders.days.indexOf(d);
+    i >= 0 ? E.reminders.days.splice(i, 1) : E.reminders.days.push(d);
+    render();
+  };
+  $("unitSeg").onclick = (e) => { const u = e.target.dataset.u; if (u) { E.unit = u; render(); } };
+  $("chart").onclick = (e) => { const b = e.target.closest(".bar"); if (b) { selected = +b.dataset.i; render(); } };
+  S.onChange(() => { selected = -1; });
+
+  const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  function render() {
+    const ms = S.elapsed(), p = S.parts(ms), st = S.stats();
+    $("thumb").style.backgroundImage = `url(${S.asset(S.theme, "square")})`;
+    $("headSub").textContent = `Tracking since ${S.fmtDate(E.createdAt)} · Streak #${st.streakNo}`;
+
+    $("clock").innerHTML = [[p.d, "days"], [S.pad(p.h), "hrs"], [S.pad(p.m), "min"], [S.pad(p.s), "sec"]]
+      .map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join("");
+    $("started").innerHTML = `<span>Started ${S.fmtDate(E.startedAt, { weekday: "short" })} at ${S.fmtTime(E.startedAt)}</span>`;
+    $("pb").style.visibility = st.isBest ? "visible" : "hidden";
+
+    $("bento").innerHTML = [
+      ["Longest", S.short(st.longest), st.isBest ? "That's this one" : "Beat it in " + S.short(st.longest - ms)],
+      ["Average", S.short(st.average), `across ${st.streakNo} streaks`],
+      ["Resets", st.resets, st.resets ? "last on " + S.fmtDate(E.history[0].at) : "none yet"],
+      ["Tracking", S.days(st.tracking) + "d", "since " + S.fmtDate(E.createdAt)],
+    ].map(([c, v, s]) => `<div class="stat"><span class="cap">${c}</span><b>${v}</b><small>${s}</small></div>`).join("");
+
+    // Milestone ladder, evenly spaced nodes with interpolated fill
+    const d = ms / S.DAY, M = S.MILESTONES;
+    const pos = (i) => (i / (M.length - 1)) * 100;
+    let fillPct = 100, reached = 0;
+    for (let i = 0; i < M.length; i++) {
+      if (d >= M[i]) { reached++; continue; }
+      const prevV = i === 0 ? 0 : M[i - 1], prevP = i === 0 ? 0 : pos(i - 1);
+      fillPct = prevP + (pos(i) - prevP) * ((d - prevV) / (M[i] - prevV));
+      break;
+    }
+    const labels = { 1: "1d", 7: "7d", 30: "30d", 90: "90d", 365: "1y" };
+    $("ladder").innerHTML = `<div class="track"></div><div class="fill" style="width:${fillPct}%"></div>` +
+      M.map((m, i) => `<div class="node ${d >= m ? "done" : i === reached ? "next" : ""}" style="left:${pos(i)}%"><div class="dot">${d >= m ? "✓" : ""}</div><span>${labels[m]}</span></div>`).join("");
+    $("msCount").textContent = `${reached} of ${M.length}`;
+    const nm = S.nextMilestone(ms);
+    $("nextLine").innerHTML = nm ? `Next: ${nm.days} days on ${S.fmtDate(nm.date, { weekday: "short" })} <span>· ${S.short(nm.remaining)} to go</span>` : "Every milestone reached";
+
+    // Streak chart (oldest → newest, current last)
+    const streaks = E.history.slice().reverse().map((h, i) => ({ ...h, idx: i })).concat([{ length: ms, cur: true, start: E.startedAt, idx: -1 }]);
+    const max = Math.max(...streaks.map((s) => s.length));
+    const avgPx = (st.average / max) * 110;
+    $("chart").innerHTML = `<div class="avg" style="bottom:${avgPx}px"><span>avg ${S.short(st.average)}</span></div>` +
+      streaks.map((s) => `<button class="bar ${s.cur ? "cur" : ""} ${s.idx === selected ? "sel" : ""}" data-i="${s.idx}"><em>${S.days(s.length)}d</em><i style="height:${Math.max(4, (s.length / max) * 110)}px"></i></button>`).join("");
+    $("barX").innerHTML = streaks.map((s, i) => `<span>${s.cur ? "Now" : "#" + (i + 1)}</span>`).join("");
+    const sel = streaks.find((s) => s.idx === selected) || streaks[streaks.length - 1];
+    $("detail").innerHTML = sel.cur
+      ? `<b>Current streak · ${S.short(sel.length)}</b><p>Started ${S.fmtDate(sel.start)}. ${st.isBest ? "Longest so far." : ""}</p>`
+      : `<b>${S.fmtDate(sel.start)} → ${S.fmtDate(sel.at)} · ${S.short(sel.length)}</b><p>${sel.note ? `<q>${sel.note}</q>` : "No note added"}</p>`;
+
+    $("widget").style.backgroundImage = `url(${S.asset(S.theme, "square")})`;
+    const uv = S.unitValue(E.unit, ms);
+    $("wVal").textContent = `${uv.value} ${uv.word}`;
+    $("unitSeg").innerHTML = S.UNITS.map((u) => `<button data-u="${u}" class="${u === E.unit ? "on" : ""}">${u}</button>`).join("");
+
+    const r = E.reminders;
+    $("remToggle").classList.toggle("off", !r.enabled);
+    $("remBody").classList.toggle("off", !r.enabled);
+    $("remSub").textContent = !r.enabled ? "Off" : r.type === "Daily" ? `Every day at ${r.time}` : `${r.days.length ? r.days.join(", ") : "Pick days"}, random time 9 AM–8 PM`;
+    $("freq").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.textContent === r.type));
+    $("days").style.display = r.type === "Weekly" ? "flex" : "none";
+    $("days").innerHTML = WEEK.map((w) => `<button data-d="${w}" class="${r.days.includes(w) ? "on" : ""}">${w[0]}</button>`).join("");
+
+    $("foot").textContent = `Created ${S.fmtDate(E.createdAt, { year: "numeric" })}`;
+  }
+  S.onChange(render);
+  S.tick(render);
+</script>
+</body>
+</html>
