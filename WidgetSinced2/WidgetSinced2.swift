@@ -10,16 +10,24 @@ import SwiftUI
 
 // MARK: - Timeline Provider
 struct SinceWidgetProvider: AppIntentTimelineProvider {
+    /// Shown in the widget gallery and while loading
+    static let sampleEvent = SinceEvent(
+        title: "No smoking",
+        startedAt: Date().addingTimeInterval(-12 * 86400),
+        cardTheme: .mosaic
+    )
+    
     func placeholder(in context: Context) -> SinceWidgetEntry {
         SinceWidgetEntry(
             date: Date(),
-            event: nil,
+            event: Self.sampleEvent,
             configuration: SelectEventIntent()
         )
     }
 
     func snapshot(for configuration: SelectEventIntent, in context: Context) async -> SinceWidgetEntry {
-        let event = getEvent(for: configuration)
+        // The gallery preview should show a real-looking widget even with no events yet
+        let event = getEvent(for: configuration) ?? (context.isPreview ? Self.sampleEvent : nil)
         return SinceWidgetEntry(
             date: Date(),
             event: event,
@@ -28,34 +36,43 @@ struct SinceWidgetProvider: AppIntentTimelineProvider {
     }
     
     func timeline(for configuration: SelectEventIntent, in context: Context) async -> Timeline<SinceWidgetEntry> {
-        let event = getEvent(for: configuration)
-        let currentDate = Date()
+        let now = Date()
         
-        var entries: [SinceWidgetEntry] = []
+        guard let event = getEvent(for: configuration) else {
+            // The app reloads widgets whenever events change
+            return Timeline(entries: [SinceWidgetEntry(date: now, event: nil, configuration: configuration)], policy: .never)
+        }
         
-        // Generate entries for the next 24 hours, updating every hour
-        for hourOffset in 0..<24 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SinceWidgetEntry(
-                date: entryDate,
-                event: event,
-                configuration: configuration
-            )
-            entries.append(entry)
+        // One entry now, then one at each moment the displayed count changes
+        // (startedAt + n units), so the number ticks over on time.
+        let changeDates = event.countChangeDates(after: now, limit: event.widgetTimeUnit.timelineSteps)
+        let entries = ([now] + changeDates).map {
+            SinceWidgetEntry(date: $0, event: event, configuration: configuration)
         }
 
         return Timeline(entries: entries, policy: .atEnd)
     }
 
-    private func getEvent(for configuration: SelectEventIntent) -> SinceEvent? {
+    func getEvent(for configuration: SelectEventIntent) -> SinceEvent? {
         guard let selectedEvent = configuration.selectedEvent else {
-            // Return first non-archived event as default
-            let events = StorageManager.shared.loadEvents()
-            return events.first { !$0.isArchived }
+            // Default to the first active event
+            return WidgetEvents.active().first
         }
         
-        guard let uuid = UUID(uuidString: selectedEvent.id) else { return nil }
-        return StorageManager.shared.getEvent(byId: uuid)
+        // nil if the event was deleted or archived
+        return WidgetEvents.event(id: selectedEvent.id)
+    }
+}
+
+extension WidgetTimeUnit {
+    /// Length of one unit, matching the app's display math (30-day months, 365-day years)
+    var seconds: TimeInterval {
+        switch self {
+        case .hours: return 3600
+        case .days: return 86400
+        case .months: return 86400 * 30
+        case .years: return 86400 * 365
+        }
     }
 }
 
@@ -74,29 +91,69 @@ struct SinceWidgetEntryView: View {
     var body: some View {
         if let event = entry.event {
             SmallWidgetView(event: event, currentDate: entry.date)
+                // Tapping opens this event in the app
+                .widgetURL(event.widgetURL)
         } else {
             PlaceholderWidgetView()
         }
     }
 }
 
-// MARK: - Placeholder View (No Event Selected)
-struct PlaceholderWidgetView: View {
+// MARK: - Widget Background
+/// Drawn as the widget's container background so iOS can handle it properly
+/// in tinted and clear Home Screen modes.
+struct SinceWidgetBackgroundView: View {
+    let event: SinceEvent?
+    
     var body: some View {
-        ZStack {
-            Color(hex: "4D4AFD")
-            
-            VStack(spacing: 4) {
-                Text("Select Event")
-                    .font(.custom("GeistMono-Medium", size: 16))
-                    .foregroundColor(.white)
-                
-                Text("Tap to configure")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.6))
+        GeometryReader { geometry in
+            if let event, let imageData = event.imageData, let uiImage = UIImage(data: imageData) {
+                ZStack(alignment: .bottom) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .widgetAccentedRenderingMode(.fullColor)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipped()
+                    
+                    // From Figma: gradient from rgba(36,36,36,0) to #242424, height 138/328 ≈ 42%
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color(hex: "242424").opacity(0),
+                            Color(hex: "242424").opacity(0.7),
+                            Color(hex: "242424")
+                        ]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: geometry.size.height * 0.42)
+                }
+            } else if let event {
+                ZStack {
+                    event.cardTheme.backgroundColor
+                    ThemeDecorationView(theme: event.cardTheme, size: geometry.size)
+                }
+            } else {
+                Color(hex: "4D4AFD")
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+// MARK: - Placeholder View (No Event Available)
+struct PlaceholderWidgetView: View {
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("No event")
+                .font(.custom("GeistMono-Medium", size: 16))
+                .foregroundColor(.white)
+            
+            Text("Add one in Sinced, then hold to choose it")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.6))
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 12)
     }
 }
 
@@ -107,13 +164,10 @@ struct SmallWidgetView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            // Check if event has custom image
-            if let imageData = event.imageData,
-               let uiImage = UIImage(data: imageData) {
+            if let imageData = event.imageData, UIImage(data: imageData) != nil {
                 // Custom Image Widget Design (from Figma)
                 CustomImageWidgetView(
                     event: event,
-                    image: uiImage,
                     formattedTime: formattedTimeValue,
                     size: geometry.size
                 )
@@ -126,62 +180,23 @@ struct SmallWidgetView: View {
                 )
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
     
     private var formattedTimeValue: String {
-        let elapsed = currentDate.timeIntervalSince(event.startedAt)
-        
-        switch event.widgetTimeUnit {
-        case .hours:
-            let hours = Int(elapsed / 3600)
-            return "\(hours) \(hours == 1 ? "HOUR" : "HOURS")"
-        case .days:
-            let days = Int(elapsed / 86400)
-            return "\(days) \(days == 1 ? "DAY" : "DAYS")"
-        case .months:
-            let months = Int(elapsed / (86400 * 30))
-            return "\(months) \(months == 1 ? "MONTH" : "MONTHS")"
-        case .years:
-            let years = Int(elapsed / (86400 * 365))
-            return "\(years) \(years == 1 ? "YEAR" : "YEARS")"
-        }
+        event.countLabel(at: currentDate)
     }
 }
 
 // MARK: - Custom Image Widget View (Figma: node-id=346-3624)
-// User uploaded image with gradient overlay and text at bottom-left
+// Text at bottom-left over the user's image (image is in the container background)
 struct CustomImageWidgetView: View {
     let event: SinceEvent
-    let image: UIImage
     let formattedTime: String
     let size: CGSize
     
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Full-bleed user image
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: size.width, height: size.height)
-                .clipped()
-            
-            // Dark gradient overlay with blur at bottom
-            // From Figma: gradient from rgba(36,36,36,0) to #242424, height 138/328 ≈ 42%
-            VStack(spacing: 0) {
-                Spacer()
-                
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(hex: "242424").opacity(0),
-                        Color(hex: "242424").opacity(0.7),
-                        Color(hex: "242424")
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: size.height * 0.42)
-            }
+            Color.clear
             
             // Text content at bottom-left
             // From Figma: left-24px padding, positioned at bottom
@@ -199,47 +214,41 @@ struct CustomImageWidgetView: View {
                     .font(.system(size: size.width < 160 ? 10 : 12, weight: .medium, design: .rounded))
                     .foregroundColor(.white.opacity(0.6))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .truncationMode(.tail)
             }
-            .padding(.leading, size.width * 0.073)  // 24/328 ≈ 7.3%
+            .padding(.horizontal, size.width * 0.073)  // 24/328 ≈ 7.3%, both sides so long titles truncate
             .padding(.bottom, size.height * 0.12)   // Bottom padding
         }
+        .frame(width: size.width, height: size.height)
     }
 }
 
 // MARK: - Theme Based Widget View (Preset themes)
+// Centered text over the theme (theme is in the container background)
 struct ThemeBasedWidgetView: View {
     let event: SinceEvent
     let formattedTime: String
     let size: CGSize
     
     var body: some View {
-        ZStack {
-            // Background color based on theme
-            event.cardTheme.backgroundColor
+        VStack(spacing: 2) {
+            // Time value - using Geist Mono Medium
+            Text(formattedTime)
+                .font(.custom("GeistMono-Medium", size: size.width < 160 ? 18 : 22))
+                .tracking(-1.5)
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             
-            // Theme decorative elements
-            ThemeDecorationView(theme: event.cardTheme, size: size)
-            
-            // Content overlay - centered
-            VStack(spacing: 2) {
-                // Time value - using Geist Mono Medium
-                Text(formattedTime)
-                    .font(.custom("GeistMono-Medium", size: size.width < 160 ? 18 : 22))
-                    .tracking(-1.5)
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                
-                // Event title - using SF Pro Rounded
-                Text("Since \(event.title)")
-                    .font(.system(size: size.width < 160 ? 11 : 13, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.6))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .padding(.horizontal, 8)
+            // Event title - using SF Pro Rounded
+            Text("Since \(event.title)")
+                .font(.system(size: size.width < 160 ? 11 : 13, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.6))
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
+        .padding(.horizontal, size.width * 0.09)  // ~15pt on a small widget
+        .frame(width: size.width, height: size.height)
     }
 }
 
@@ -272,6 +281,7 @@ struct ThemeImageView: View {
             Image(name, bundle: nil)
                 .renderingMode(.original)
                 .resizable()
+                .widgetAccentedRenderingMode(.fullColor)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: size.width, height: size.height)
                 .clipped()
@@ -639,66 +649,15 @@ struct SinceSmallWidget: Widget {
         ) { entry in
             SinceWidgetEntryView(entry: entry)
                 .containerBackground(for: .widget) {
-                    Color.clear
+                    SinceWidgetBackgroundView(event: entry.event)
                 }
         }
         .configurationDisplayName("Since Event")
         .description("Track time since your selected event")
         .supportedFamilies([.systemSmall])
         .contentMarginsDisabled()
-    }
-}
-
-// MARK: - Legacy Widget (keeping for compatibility)
-struct WidgetSinced2: Widget {
-    let kind: String = "WidgetSinced2"
-
-    var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: LegacyProvider()) { entry in
-            LegacyWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
-        }
-        .configurationDisplayName("Sinced Widget (Legacy)")
-        .description("Legacy widget - use 'Since Event' instead")
-        .supportedFamilies([.systemSmall])
-    }
-}
-
-// Legacy Provider
-struct LegacyProvider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> LegacyEntry {
-        LegacyEntry(date: Date(), configuration: ConfigurationAppIntent())
-    }
-
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> LegacyEntry {
-        LegacyEntry(date: Date(), configuration: configuration)
-    }
-    
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<LegacyEntry> {
-        var entries: [LegacyEntry] = []
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = LegacyEntry(date: entryDate, configuration: configuration)
-            entries.append(entry)
-        }
-        return Timeline(entries: entries, policy: .atEnd)
-    }
-}
-
-struct LegacyEntry: TimelineEntry {
-    let date: Date
-    let configuration: ConfigurationAppIntent
-}
-
-struct LegacyWidgetEntryView: View {
-    var entry: LegacyProvider.Entry
-
-    var body: some View {
-        VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
-        }
+        // Keep the themed card in StandBy instead of dropping it to plain text on black
+        .containerBackgroundRemovable(false)
     }
 }
 
