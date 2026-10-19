@@ -18,22 +18,24 @@ struct AddEventBottomSheet: View {
     @State private var eventTitle: String
     @State private var startDate: Date
     @State private var selectedImage: UIImage?
-    @State private var selectedTheme: CardTheme
+    /// nil until the user picks a card for a new event
+    @State private var selectedTheme: CardTheme?
     /// Theme to fall back to if the photo picker is cancelled
-    @State private var themeBeforeCustom: CardTheme
+    @State private var themeBeforeCustom: CardTheme?
     /// Set when the user picks a new photo, so an unchanged photo isn't re-encoded
     @State private var didPickNewImage = false
     @State private var showImagePicker: Bool = false
-    @State private var showDatePicker: Bool = false
-    @State private var showTimePicker: Bool = false
     @FocusState private var isTextFieldFocused: Bool
+    /// A fresh random pick of name ideas each time the sheet opens
+    @State private var nameSuggestions = Array(Self.nameIdeas.shuffled().prefix(8))
     
     init(viewModel: EventViewModel, isPresented: Binding<Bool>, editingEvent: SinceEvent? = nil) {
         self.viewModel = viewModel
         self._isPresented = isPresented
         self.editingEvent = editingEvent
         
-        let theme = editingEvent?.cardTheme ?? .mosaic
+        // New events start with no card selected
+        let theme = editingEvent?.cardTheme
         let image = editingEvent?.imageData.flatMap(UIImage.init(data:))
         self._eventTitle = State(initialValue: editingEvent?.title ?? "")
         self._startDate = State(initialValue: editingEvent?.startedAt ?? Date())
@@ -49,23 +51,10 @@ struct AddEventBottomSheet: View {
             // Header
             HStack {
                 Text(isEditing ? "Edit event" : "Add an event")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.primaryBlue)
-                    .tracking(-0.96)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primaryGreen)
                 
                 Spacer()
-                
-                // Close Button
-                Button(action: {
-                    isPresented = false
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.black.opacity(0.6))
-                        .frame(width: 24, height: 24)
-                        .background(Color(hex: "f3f3f3"))
-                        .clipShape(Circle())
-                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 24)
@@ -75,10 +64,14 @@ struct AddEventBottomSheet: View {
                 VStack(spacing: 0) {
                     // Event Title Input
                     HStack(spacing: 8) {
-                        TextField("eg: last cigarette, no coffee", text: $eventTitle)
+                        TextField(
+                            "Event name",
+                            text: $eventTitle,
+                            prompt: Text("eg: last cigarette, no coffee")
+                                .foregroundColor(Self.labelColor)
+                        )
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color(hex: "313131"))
-                            .tracking(-0.64)
+                            .foregroundColor(Color(hex: "1a1a1a"))
                             .focused($isTextFieldFocused)
                             .onChange(of: eventTitle) { _, newValue in
                                 if newValue.count > Self.maxTitleLength {
@@ -89,63 +82,47 @@ struct AddEventBottomSheet: View {
                     .padding(.horizontal, 16)
                     .frame(height: 58)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(hex: "f7f7f7"))
+                    // Near-opaque so the field stays legible over the glass sheet
+                    .background(Color.white.opacity(0.9))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, isEditing ? 24 : 12)
+
+                    if !isEditing {
+                        nameSuggestionChips
+                            .padding(.bottom, 20)
+                    }
                     
                     // Details Section
                     VStack(spacing: 12) {
-                        HStack {
+                        HStack(spacing: 8) {
                             Text("Started on")
                                 .font(.system(size: 16))
-                                .foregroundColor(Color(hex: "a5a3a5"))
-                                .tracking(-0.64)
+                                .foregroundColor(Self.labelColor)
                             
                             Spacer()
                             
-                            HStack(spacing: 8) {
-                                Button(action: { showDatePicker = true }) {
-                                    Text(formatDate(startDate))
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(Color(hex: "0881f4"))
-                                        .tracking(-0.64)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 36)
-                                                .stroke(Color.black.opacity(0.04), lineWidth: 1)
-                                        )
-                                }
-                                
-                                Button(action: { showTimePicker = true }) {
-                                    Text(formatTime(startDate))
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(Color(hex: "0881f4"))
-                                        .tracking(-0.64)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 36)
-                                                .stroke(Color.black.opacity(0.04), lineWidth: 1)
-                                        )
-                                }
-                            }
+                            StartDatePill(
+                                date: $startDate,
+                                components: .date,
+                                text: startDate.formatted(.dateTime.day().month(.abbreviated).year())
+                            )
+                            StartDatePill(
+                                date: $startDate,
+                                components: .hourAndMinute,
+                                text: startDate.formatted(date: .omitted, time: .shortened)
+                            )
                         }
-                        
-                        Rectangle()
-                            .fill(Color.black.opacity(0.04))
-                            .frame(height: 1)
+                        .padding(.bottom, 8)
                         
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Card theme")
                                 .font(.system(size: 16))
-                                .foregroundColor(Color(hex: "a5a3a5"))
-                                .tracking(-0.64)
+                                .foregroundColor(Self.labelColor)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
@@ -176,6 +153,10 @@ struct AddEventBottomSheet: View {
                                 .padding(.vertical, 4)
                                 .padding(.horizontal, 2)
                             }
+                            // Run edge to edge so cards fade out instead of being cut
+                            .contentMargins(.horizontal, 14, for: .scrollContent)
+                            .padding(.horizontal, -16)
+                            .edgeFade()
                         }
                     }
                     .padding(.horizontal, 16)
@@ -187,12 +168,11 @@ struct AddEventBottomSheet: View {
             VStack(spacing: 0) {
                 Button(action: { saveEvent() }) {
                     Text(isEditing ? "Save changes" : "Save")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
-                        .tracking(-0.64)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
-                        .background(isSaveEnabled ? Color.primaryBlue : Color.mutedBlue)
+                        .background(isSaveEnabled ? Color.primaryGreen : Color.mutedGreen)
                         .cornerRadius(50)
                         // Fade between enabled/disabled instead of snapping
                         .animation(.easeOut(duration: 0.2), value: isSaveEnabled)
@@ -219,20 +199,49 @@ struct AddEventBottomSheet: View {
                     selectedTheme = selectedImage != nil ? .custom : themeBeforeCustom
                 }
         }
-        .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(date: $startDate, mode: .date)
-                .presentationDetents([.height(500)])
-        }
-        .sheet(isPresented: $showTimePicker) {
-            DatePickerSheet(date: $startDate, mode: .hourAndMinute)
-                .presentationDetents([.height(280)])
-        }
     }
     
+    // MARK: - Name Suggestions
+
+    /// Tappable name ideas so people don't have to think up a title
+    private var nameSuggestionChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(nameSuggestions, id: \.self) { idea in
+                    Button {
+                        HapticManager.shared.light()
+                        eventTitle = idea
+                    } label: {
+                        NameSuggestionChip(title: idea, isSelected: trimmedTitle == idea)
+                    }
+                    .buttonStyle(PressableButtonStyle())
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .contentMargins(.horizontal, 16, for: .scrollContent)
+        .edgeFade()
+    }
+
+    /// The most common things people count days since
+    static let nameIdeas = [
+        "Quit smoking", "Last cigarette", "No alcohol", "Quit vaping",
+        "No caffeine", "No sugar", "No junk food", "No social media",
+        "Started the gym", "Started running", "Meditating daily", "Started therapy",
+        "New job", "Moved cities", "Got sober", "Last breakup",
+        "First date", "Our anniversary", "Got a pet", "Last haircut",
+        "Last vacation", "Called mom", "Last doctor visit", "Changed bedsheets",
+        "Watered the plants", "Car service", "Started journaling", "Reading daily"
+    ]
+
+    /// Secondary text that stays readable on the glass sheet
+    static let labelColor = Color(hex: "8a888a")
+
     // MARK: - Computed Properties
     
     private var availableThemes: [CardTheme] {
-        CardTheme.displayThemes + [.custom]
+        // Photo first so it's easy to find; the themes follow
+        [.custom] + CardTheme.displayThemes
     }
     
     static let maxTitleLength = 40
@@ -253,18 +262,6 @@ struct AddEventBottomSheet: View {
     
     // MARK: - Helper Functions
     
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM yyyy"
-        return formatter.string(from: date)
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "hh:mm a"
-        return formatter.string(from: date)
-    }
-    
     private func saveEvent() {
         guard isSaveEnabled else { return }
         
@@ -281,7 +278,8 @@ struct AddEventBottomSheet: View {
             // A start in the future would give negative counts
             startedAt: min(startDate, Date()),
             imageData: imageData,
-            cardTheme: selectedTheme
+            // Fall back to the default card if none was picked
+            cardTheme: selectedTheme ?? .mosaic
         )
         
         viewModel.addEvent(newEvent)
@@ -298,7 +296,7 @@ struct AddEventBottomSheet: View {
         var updated = original
         updated.title = trimmedTitle
         updated.startedAt = min(startDate, Date())
-        updated.cardTheme = selectedTheme
+        updated.cardTheme = selectedTheme ?? updated.cardTheme
         
         if selectedTheme != .custom {
             updated.imageData = nil
@@ -390,50 +388,6 @@ struct ImagePicker: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Date Picker Sheet
-
-struct DatePickerSheet: View {
-    @Environment(\.dismiss) var dismiss
-    @Binding var date: Date
-    var mode: DatePickerComponents
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            // Header
-            HStack {
-                Text(mode.contains(.date) ? "Select Date" : "Select Time")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primaryBlue)
-                
-                Spacer()
-                
-                Button("Done") {
-                    dismiss()
-                }
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color(hex: "0881f4"))
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            
-            // Date Picker
-            if mode.contains(.date) {
-                DatePicker("", selection: $date, in: ...Date(), displayedComponents: .date)
-                    .datePickerStyle(.graphical)
-                    .labelsHidden()
-            } else {
-                DatePicker("", selection: $date, in: ...Date(), displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-            }
-            
-            Spacer()
-        }
-        .background(Color.white)
-        .preferredColorScheme(.light)
-    }
-}
-
 // MARK: - Theme Card Button Style
 
 struct ThemeCardButtonStyle: ButtonStyle {
@@ -463,16 +417,20 @@ struct ThemeCarouselItem: View {
                         .resizable()
                         .scaledToFill()
                 } else {
-                    // Placeholder for custom
-                    Color(hex: "f0f0f0")
-                    VStack(spacing: 4) {
+                    // Add-a-photo card, outlined like the name chips
+                    Color.white
+                    VStack(spacing: 5) {
                         Image(systemName: "photo.badge.plus")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color(hex: "b5b5b8"))
-                        Text("Custom")
-                            .font(.system(size: 9, weight: .medium, design: .rounded))
-                            .foregroundColor(Color(hex: "b5b5b8"))
+                            .font(.system(size: 20, weight: .medium))
+                        Text("Photo")
+                            .font(.system(size: 11, weight: .medium))
                     }
+                    .foregroundColor(.primaryGreen)
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(
+                            Color.primaryGreen.opacity(0.6),
+                            style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                        )
                 }
             } else if let assetName = theme.svgAssetName {
                 Image(assetName)
@@ -483,8 +441,9 @@ struct ThemeCarouselItem: View {
         .frame(width: 64, height: 80)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
+            // Inside the card's edge so the scroll view never clips it
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.primaryBlue : Color.clear, lineWidth: 3)
+                .strokeBorder(isSelected ? Color.primaryGreen : Color.clear, lineWidth: 3)
         )
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
     }
@@ -525,5 +484,104 @@ struct ThemeMiniPreview: View {
 struct AddEventBottomSheet_Preview: View {
     var body: some View {
         AddEventBottomSheet(viewModel: EventViewModel(), isPresented: .constant(true))
+    }
+}
+
+/// Outlined, dashed pill for a name idea
+private struct NameSuggestionChip: View {
+    let title: String
+    let isSelected: Bool
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 14, weight: .regular))
+            .foregroundColor(isSelected ? .primaryGreen : Color(hex: "4a484a"))
+            .padding(.horizontal, 14)
+            .frame(height: 34)
+            .background(
+                Capsule()
+                    .fill(isSelected ? Color.primaryGreen.opacity(0.08) : Color.white.opacity(0.5))
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(
+                        isSelected ? Color.primaryGreen : Color.black.opacity(0.28),
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 3])
+                    )
+            )
+            .animation(.easeOut(duration: 0.15), value: isSelected)
+    }
+}
+
+private extension View {
+    /// Softly fades a horizontal carousel's edges, but only on a side with more
+    /// content to scroll to, so the first card isn't faded at rest
+    func edgeFade(width: CGFloat = 24) -> some View {
+        modifier(CarouselEdgeFade(width: width))
+    }
+}
+
+private struct CarouselEdgeFade: ViewModifier {
+    let width: CGFloat
+    @State private var fadesLeading = false
+    @State private var fadesTrailing = false
+
+    func body(content: Content) -> some View {
+        content
+            .onScrollGeometryChange(for: [Bool].self) { geometry in
+                let visible = geometry.visibleRect
+                return [visible.minX > 1, visible.maxX < geometry.contentSize.width - 1]
+            } action: { _, edges in
+                withAnimation(.easeOut(duration: 0.2)) {
+                    fadesLeading = edges[0]
+                    fadesTrailing = edges[1]
+                }
+            }
+            .mask(
+                HStack(spacing: 0) {
+                    LinearGradient(
+                        colors: [.black.opacity(fadesLeading ? 0 : 1), .black],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .frame(width: width)
+                    Color.black
+                    LinearGradient(
+                        colors: [.black, .black.opacity(fadesTrailing ? 0 : 1)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .frame(width: width)
+                }
+            )
+    }
+}
+
+/// Date or time pill in the sheet's own style. The real compact DatePicker is
+/// underneath and fully visible to touch; our pill is drawn over it, opaque and
+/// with hit testing off, so taps fall straight through to the native control and
+/// open the system's own glass picker.
+private struct StartDatePill: View {
+    @Binding var date: Date
+    let components: DatePickerComponents
+    let text: String
+
+    var body: some View {
+        DatePicker("", selection: $date, in: ...Date(), displayedComponents: components)
+            .datePickerStyle(.compact)
+            .labelsHidden()
+            .tint(.primaryGreen)
+            .accessibilityLabel(components == .date ? "Start date" : "Start time")
+            .overlay {
+                // Fully opaque, so none of the native text shows through
+                Text(text)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(Color(hex: "1a1a1a"))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Capsule().fill(Color.white))
+                    .overlay(Capsule().strokeBorder(Color.black.opacity(0.08), lineWidth: 1))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
     }
 }

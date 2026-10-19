@@ -101,7 +101,7 @@ struct AddEventHalfView: View {
                 Image(systemName: "plus")
                     .font(.system(size: 18, weight: .semibold))
                 Text("Add another\nevent")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: 12, weight: .medium))
                     .multilineTextAlignment(.center)
             }
             .foregroundColor(.white.opacity(0.6))

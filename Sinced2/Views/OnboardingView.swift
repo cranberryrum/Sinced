@@ -26,8 +26,7 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            Color(UIColor.systemBackground)
-                .ignoresSafeArea()
+            GrainBackground()
 
             if !showName {
                 LottiePlayerView(

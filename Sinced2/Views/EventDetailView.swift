@@ -77,11 +77,11 @@ struct EventDetailView: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "flag.fill")
                                         .font(.rounded(14))
-                                        .foregroundColor(.lightBlue)
+                                        .foregroundColor(.lightGreen)
                                     
                                     Text("\(milestone.days)d milestone in \(milestone.timeRemaining)")
                                         .font(.roundedCallout)
-                                        .foregroundColor(.lightBlue)
+                                        .foregroundColor(.lightGreen)
                                 }
                             }
                         }
@@ -109,7 +109,7 @@ struct EventDetailView: View {
                             .frame(height: 54)
                             .background(
                                 RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color.primaryBlue)
+                                    .fill(Color.primaryGreen)
                             )
                         }
                         .frame(maxWidth: geometry.size.width - 40)
@@ -198,6 +198,7 @@ struct EventDetailView: View {
                 .frame(maxWidth: geometry.size.width)
             }
             }
+            .grainBackground()
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -234,8 +235,6 @@ struct EventDetailView: View {
                 )
                 .presentationDetents([.height(440)])
                 .presentationDragIndicator(.visible)
-                .presentationCornerRadius(36)
-                .presentationBackground(.white)
             }
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheetView(event: localEvent)
@@ -297,7 +296,7 @@ struct TimelineItemView: View {
         HStack(alignment: .top, spacing: 12) {
             // Timeline dot
             Circle()
-                .fill(Color.primaryBlue)
+                .fill(Color.primaryGreen)
                 .frame(width: 8, height: 8)
                 .padding(.top, 6)
             
@@ -343,7 +342,7 @@ struct ReminderToggleSection: View {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(settings.isEnabled ? Color.primaryBlue : Color.secondary.opacity(0.2))
+                        .fill(settings.isEnabled ? Color.primaryGreen : Color.secondary.opacity(0.2))
                         .frame(width: 36, height: 36)
                     
                     Image(systemName: settings.isEnabled ? "bell.badge.fill" : "bell.fill")
@@ -371,7 +370,7 @@ struct ReminderToggleSection: View {
                     set: handleToggle
                 ))
                 .labelsHidden()
-                .tint(.primaryBlue)
+                .tint(.primaryGreen)
             }
             .padding(16)
             
@@ -440,7 +439,7 @@ struct ReminderToggleSection: View {
                         notificationManager.setNotificationsEnabled(true)
                     }
                     .font(.roundedCaption.weight(.semibold))
-                    .foregroundColor(.primaryBlue)
+                    .foregroundColor(.primaryGreen)
                     
                     Spacer()
                 }
@@ -510,7 +509,7 @@ struct ReminderToggleSection: View {
             Image(systemName: "chevron.up.chevron.down")
                 .font(.system(size: 12, weight: .semibold))
         }
-        .foregroundColor(.primaryBlue)
+        .foregroundColor(.primaryGreen)
         .frame(minHeight: 44)
         .contentShape(Rectangle())
     }

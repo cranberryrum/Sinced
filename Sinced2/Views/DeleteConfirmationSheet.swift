@@ -26,7 +26,7 @@ struct DeleteConfirmationSheet: View {
         VStack(spacing: 18) {
             VStack(spacing: 8) {
                 Image(systemName: "trash.fill")
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .font(.system(size: 26, weight: .semibold))
                     .foregroundColor(.red)
                     .padding(.bottom, 4)
                 

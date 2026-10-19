@@ -149,7 +149,7 @@ struct PlaceholderWidgetView: View {
                 .foregroundColor(.white)
             
             Text("Add one in Sinced, then hold to choose it")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
         }
@@ -211,7 +211,7 @@ struct CustomImageWidgetView: View {
                 
                 // Event title - SF Pro Rounded Medium, 20px (scaled), white 60%
                 Text("Since \(event.title)")
-                    .font(.system(size: size.width < 160 ? 10 : 12, weight: .medium, design: .rounded))
+                    .font(.system(size: size.width < 160 ? 10 : 12, weight: .medium))
                     .foregroundColor(.white.opacity(0.6))
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -242,7 +242,7 @@ struct ThemeBasedWidgetView: View {
             
             // Event title - using SF Pro Rounded
             Text("Since \(event.title)")
-                .font(.system(size: size.width < 160 ? 11 : 13, weight: .medium, design: .rounded))
+                .font(.system(size: size.width < 160 ? 11 : 13, weight: .medium))
                 .foregroundColor(.white.opacity(0.6))
                 .lineLimit(1)
                 .truncationMode(.tail)

@@ -66,13 +66,13 @@ struct TabButton: View {
                 
                 if currentTab == tab {
                     Text(title)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 14, weight: .semibold))
                 }
             }
-            .foregroundColor(currentTab == tab ? .primaryBlue : .secondary)
+            .foregroundColor(currentTab == tab ? .primaryGreen : .secondary)
             .padding(.horizontal, currentTab == tab ? 16 : 12)
             .frame(height: 44)
-            .background(currentTab == tab ? Color.primaryBlue.opacity(0.1) : Color.clear)
+            .background(currentTab == tab ? Color.primaryGreen.opacity(0.1) : Color.clear)
             .clipShape(Capsule())
         }
     }
