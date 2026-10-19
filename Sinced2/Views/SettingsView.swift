@@ -36,7 +36,7 @@ struct SettingsView: View {
                     Button {
                         activeSheet = .aboutApp
                     } label: {
-                        SettingsRowLabel(title: "About Sinced")
+                        SettingsRowLabel(icon: "info.circle", title: "About Sinced")
                     }
                     .buttonStyle(.plain)
 
@@ -44,7 +44,7 @@ struct SettingsView: View {
                         NotificationSettingsView()
                             .environmentObject(viewModel)
                     } label: {
-                        SettingsRowLabel(title: "Notifications", showsChevron: false)
+                        SettingsRowLabel(icon: "bell", title: "Notifications", showsChevron: false)
                     }
 
                     NavigationLink {
@@ -52,6 +52,7 @@ struct SettingsView: View {
                             .environmentObject(viewModel)
                     } label: {
                         SettingsRowLabel(
+                            icon: "archivebox",
                             title: "Archived Events",
                             value: viewModel.archivedEvents.isEmpty ? nil : "\(viewModel.archivedEvents.count)",
                             showsChevron: false
@@ -61,21 +62,21 @@ struct SettingsView: View {
                     Button {
                         activeSheet = .aboutDeveloper
                     } label: {
-                        SettingsRowLabel(title: "About Developer")
+                        SettingsRowLabel(icon: "hammer", title: "About Developer")
                     }
                     .buttonStyle(.plain)
 
                     Button {
                         openURL(Self.privacyPolicyURL)
                     } label: {
-                        SettingsRowLabel(title: "Privacy Policy")
+                        SettingsRowLabel(icon: "hand.raised", title: "Privacy Policy")
                     }
                     .buttonStyle(.plain)
 
                     Button {
                         openURL(Self.supportURL)
                     } label: {
-                        SettingsRowLabel(title: "Contact Support")
+                        SettingsRowLabel(icon: "envelope", title: "Contact Support")
                     }
                     .buttonStyle(.plain)
                 }
@@ -124,14 +125,33 @@ private enum SettingsSheet: Identifiable {
     }
 }
 
+/// Leading SF Symbol for a settings row: one size, weight and width so
+/// every title lines up
+private struct SettingsIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .symbolVariant(.fill)
+            .font(.system(size: 15, weight: .regular))
+            .foregroundStyle(Color(.systemGray))
+            .frame(width: 22)
+            .accessibilityHidden(true)
+    }
+}
+
 private struct NameSettingsRow: View {
     let name: String
 
     var body: some View {
         HStack(spacing: 12) {
+            SettingsIcon(systemName: "person")
+
             Text(name)
                 .font(.roundedBody)
                 .foregroundColor(.primary)
+                // Separators start under the title, not the icon
+                .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
 
             Spacer()
 
@@ -144,15 +164,19 @@ private struct NameSettingsRow: View {
 }
 
 private struct SettingsRowLabel: View {
+    let icon: String
     let title: String
     var value: String? = nil
     var showsChevron: Bool = true
 
     var body: some View {
         HStack(spacing: 12) {
+            SettingsIcon(systemName: icon)
+
             Text(title)
                 .font(.roundedBody)
                 .foregroundColor(.primary)
+                .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
 
             Spacer()
 
