@@ -12,6 +12,10 @@ struct SettingsView: View {
     @EnvironmentObject private var viewModel: EventViewModel
     @State private var activeSheet: SettingsSheet?
     @State private var showingNameEditor = false
+    @Environment(\.openURL) private var openURL
+    
+    private static let privacyPolicyURL = URL(string: "https://github.com/cranberryrum/Sinced/blob/main/PRIVACY.md")!
+    private static let supportURL = URL(string: "mailto:adityakoltedes@gmail.com?subject=Sinced")!
 
     private var displayName: String {
         let trimmed = viewModel.userName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -43,6 +47,17 @@ struct SettingsView: View {
                         SettingsRowLabel(title: "Notifications", showsChevron: false)
                     }
 
+                    NavigationLink {
+                        ArchivedEventsView()
+                            .environmentObject(viewModel)
+                    } label: {
+                        SettingsRowLabel(
+                            title: "Archived Events",
+                            value: viewModel.archivedEvents.isEmpty ? nil : "\(viewModel.archivedEvents.count)",
+                            showsChevron: false
+                        )
+                    }
+
                     Button {
                         activeSheet = .aboutDeveloper
                     } label: {
@@ -51,9 +66,16 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
 
                     Button {
-                        activeSheet = .privacy
+                        openURL(Self.privacyPolicyURL)
                     } label: {
                         SettingsRowLabel(title: "Privacy Policy")
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        openURL(Self.supportURL)
+                    } label: {
+                        SettingsRowLabel(title: "Contact Support")
                     }
                     .buttonStyle(.plain)
                 }
@@ -75,15 +97,6 @@ struct SettingsView: View {
                     DeveloperInfoSheet()
                         .presentationDetents([.height(340), .medium])
                         .presentationDragIndicator(.visible)
-                case .privacy:
-                    SimpleInfoSheet(
-                        title: "Privacy Policy",
-                        bodyText: "Privacy policy placeholder: Sinced will explain what data is stored on device, what information may be collected, and how your reminders and event data are handled. This can be replaced with the final policy later.",
-                        imageName: nil,
-                        actions: []
-                    )
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
                 }
             }
             .sheet(isPresented: $showingNameEditor) {
@@ -100,7 +113,6 @@ struct SettingsView: View {
 private enum SettingsSheet: Identifiable {
     case aboutApp
     case aboutDeveloper
-    case privacy
 
     var id: Int {
         switch self {
@@ -108,8 +120,6 @@ private enum SettingsSheet: Identifiable {
             return 0
         case .aboutDeveloper:
             return 1
-        case .privacy:
-            return 2
         }
     }
 }
@@ -135,6 +145,7 @@ private struct NameSettingsRow: View {
 
 private struct SettingsRowLabel: View {
     let title: String
+    var value: String? = nil
     var showsChevron: Bool = true
 
     var body: some View {
@@ -144,6 +155,13 @@ private struct SettingsRowLabel: View {
                 .foregroundColor(.primary)
 
             Spacer()
+
+            if let value {
+                Text(value)
+                    .font(.roundedBody)
+                    .foregroundColor(.secondary)
+                    .contentTransition(.numericText())
+            }
 
             if showsChevron {
                 Image(systemName: "chevron.right")
@@ -296,9 +314,12 @@ private struct NotificationSettingsView: View {
     @EnvironmentObject private var viewModel: EventViewModel
     @ObservedObject private var notificationManager = NotificationManager.shared
     @State private var showingPermissionAlert = false
+    /// Events listed on this screen. Captured on appear so a row doesn't
+    /// vanish the moment its toggle is switched off.
+    @State private var listedEventIds: [UUID] = []
 
     private var eventsWithNotifications: [SinceEvent] {
-        viewModel.events.filter { $0.reminderSettings.isEnabled }
+        viewModel.events.filter { listedEventIds.contains($0.id) }
     }
 
     var body: some View {
@@ -357,6 +378,11 @@ private struct NotificationSettingsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .onAppear {
+            listedEventIds = viewModel.events
+                .filter { $0.reminderSettings.isEnabled }
+                .map(\.id)
+        }
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Notifications Disabled", isPresented: $showingPermissionAlert) {
@@ -373,7 +399,7 @@ private struct NotificationSettingsView: View {
         HapticManager.shared.light()
 
         guard isEnabled else {
-            notificationManager.setNotificationsEnabled(false, events: viewModel.events)
+            notificationManager.setNotificationsEnabled(false)
             return
         }
 
@@ -381,15 +407,15 @@ private struct NotificationSettingsView: View {
         case .notDetermined:
             notificationManager.requestAuthorization { granted in
                 if granted {
-                    notificationManager.setNotificationsEnabled(true, events: viewModel.events)
+                    notificationManager.setNotificationsEnabled(true)
                 }
             }
         case .denied:
             showingPermissionAlert = true
         case .authorized, .provisional, .ephemeral:
-            notificationManager.setNotificationsEnabled(true, events: viewModel.events)
+            notificationManager.setNotificationsEnabled(true)
         @unknown default:
-            notificationManager.setNotificationsEnabled(true, events: viewModel.events)
+            notificationManager.setNotificationsEnabled(true)
         }
     }
 
