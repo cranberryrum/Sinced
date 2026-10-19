@@ -5,6 +5,7 @@
 //  Handles JSON-based storage with AppGroup support for widget sharing
 //
 
+import AppIntents
 import Foundation
 
 /// Manages persistent storage of events using JSON in AppGroup container
@@ -84,6 +85,9 @@ class StorageManager {
             
             // Notify widget to update
             WidgetCenter.shared.reloadAllTimelines()
+            ControlCenter.shared.reloadAllControls()
+            // Siri matches spoken event names against this list
+            SincedShortcuts.updateAppShortcutParameters()
         } catch {
             print("StorageManager: Error saving events: \(error.localizedDescription)")
         }

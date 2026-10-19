@@ -86,6 +86,7 @@ class StorageManager {
             
             // Notify widget to update
             WidgetCenter.shared.reloadAllTimelines()
+            ControlCenter.shared.reloadAllControls()
         } catch {
             print("StorageManager: Error saving events: \(error.localizedDescription)")
         }

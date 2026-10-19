@@ -61,6 +61,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		5A1E0C0F2F8A000100D1C0DE /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		48A525432F161ED900CDB8C9 /* WidgetSinced2 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = WidgetSinced2;
@@ -131,6 +136,7 @@
 			isa = PBXGroup;
 			children = (
 				C33352A72EB4D39E007ECEC4 /* Sinced2 */,
+				5A1E0C0F2F8A000100D1C0DE /* Shared */,
 				C33352B52EB4D3A1007ECEC4 /* Sinced2Tests */,
 				C33352BF2EB4D3A2007ECEC4 /* Sinced2UITests */,
 				48A525432F161ED900CDB8C9 /* WidgetSinced2 */,
@@ -167,6 +173,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				48A525432F161ED900CDB8C9 /* WidgetSinced2 */,
+				5A1E0C0F2F8A000100D1C0DE /* Shared */,
 			);
 			name = WidgetSinced2Extension;
 			packageProductDependencies = (
@@ -191,6 +198,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				C33352A72EB4D39E007ECEC4 /* Sinced2 */,
+				5A1E0C0F2F8A000100D1C0DE /* Shared */,
 			);
 			name = Sinced2;
 			packageProductDependencies = (

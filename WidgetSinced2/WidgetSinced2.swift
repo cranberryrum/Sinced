@@ -5,6 +5,7 @@
 //  Created by Aditya on 13/01/26.
 //
 
+import AppIntents
 import WidgetKit
 import SwiftUI
 
@@ -45,8 +46,13 @@ struct SinceWidgetProvider: AppIntentTimelineProvider {
         
         // One entry now, then one at each moment the displayed count changes
         // (startedAt + n units), so the number ticks over on time.
-        let changeDates = event.countChangeDates(after: now, limit: event.widgetTimeUnit.timelineSteps)
-        let entries = ([now] + changeDates).map {
+        var dates = [now] + event.countChangeDates(after: now, limit: event.widgetTimeUnit.timelineSteps)
+        // Hide the Undo button once its window closes
+        if let reset = event.undoableReset(at: now) {
+            dates.append(reset.at.addingTimeInterval(SinceEvent.undoWindow))
+            dates.sort()
+        }
+        let entries = dates.map {
             SinceWidgetEntry(date: $0, event: event, configuration: configuration)
         }
 
@@ -91,10 +97,51 @@ struct SinceWidgetEntryView: View {
     var body: some View {
         if let event = entry.event {
             SmallWidgetView(event: event, currentDate: entry.date)
-                // Tapping opens this event in the app
+                .overlay(alignment: .topTrailing) {
+                    if entry.configuration.showsResetButton {
+                        WidgetResetButton(event: event, currentDate: entry.date)
+                            .padding(10)
+                    }
+                }
+                // Tapping anywhere else opens this event in the app
                 .widgetURL(event.widgetURL)
         } else {
             PlaceholderWidgetView()
+        }
+    }
+}
+
+// MARK: - Reset Button
+/// Resets the event in place; for a short while afterwards it becomes Undo
+struct WidgetResetButton: View {
+    let event: SinceEvent
+    let currentDate: Date
+    
+    var body: some View {
+        let entity = EventEntity(event: event)
+        let theme = event.imageData == nil ? event.cardTheme : .custom
+        
+        if event.undoableReset(at: currentDate) != nil {
+            Button(intent: UndoResetIntent(event: entity)) {
+                Text("Undo")
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 10)
+                    .frame(height: 26)
+                    .background(theme.badgeBackgroundColor, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(theme.badgeTextColor)
+            .accessibilityLabel("Undo reset of \(event.title)")
+        } else {
+            Button(intent: ResetEventIntent(event: entity)) {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 11, weight: .bold))
+                    .frame(width: 26, height: 26)
+                    .background(theme.badgeBackgroundColor, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(theme.badgeTextColor)
+            .accessibilityLabel("Reset \(event.title)")
         }
     }
 }
@@ -203,6 +250,7 @@ struct CustomImageWidgetView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Time value - Geist Mono Medium, 40px (scaled), tracking -3.2px, white
                 Text(formattedTime)
+                    .invalidatableContent()
                     .font(.custom("GeistMono-Medium", size: size.width < 160 ? 16 : 20))
                     .tracking(-1.6)  // Scaled from -3.2px for 40px to widget size
                     .foregroundColor(.white)
@@ -234,6 +282,7 @@ struct ThemeBasedWidgetView: View {
         VStack(spacing: 2) {
             // Time value - using Geist Mono Medium
             Text(formattedTime)
+                .invalidatableContent()
                 .font(.custom("GeistMono-Medium", size: size.width < 160 ? 18 : 22))
                 .tracking(-1.5)
                 .foregroundColor(.white)

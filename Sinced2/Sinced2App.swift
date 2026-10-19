@@ -19,6 +19,20 @@ struct Sinced2App: App {
         
         // Initialize notification manager (sets up delegate)
         _ = NotificationManager.shared
+        
+        // Widget, Control Center and Siri resets can happen while the app is open
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            nil,
+            { _, _, _, _, _ in
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .eventsChangedExternally, object: nil)
+                }
+            },
+            ExternalEventChanges.darwinName as CFString,
+            nil,
+            .deliverImmediately
+        )
     }
     
     var body: some Scene {
@@ -36,6 +50,10 @@ struct Sinced2App: App {
                             viewModel.openEvent(id: eventId)
                         }
                     }
+                    .onReceive(NotificationCenter.default.publisher(for: .eventsChangedExternally)) { _ in
+                        viewModel.loadEvents()
+                        viewModel.refreshAllNotifications()
+                    }
                     // Widget taps open sinced://event/<id>
                     .onOpenURL { url in
                         guard url.scheme == "sinced", url.host == "event",
@@ -46,6 +64,8 @@ struct Sinced2App: App {
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
+                // Pick up resets made from widgets, controls or Siri
+                viewModel.loadEvents()
                 // Pick up permission changes made in iOS Settings
                 NotificationManager.shared.checkAuthorizationStatus()
                 // Reminders are scheduled a limited number of days ahead with
@@ -54,4 +74,9 @@ struct Sinced2App: App {
             }
         }
     }
+}
+
+extension Notification.Name {
+    /// Posted when an intent outside the app's UI changed events
+    static let eventsChangedExternally = Notification.Name("eventsChangedExternally")
 }

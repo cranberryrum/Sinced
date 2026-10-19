@@ -17,5 +17,7 @@ struct WidgetSinced2Bundle: WidgetBundle {
         SincePairWidget()
         // Lock Screen: circular, rectangular and inline
         SinceLockScreenWidget()
+        // Control Center, Lock Screen and Action button
+        SinceResetControl()
     }
 }
