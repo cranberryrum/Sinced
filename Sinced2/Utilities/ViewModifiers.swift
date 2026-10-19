@@ -20,7 +20,7 @@ struct CardBackground: ViewModifier {
 
 /// Primary button style
 struct PrimaryButtonStyle: ButtonStyle {
-    var color: Color = .primaryBlue
+    var color: Color = .primaryGreen
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -39,7 +39,7 @@ struct PrimaryButtonStyle: ButtonStyle {
 
 /// Secondary button style
 struct SecondaryButtonStyle: ButtonStyle {
-    var color: Color = .primaryBlue
+    var color: Color = .primaryGreen
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -62,48 +62,49 @@ extension View {
     }
 }
 
-/// Font extension for SF Pro Rounded
+/// App fonts: SF Pro (the system default design, which iOS draws as
+/// SF Pro Display at larger sizes). Names kept from the old rounded set.
 extension Font {
-    /// Returns SF Pro Rounded font with specified size and weight
+    /// SF Pro at the given size and weight
     static func rounded(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        return .system(size: size, weight: weight, design: .rounded)
+        return .system(size: size, weight: weight)
     }
     
-    /// SF Pro Rounded versions of standard text styles
+    /// SF Pro versions of standard text styles
     static var roundedLargeTitle: Font {
-        return .system(.largeTitle, design: .rounded, weight: .bold)
+        return .system(.largeTitle, weight: .semibold)
     }
     
     static var roundedTitle: Font {
-        return .system(.title, design: .rounded, weight: .bold)
+        return .system(.title, weight: .semibold)
     }
     
     static var roundedTitle2: Font {
-        return .system(.title2, design: .rounded, weight: .semibold)
+        return .system(.title2, weight: .medium)
     }
     
     static var roundedTitle3: Font {
-        return .system(.title3, design: .rounded, weight: .semibold)
+        return .system(.title3, weight: .medium)
     }
     
     static var roundedHeadline: Font {
-        return .system(.headline, design: .rounded)
+        return .system(.headline)
     }
     
     static var roundedSubheadline: Font {
-        return .system(.subheadline, design: .rounded)
+        return .system(.subheadline)
     }
     
     static var roundedBody: Font {
-        return .system(.body, design: .rounded)
+        return .system(.body)
     }
     
     static var roundedCallout: Font {
-        return .system(.callout, design: .rounded)
+        return .system(.callout)
     }
     
     static var roundedCaption: Font {
-        return .system(.caption, design: .rounded)
+        return .system(.caption)
     }
 }
 

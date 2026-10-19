@@ -28,8 +28,7 @@ struct EventListView: View {
             
             ZStack {
                 // Background
-                Color(UIColor.systemBackground)
-                    .ignoresSafeArea()
+                GrainBackground()
                 
                 if isEmptyState {
                     VStack {
@@ -131,16 +130,17 @@ struct EventListView: View {
                     Spacer()
                         .frame(height: geometry.safeAreaInsets.top + 16)
                         .background(
-                            LinearGradient(
-                                colors: [
-                                    Color(UIColor.systemBackground),
-                                    Color(UIColor.systemBackground).opacity(0.9),
-                                    Color(UIColor.systemBackground).opacity(0)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .ignoresSafeArea()
+                            // Same grainy background, faded, so the grain runs
+                            // unbroken under the status bar
+                            GrainBackground()
+                                .mask(
+                                    LinearGradient(
+                                        colors: [.black, .black.opacity(0.9), .clear],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                    .ignoresSafeArea()
+                                )
                         )
                     
                     Spacer()
@@ -388,7 +388,7 @@ struct HomeEventCardView: View {
         Text(widgetTimeValue(for: currentTime).uppercased())
             .font(.custom("GeistMono-Medium", size: 20))
             .foregroundColor(.white)
-            .tracking(-1.6)
+            .tracking(-0.6)
             .lineLimit(1)
             .minimumScaleFactor(0.65)
             .fixedSize(horizontal: true, vertical: false)
@@ -397,7 +397,7 @@ struct HomeEventCardView: View {
 
     private func subtitleLabel(multilineAlignment: TextAlignment) -> some View {
         Text("Since \(event.title)")
-            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .font(.system(size: 14, weight: .medium))
             .foregroundColor(Color.white.opacity(0.6))
             .lineLimit(1)
             .minimumScaleFactor(0.7)

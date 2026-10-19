@@ -83,7 +83,7 @@ struct CircularLockScreenView: View {
                     .minimumScaleFactor(0.5)
 
                 Text(event.widgetTimeUnit.shortLabel)
-                    .font(.system(size: 8, weight: .semibold, design: .rounded))
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 2)
@@ -111,7 +111,7 @@ struct RectangularLockScreenView: View {
                 .widgetAccentable()
 
             Text("Since \(event.title)")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
@@ -119,7 +119,7 @@ struct RectangularLockScreenView: View {
                 MilestoneBar(fraction: milestone.fraction)
 
                 Text("\(milestone.targetText) in \(milestone.remainingText)")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .fixedSize()
@@ -180,7 +180,7 @@ struct EmptyLockScreenView: View {
                 Text("No event")
                     .font(.custom("GeistMono-Medium", size: 18))
                 Text("Add one in Sinced")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

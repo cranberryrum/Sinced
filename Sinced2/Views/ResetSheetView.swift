@@ -38,7 +38,7 @@ struct ResetSheetView: View {
                     lastNowTap = Date()
                 }
                 .font(.roundedSubheadline)
-                .foregroundColor(.primaryBlue)
+                .foregroundColor(.primaryGreen)
             }
             
             HStack(spacing: 14) {
@@ -75,7 +75,7 @@ struct ResetSheetView: View {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primaryBlue)
+                    .foregroundColor(.primaryGreen)
                     .opacity(lastNowTap.timeIntervalSinceNow > -1.5 ? 1 : 0.4)
                     .animation(.easeInOut(duration: 0.2), value: lastNowTap)
                 

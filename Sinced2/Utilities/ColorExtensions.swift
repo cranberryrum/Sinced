@@ -8,25 +8,25 @@
 import SwiftUI
 
 extension Color {
-    // MARK: - Blue Color Scheme
+    // MARK: - Green Color Scheme (from the app icon)
     
-    /// Primary blue - main actions and highlights
-    static let primaryBlue = Color(hex: "007AFF")
+    /// Primary green, the logo's colour - main actions and highlights
+    static let primaryGreen = Color(hex: "488B5A")
     
-    /// Secondary blue - less prominent actions
-    static let secondaryBlue = Color(hex: "5AC8FA")
+    /// Secondary green - less prominent actions
+    static let secondaryGreen = Color(hex: "7FB58F")
     
-    /// Tertiary blue - backgrounds and subtle elements
-    static let tertiaryBlue = Color(hex: "0A84FF")
+    /// Tertiary green - backgrounds and subtle elements
+    static let tertiaryGreen = Color(hex: "3F7D50")
     
-    /// Light blue - info, milestones
-    static let lightBlue = Color(hex: "64D2FF")
+    /// Light green - info, milestones
+    static let lightGreen = Color(hex: "5E9F70")
     
-    /// Dark blue - important text
-    static let darkBlue = Color(hex: "0051D5")
+    /// Dark green - important text
+    static let darkGreen = Color(hex: "2F5E3D")
     
-    /// Muted blue - disabled states
-    static let mutedBlue = Color(hex: "8E8E93")
+    /// Muted grey - disabled states
+    static let mutedGreen = Color(hex: "8E8E93")
     
     /// Initialize Color from hex string
     init(hex: String) {

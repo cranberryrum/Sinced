@@ -32,7 +32,7 @@ struct ArchivedEventsView: View {
                                 } label: {
                                     Label("Restore", systemImage: "arrow.uturn.backward")
                                 }
-                                .tint(.primaryBlue)
+                                .tint(.primaryGreen)
                             }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
@@ -60,6 +60,7 @@ struct ArchivedEventsView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .grainListBackground()
             }
         }
         .animation(.smooth(duration: 0.3), value: viewModel.archivedEvents.map(\.id))
@@ -114,7 +115,7 @@ private struct ArchivedEventRow: View {
 
             Button("Restore", action: onRestore)
                 .font(.roundedCaption.weight(.semibold))
-                .foregroundColor(.primaryBlue)
+                .foregroundColor(.primaryGreen)
                 .buttonStyle(.borderless)
         }
         .padding(.vertical, 2)

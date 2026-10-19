@@ -70,7 +70,7 @@ struct ShareableCardView: View {
             
             // Event Title
             Text(event.title)
-                .font(.system(size: cardSize.width * 0.07, weight: .bold, design: .rounded))
+                .font(.system(size: cardSize.width * 0.07, weight: .bold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -80,7 +80,7 @@ struct ShareableCardView: View {
             
             // Since date
             Text("Since \(formattedStartDate)")
-                .font(.system(size: cardSize.width * 0.035, weight: .medium, design: .rounded))
+                .font(.system(size: cardSize.width * 0.035, weight: .medium))
                 .foregroundColor(.white.opacity(0.9))
                 .padding(.top, cardSize.height * 0.015)
                 .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
@@ -89,13 +89,13 @@ struct ShareableCardView: View {
             
             // Large Time Value
             Text("\(timeValue)")
-                .font(.system(size: cardSize.width * 0.22, weight: .black, design: .rounded))
+                .font(.system(size: cardSize.width * 0.22, weight: .black))
                 .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
             
             // Unit Label
             Text(unitLabel.uppercased())
-                .font(.system(size: cardSize.width * 0.055, weight: .semibold, design: .rounded))
+                .font(.system(size: cardSize.width * 0.055, weight: .semibold))
                 .foregroundColor(.white.opacity(0.9))
                 .tracking(4)
                 .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
@@ -110,14 +110,14 @@ struct ShareableCardView: View {
                     AppIconView(size: cardSize.width * 0.06, hasImageBackground: true)
                     
                     Text("Sinced")
-                        .font(.system(size: cardSize.width * 0.035, weight: .semibold, design: .rounded))
+                        .font(.system(size: cardSize.width * 0.035, weight: .semibold))
                         .foregroundColor(.white)
                 }
                 .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                 
                 // Download CTA
                 Text("Download Sinced on App Store")
-                    .font(.system(size: cardSize.width * 0.025, weight: .medium, design: .rounded))
+                    .font(.system(size: cardSize.width * 0.025, weight: .medium))
                     .foregroundColor(.white.opacity(0.7))
                     .shadow(color: .black.opacity(0.2), radius: 1, x: 0, y: 1)
             }
@@ -141,7 +141,7 @@ struct ShareableCardView: View {
                 
                 // Event Title - Proportions from Figma (20/492 ≈ 0.04)
                 Text("Since \(event.title)")
-                    .font(.system(size: cardSize.width * 0.053, weight: .medium, design: .rounded))
+                    .font(.system(size: cardSize.width * 0.053, weight: .medium))
                     .foregroundColor(.white.opacity(0.6))
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)
@@ -247,7 +247,7 @@ struct AppIconView: View {
                     RoundedRectangle(cornerRadius: size * 0.2)
                         .fill(
                             LinearGradient(
-                                colors: [Color.primaryBlue, Color.primaryBlue.opacity(0.8)],
+                                colors: [Color.primaryGreen, Color.primaryGreen.opacity(0.8)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )

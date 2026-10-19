@@ -51,9 +51,8 @@ struct AddEventBottomSheet: View {
             // Header
             HStack {
                 Text(isEditing ? "Edit event" : "Add an event")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.primaryBlue)
-                    .tracking(-0.96)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primaryGreen)
                 
                 Spacer()
             }
@@ -73,7 +72,6 @@ struct AddEventBottomSheet: View {
                         )
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(Color(hex: "1a1a1a"))
-                            .tracking(-0.64)
                             .focused($isTextFieldFocused)
                             .onChange(of: eventTitle) { _, newValue in
                                 if newValue.count > Self.maxTitleLength {
@@ -105,7 +103,6 @@ struct AddEventBottomSheet: View {
                             Text("Started on")
                                 .font(.system(size: 16))
                                 .foregroundColor(Self.labelColor)
-                                .tracking(-0.64)
                             
                             Spacer()
                             
@@ -126,7 +123,6 @@ struct AddEventBottomSheet: View {
                             Text("Card theme")
                                 .font(.system(size: 16))
                                 .foregroundColor(Self.labelColor)
-                                .tracking(-0.64)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
@@ -172,12 +168,11 @@ struct AddEventBottomSheet: View {
             VStack(spacing: 0) {
                 Button(action: { saveEvent() }) {
                     Text(isEditing ? "Save changes" : "Save")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
-                        .tracking(-0.64)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
-                        .background(isSaveEnabled ? Color.primaryBlue : Color.mutedBlue)
+                        .background(isSaveEnabled ? Color.primaryGreen : Color.mutedGreen)
                         .cornerRadius(50)
                         // Fade between enabled/disabled instead of snapping
                         .animation(.easeOut(duration: 0.2), value: isSaveEnabled)
@@ -245,7 +240,8 @@ struct AddEventBottomSheet: View {
     // MARK: - Computed Properties
     
     private var availableThemes: [CardTheme] {
-        CardTheme.displayThemes + [.custom]
+        // Photo first so it's easy to find; the themes follow
+        [.custom] + CardTheme.displayThemes
     }
     
     static let maxTitleLength = 40
@@ -427,12 +423,12 @@ struct ThemeCarouselItem: View {
                         Image(systemName: "photo.badge.plus")
                             .font(.system(size: 20, weight: .medium))
                         Text("Photo")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 11, weight: .medium))
                     }
-                    .foregroundColor(.primaryBlue)
+                    .foregroundColor(.primaryGreen)
                     RoundedRectangle(cornerRadius: 12)
                         .strokeBorder(
-                            Color.primaryBlue.opacity(0.6),
+                            Color.primaryGreen.opacity(0.6),
                             style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
                         )
                 }
@@ -447,7 +443,7 @@ struct ThemeCarouselItem: View {
         .overlay(
             // Inside the card's edge so the scroll view never clips it
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isSelected ? Color.primaryBlue : Color.clear, lineWidth: 3)
+                .strokeBorder(isSelected ? Color.primaryGreen : Color.clear, lineWidth: 3)
         )
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
     }
@@ -498,19 +494,18 @@ private struct NameSuggestionChip: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 14, weight: .medium))
-            .tracking(-0.4)
-            .foregroundColor(isSelected ? .primaryBlue : Color(hex: "4a484a"))
+            .font(.system(size: 14, weight: .regular))
+            .foregroundColor(isSelected ? .primaryGreen : Color(hex: "4a484a"))
             .padding(.horizontal, 14)
             .frame(height: 34)
             .background(
                 Capsule()
-                    .fill(isSelected ? Color.primaryBlue.opacity(0.08) : Color.white.opacity(0.5))
+                    .fill(isSelected ? Color.primaryGreen.opacity(0.08) : Color.white.opacity(0.5))
             )
             .overlay(
                 Capsule()
                     .strokeBorder(
-                        isSelected ? Color.primaryBlue : Color.black.opacity(0.28),
+                        isSelected ? Color.primaryGreen : Color.black.opacity(0.28),
                         style: StrokeStyle(lineWidth: 1, dash: [4, 3])
                     )
             )
@@ -560,33 +555,33 @@ private struct CarouselEdgeFade: ViewModifier {
     }
 }
 
-/// Date or time pill in the sheet's own style. A native compact DatePicker sits
-/// underneath, so a tap still opens the system popover anchored here.
+/// Date or time pill in the sheet's own style. The real compact DatePicker is
+/// underneath and fully visible to touch; our pill is drawn over it, opaque and
+/// with hit testing off, so taps fall straight through to the native control and
+/// open the system's own glass picker.
 private struct StartDatePill: View {
     @Binding var date: Date
     let components: DatePickerComponents
     let text: String
 
     var body: some View {
-        Text(text)
-            .font(.system(size: 15, weight: .medium))
-            .tracking(-0.4)
-            .foregroundColor(Color(hex: "1a1a1a"))
-            .lineLimit(1)
-            .padding(.horizontal, 14)
-            .frame(height: 34)
-            .background(Capsule().fill(Color.white))
-            .overlay(Capsule().strokeBorder(Color.black.opacity(0.08), lineWidth: 1))
-            .overlay {
-                // The native control stays tappable but invisible, so its own
-                // text never shows through
-                DatePicker("", selection: $date, in: ...Date(), displayedComponents: components)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .tint(.primaryBlue)
-                    .colorMultiply(.clear)
-                    .opacity(0.02)
-            }
+        DatePicker("", selection: $date, in: ...Date(), displayedComponents: components)
+            .datePickerStyle(.compact)
+            .labelsHidden()
+            .tint(.primaryGreen)
             .accessibilityLabel(components == .date ? "Start date" : "Start time")
+            .overlay {
+                // Fully opaque, so none of the native text shows through
+                Text(text)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(Color(hex: "1a1a1a"))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Capsule().fill(Color.white))
+                    .overlay(Capsule().strokeBorder(Color.black.opacity(0.08), lineWidth: 1))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
     }
 }

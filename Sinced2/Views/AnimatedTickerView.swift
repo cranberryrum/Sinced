@@ -16,7 +16,7 @@ struct AnimatedTickerView: View {
     
     var body: some View {
         Text(text)
-            .font(.system(size: fontSize, weight: fontWeight, design: .rounded))
+            .font(.system(size: fontSize, weight: fontWeight))
             .monospacedDigit()
             .foregroundColor(color)
             .contentTransition(.numericText())
@@ -35,7 +35,7 @@ struct AnimatedTimeDisplay: View {
             AnimatedNumberOnly(
                 number: getTimeValue(),
                 fontSize: 72,
-                color: .primaryBlue
+                color: .primaryGreen
             )
             
             Text("\(getUnitSuffix()) since")
@@ -85,7 +85,7 @@ struct AnimatedNumberOnly: View {
     
     var body: some View {
         Text(numberString)
-            .font(.system(size: fontSize, weight: .bold, design: .rounded))
+            .font(.system(size: fontSize, weight: .semibold))
             .monospacedDigit()
             .foregroundColor(color)
             .contentTransition(.numericText(value: Double(number)))
@@ -102,7 +102,7 @@ struct AnimatedNumberOnly: View {
 
 #Preview {
     VStack(spacing: 40) {
-        AnimatedTickerView(text: "42", fontSize: 48, fontWeight: .bold, color: .primaryBlue)
+        AnimatedTickerView(text: "42", fontSize: 48, fontWeight: .bold, color: .primaryGreen)
         AnimatedNumberOnly(number: 365, fontSize: 56, color: .blue)
     }
     .padding()

@@ -82,6 +82,7 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .grainListBackground()
             .navigationTitle("Settings")
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
@@ -363,13 +364,13 @@ private struct NotificationSettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .tint(.primaryBlue)
+                .tint(.primaryGreen)
 
                 if notificationManager.authorizationStatus == .denied {
                     Button("Open System Settings") {
                         notificationManager.openSettings()
                     }
-                    .foregroundColor(.primaryBlue)
+                    .foregroundColor(.primaryGreen)
                 }
             }
 
@@ -396,12 +397,13 @@ private struct NotificationSettingsView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .tint(.primaryBlue)
+                        .tint(.primaryGreen)
                     }
                 }
             }
         }
         .listStyle(.insetGrouped)
+        .grainListBackground()
         .onAppear {
             listedEventIds = viewModel.events
                 .filter { $0.reminderSettings.isEnabled }

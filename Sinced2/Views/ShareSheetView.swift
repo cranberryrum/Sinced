@@ -54,7 +54,7 @@ struct ShareSheetView: View {
                 // Theme Selection
                 VStack(spacing: 12) {
                     Text("Theme")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.primary.opacity(0.4))
                     
                     HStack(spacing: 16) {
@@ -80,14 +80,14 @@ struct ShareSheetView: View {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.system(size: 18, weight: .semibold))
                             Text("Share")
-                                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                .font(.system(size: 17, weight: .semibold))
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.primaryBlue)
+                                .fill(Color.primaryGreen)
                         )
                     }
                     .disabled(isSharing)
@@ -98,14 +98,14 @@ struct ShareSheetView: View {
                             Image(systemName: showingSaveSuccess ? "checkmark" : "square.and.arrow.down")
                                 .font(.system(size: 18, weight: .semibold))
                             Text(showingSaveSuccess ? "Saved!" : "Save to Photos")
-                                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                .font(.system(size: 17, weight: .semibold))
                         }
-                        .foregroundColor(showingSaveSuccess ? .green : .primaryBlue)
+                        .foregroundColor(showingSaveSuccess ? .green : .primaryGreen)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(showingSaveSuccess ? Color.green.opacity(0.1) : Color.primaryBlue.opacity(0.1))
+                                .fill(showingSaveSuccess ? Color.green.opacity(0.1) : Color.primaryGreen.opacity(0.1))
                         )
                     }
                     .disabled(isSharing || showingSaveSuccess)
@@ -223,7 +223,7 @@ struct ShareSheetView: View {
             
             // Selection ring with dissolve transition
             Circle()
-                .stroke(Color.primaryBlue, lineWidth: 2)
+                .stroke(Color.primaryGreen, lineWidth: 2)
                 .frame(width: 44, height: 44)
                 .opacity(selectedTheme == theme ? 1 : 0)
                 .scaleEffect(selectedTheme == theme ? 1.0 : 0.8)
