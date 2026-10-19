@@ -191,15 +191,11 @@ struct EventListView: View {
                 )
                 .presentationDetents([.height(440)])
                 .presentationDragIndicator(.visible)
-                .presentationCornerRadius(36)
-                .presentationBackground(.white)
             }
             .sheet(isPresented: $showingCreateEvent) {
                 AddEventBottomSheet(viewModel: viewModel, isPresented: $showingCreateEvent)
-                    .presentationDetents([.height(440)])
+                    .presentationDetents([.height(490)])
                     .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(36)
-                    .presentationBackground(.white)
             }
         }
     }

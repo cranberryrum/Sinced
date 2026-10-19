@@ -103,8 +103,6 @@ struct ResetSheetView: View {
         // Extra detent so large Dynamic Type can still reach the button
         .presentationDetents([.height(360), .large])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(32)
-        .presentationBackground(.white)
     }
     
     private func resetEvent() {

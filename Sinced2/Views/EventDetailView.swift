@@ -234,8 +234,6 @@ struct EventDetailView: View {
                 )
                 .presentationDetents([.height(440)])
                 .presentationDragIndicator(.visible)
-                .presentationCornerRadius(36)
-                .presentationBackground(.white)
             }
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheetView(event: localEvent)
