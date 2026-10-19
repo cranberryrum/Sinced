@@ -16,8 +16,8 @@ struct EventDetailView: View {
     
     @State private var showingResetSheet = false
     @State private var showingShareSheet = false
-    @State private var showingReminderSettings = false
     @State private var showingDeleteSheet = false
+    @State private var showingEditSheet = false
     @State private var currentTime = Date()
     @State private var localEvent: SinceEvent
     
@@ -41,11 +41,14 @@ struct EventDetailView: View {
                             .foregroundColor(.primary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 20)
+                            // Crossfade when renamed instead of snapping
+                            .contentTransition(.opacity)
                         
                         // 2. Started on date
                         Text("Started on \(localEvent.smartFormattedStartDate)")
                             .font(.roundedSubheadline)
                             .foregroundColor(.secondary)
+                            .contentTransition(.opacity)
                         
                         // 4. Native Segmented Control - Major prominence
                         VStack(spacing: 16) {
@@ -115,8 +118,7 @@ struct EventDetailView: View {
                         // Reminders Section
                         ReminderToggleSection(
                             event: $localEvent,
-                            viewModel: viewModel,
-                            showingReminderSettings: $showingReminderSettings
+                            viewModel: viewModel
                         )
                         .padding(.horizontal, 20)
                         
@@ -199,6 +201,12 @@ struct EventDetailView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Edit") {
+                        HapticManager.shared.light()
+                        showingEditSheet = true
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
@@ -218,22 +226,26 @@ struct EventDetailView: View {
             .sheet(isPresented: $showingResetSheet) {
                 ResetSheetView(event: localEvent, viewModel: viewModel)
             }
+            .sheet(isPresented: $showingEditSheet) {
+                AddEventBottomSheet(
+                    viewModel: viewModel,
+                    isPresented: $showingEditSheet,
+                    editingEvent: localEvent
+                )
+                .presentationDetents([.height(440)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(36)
+                .presentationBackground(.white)
+            }
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheetView(event: localEvent)
-            }
-            .sheet(isPresented: $showingReminderSettings) {
-                ReminderSettingsView(
-                    event: $localEvent,
-                    viewModel: viewModel,
-                    startEnabled: !localEvent.reminderSettings.isEnabled
-                )
             }
             .sheet(isPresented: $showingDeleteSheet) {
                 DeleteConfirmationSheet(
                     eventTitle: localEvent.title,
                     onConfirmDelete: confirmDelete
                 )
-                .presentationDetents([.height(280)])
+                .presentationDetents([.height(280), .large])
                 .presentationDragIndicator(.visible)
             }
         }
@@ -241,8 +253,13 @@ struct EventDetailView: View {
             currentTime = Date()
         }
         .onReceive(viewModel.$events) { events in
-            guard let updatedEvent = events.first(where: { $0.id == localEvent.id }) else { return }
-            localEvent = updatedEvent
+            guard let updatedEvent = events.first(where: { $0.id == localEvent.id }),
+                  updatedEvent != localEvent else { return }
+            // Same motion as switching time units, so edits land smoothly
+            // (the counter ticks to its new value via AnimatedTimeDisplay)
+            withAnimation(.smooth(duration: 0.35)) {
+                localEvent = updatedEvent
+            }
         }
     }
     
@@ -307,75 +324,139 @@ struct TimelineItemView: View {
     }
 }
 
-/// Reminder toggle section for event detail view
+/// Reminders row for the event detail view. The toggle turns reminders on/off
+/// right here; when on, the schedule is edited in place with native pop-up
+/// controls instead of a separate sheet. Changes save immediately.
 struct ReminderToggleSection: View {
     @Binding var event: SinceEvent
     let viewModel: EventViewModel
-    @Binding var showingReminderSettings: Bool
     
     @ObservedObject private var notificationManager = NotificationManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showingPermissionAlert = false
+    
+    private var settings: ReminderSettings { event.reminderSettings }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Main toggle row
-            Button(action: {
-                if event.reminderSettings.isEnabled {
-                    // If already enabled, open settings
-                    showingReminderSettings = true
-                } else {
-                    // Enable and request permission if needed
-                    handleToggle()
+            // L1: always-visible toggle
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(settings.isEnabled ? Color.primaryBlue : Color.secondary.opacity(0.2))
+                        .frame(width: 36, height: 36)
+                    
+                    Image(systemName: settings.isEnabled ? "bell.badge.fill" : "bell.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(settings.isEnabled ? .white : .secondary)
+                        .contentTransition(.symbolEffect(.replace))
                 }
-            }) {
-                HStack(spacing: 14) {
-                    // Icon
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(event.reminderSettings.isEnabled ? Color.primaryBlue : Color.secondary.opacity(0.2))
-                            .frame(width: 36, height: 36)
-                        
-                        Image(systemName: event.reminderSettings.isEnabled ? "bell.badge.fill" : "bell.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(event.reminderSettings.isEnabled ? .white : .secondary)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Reminders")
+                        .font(.roundedBody)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                    
+                    Text(statusText)
+                        .font(.roundedCaption)
+                        .foregroundColor(.secondary)
+                        .contentTransition(.opacity)
+                }
+                
+                Spacer()
+                
+                Toggle("Reminders", isOn: Binding(
+                    get: { settings.isEnabled },
+                    set: handleToggle
+                ))
+                .labelsHidden()
+                .tint(.primaryBlue)
+            }
+            .padding(16)
+            
+            // Schedule, edited in place
+            if settings.isEnabled {
+                VStack(spacing: 0) {
+                    Divider()
+                        .padding(.leading, 66)
+                    
+                    scheduleRow(title: "Repeat") {
+                        repeatMenu
                     }
                     
-                    // Text content
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Reminders")
-                            .font(.roundedBody)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                    Divider()
+                        .padding(.leading, 66)
+                    
+                    if settings.reminderType == .daily {
+                        scheduleRow(title: "Time") {
+                            DatePicker(
+                                "Time",
+                                selection: Binding(
+                                    get: { settings.dailyReminderTime },
+                                    set: { newTime in
+                                        let components = Calendar.current.dateComponents([.hour, .minute], from: newTime)
+                                        update {
+                                            $0.dailyHour = components.hour ?? 9
+                                            $0.dailyMinute = components.minute ?? 0
+                                        }
+                                    }
+                                ),
+                                displayedComponents: .hourAndMinute
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                        }
+                        .transition(.opacity)
+                    } else {
+                        scheduleRow(title: "Days") {
+                            weekdayMenu
+                        }
+                        .transition(.opacity)
                         
-                        Text(reminderStatusText)
+                        Text("Sent at a different time each day, between 9 AM and 9 PM.")
                             .font(.roundedCaption)
                             .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    // Toggle / Chevron
-                    if event.reminderSettings.isEnabled {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
-                    } else {
-                        Toggle("", isOn: Binding(
-                            get: { event.reminderSettings.isEnabled },
-                            set: { _ in handleToggle() }
-                        ))
-                        .labelsHidden()
-                        .tint(.primaryBlue)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.leading, 66)
+                            .padding(.trailing, 16)
+                            .padding(.bottom, 12)
+                            .transition(.opacity)
                     }
                 }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(UIColor.secondarySystemBackground))
-                )
+                .padding(.bottom, 6)
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
             }
-            .buttonStyle(.plain)
+            
+            // Event reminders can't fire while notifications are off app-wide
+            if settings.isEnabled && !notificationManager.notificationsEnabled {
+                HStack(spacing: 8) {
+                    Text("Notifications are off for Sinced.")
+                        .font(.roundedCaption)
+                        .foregroundColor(.secondary)
+                    
+                    Button("Turn on") {
+                        HapticManager.shared.light()
+                        notificationManager.setNotificationsEnabled(true)
+                    }
+                    .font(.roundedCaption.weight(.semibold))
+                    .foregroundColor(.primaryBlue)
+                    
+                    Spacer()
+                }
+                .padding(.leading, 66)
+                .padding(.bottom, 12)
+                .transition(.opacity)
+            }
         }
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(UIColor.secondarySystemBackground))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .animation(.smooth(duration: 0.3), value: settings.isEnabled)
+        .animation(.smooth(duration: 0.3), value: settings.reminderType)
+        .animation(.smooth(duration: 0.3), value: notificationManager.notificationsEnabled)
         .alert("Notifications Disabled", isPresented: $showingPermissionAlert) {
             Button("Open Settings") {
                 notificationManager.openSettings()
@@ -386,44 +467,142 @@ struct ReminderToggleSection: View {
         }
     }
     
-    private var reminderStatusText: String {
-        guard event.reminderSettings.isEnabled else {
-            return "Get daily or weekly motivation"
+    // MARK: - Pieces
+    
+    private func scheduleRow<Control: View>(title: String, @ViewBuilder control: () -> Control) -> some View {
+        HStack {
+            Text(title)
+                .font(.roundedBody)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            control()
         }
-        
-        switch event.reminderSettings.reminderType {
-        case .daily:
-            let formatter = DateFormatter()
-            formatter.timeStyle = .short
-            let timeString = formatter.string(from: event.reminderSettings.dailyReminderTime)
-            return "Daily at \(timeString)"
-        case .weekly:
-            let days = event.reminderSettings.weeklyDays
-                .sorted { $0.rawValue < $1.rawValue }
-                .map { $0.shortName }
-                .joined(separator: ", ")
-            return "Weekly on \(days)"
+        .padding(.leading, 66) // Aligns with the "Reminders" title
+        .padding(.trailing, 16) // Aligns controls with the toggle
+        .padding(.vertical, 4)
+        .frame(minHeight: 52)
+    }
+    
+    /// Repeat menu with a custom label, so its trailing edge lines up with the
+    /// toggle (the stock `.menu` picker adds its own inset)
+    private var repeatMenu: some View {
+        Menu {
+            Picker("Repeat", selection: Binding(
+                get: { settings.reminderType },
+                set: { newType in update { $0.reminderType = newType } }
+            )) {
+                ForEach(ReminderType.allCases, id: \.self) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+        } label: {
+            menuLabel(settings.reminderType.rawValue)
         }
     }
     
-    private func handleToggle() {
-        HapticManager.shared.light()
+    private func menuLabel(_ text: String) -> some View {
+        HStack(spacing: 4) {
+            Text(text)
+                .font(.roundedBody)
+                .lineLimit(1)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .foregroundColor(.primaryBlue)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+    
+    /// Multi-select weekday menu that stays open while days are toggled
+    private var weekdayMenu: some View {
+        Menu {
+            ForEach(Weekday.allCases) { weekday in
+                Toggle(weekday.fullName, isOn: Binding(
+                    get: { settings.weeklyDays.contains(weekday) },
+                    set: { isOn in toggleDay(weekday, isOn: isOn) }
+                ))
+                // Keep at least one day selected
+                .disabled(settings.weeklyDays == [weekday])
+            }
+        } label: {
+            menuLabel(weekdaySummary)
+        }
+        .menuActionDismissBehavior(.disabled)
+    }
+    
+    // MARK: - Text
+    
+    private var statusText: String {
+        guard settings.isEnabled else {
+            return "Get daily or weekly motivation"
+        }
+        guard notificationManager.notificationsEnabled else {
+            return "Paused"
+        }
+        switch settings.reminderType {
+        case .daily:
+            return "Daily at \(settings.dailyReminderTime.formatted(date: .omitted, time: .shortened))"
+        case .weekly:
+            return "Weekly on \(weekdaySummary)"
+        }
+    }
+    
+    private var weekdaySummary: String {
+        let days = Set(settings.weeklyDays)
+        if days.count == 7 { return "Every day" }
+        if days == [.monday, .tuesday, .wednesday, .thursday, .friday] { return "Weekdays" }
+        if days == [.saturday, .sunday] { return "Weekends" }
+        return Weekday.allCases
+            .filter(days.contains)
+            .map(\.shortName)
+            .joined(separator: ", ")
+    }
+    
+    // MARK: - Actions
+    
+    /// Apply a change to the reminder settings and save straight away
+    private func update(_ change: (inout ReminderSettings) -> Void) {
+        var updated = event
+        change(&updated.reminderSettings)
+        guard updated != event else { return }
+        HapticManager.shared.selection()
+        event = updated
+        viewModel.updateEvent(updated)
+    }
+    
+    private func toggleDay(_ weekday: Weekday, isOn: Bool) {
+        update { settings in
+            if isOn {
+                if !settings.weeklyDays.contains(weekday) { settings.weeklyDays.append(weekday) }
+            } else if settings.weeklyDays.count > 1 {
+                settings.weeklyDays.removeAll { $0 == weekday }
+            }
+            settings.weeklyDays.sort { $0.rawValue < $1.rawValue }
+        }
+    }
+    
+    private func handleToggle(_ isOn: Bool) {
+        guard isOn else {
+            update { $0.isEnabled = false }
+            return
+        }
         
-        // Check notification permission status
         switch notificationManager.authorizationStatus {
         case .notDetermined:
-            // Request permission
             notificationManager.requestAuthorization { granted in
                 if granted {
-                    showingReminderSettings = true
+                    update { $0.isEnabled = true }
+                } else {
+                    showingPermissionAlert = true
                 }
             }
         case .denied:
+            HapticManager.shared.light()
             showingPermissionAlert = true
-        case .authorized, .provisional, .ephemeral:
-            showingReminderSettings = true
-        @unknown default:
-            showingReminderSettings = true
+        default:
+            update { $0.isEnabled = true }
         }
     }
 }
