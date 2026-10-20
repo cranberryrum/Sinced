@@ -559,13 +559,14 @@ private struct CarouselEdgeFade: ViewModifier {
 /// underneath and fully visible to touch; our pill is drawn over it, opaque and
 /// with hit testing off, so taps fall straight through to the native control and
 /// open the system's own glass picker.
-private struct StartDatePill: View {
+struct StartDatePill: View {
     @Binding var date: Date
     let components: DatePickerComponents
     let text: String
+    var range: ClosedRange<Date>? = nil
 
     var body: some View {
-        DatePicker("", selection: $date, in: ...Date(), displayedComponents: components)
+        DatePicker("", selection: $date, in: range ?? (Date.distantPast...Date()), displayedComponents: components)
             .datePickerStyle(.compact)
             .labelsHidden()
             .tint(.primaryGreen)

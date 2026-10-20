@@ -2,7 +2,8 @@
 //  ResetSheetView.swift
 //  Sinced2
 //
-//  Sheet for resetting an event with optional note
+//  Sheet for resetting an event: shows the run being ended, lets you backdate
+//  the reset and add a note, and keeps the run in the event's history
 //
 
 import SwiftUI
@@ -10,115 +11,124 @@ import SwiftUI
 struct ResetSheetView: View {
     let event: SinceEvent
     @ObservedObject var viewModel: EventViewModel
+    /// Called after the reset is saved, e.g. to offer an undo
+    var onReset: () -> Void = {}
     @Environment(\.dismiss) var dismiss
-    
+
     @State private var resetDate = Date()
     @State private var note = ""
-    @State private var lastNowTap = Date.distantPast
-    
+
     /// Valid reset dates. Guards against a start date in the future (older
     /// data), which would make `startedAt...now` an invalid range and crash.
     private var resetRange: ClosedRange<Date> {
         let now = Date()
         return min(event.startedAt, now)...now
     }
-    
+
+    /// Length of the run this reset ends
+    private var endingRun: String {
+        SincedDurationText.text(for: min(resetDate, Date()).timeIntervalSince(event.startedAt))
+    }
+
+    private var isBackdated: Bool {
+        Date().timeIntervalSince(resetDate) > 60
+    }
+
     var body: some View {
         ScrollView {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Text("Reset time")
-                    .font(.roundedHeadline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Button("Now") {
-                    resetDate = Date()
-                    lastNowTap = Date()
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Reset \(event.title.lowercased())?")
+                        .font(.rounded(22, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    Text("Your current run of \(endingRun) goes into history, and the counter starts again from \(isBackdated ? "the time below" : "now").")
+                        .font(.roundedSubheadline)
+                        .foregroundColor(.secondary)
+                        .contentTransition(.numericText())
+                        .animation(.smooth(duration: 0.25), value: endingRun)
+
+                    Text("First started \(event.firstStartedAt.sincedShortDate). That stays.")
+                        .font(.roundedCaption)
+                        .foregroundColor(Color(UIColor.tertiaryLabel))
                 }
-                .font(.roundedSubheadline)
-                .foregroundColor(.primaryGreen)
-            }
-            
-            HStack(spacing: 14) {
-                DatePicker("", selection: $resetDate, in: resetRange, displayedComponents: .date)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
-                DatePicker("", selection: $resetDate, in: resetRange, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Note (optional)")
-                    .font(.roundedHeadline)
-                    .foregroundColor(.primary)
-                
-                TextField("Add a quick note", text: $note, axis: .vertical)
-                    .lineLimit(1...3)
-                    .padding(12)
-                    .frame(minHeight: 54, alignment: .topLeading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(Color(UIColor.secondarySystemBackground))
+
+                // When it happened, in case it was earlier than now
+                HStack(spacing: 8) {
+                    Text("When")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    StartDatePill(
+                        date: $resetDate,
+                        components: .date,
+                        text: resetDate.formatted(.dateTime.day().month(.abbreviated).year()),
+                        range: resetRange
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color(UIColor.separator), lineWidth: 0.5)
+                    StartDatePill(
+                        date: $resetDate,
+                        components: .hourAndMinute,
+                        text: resetDate.formatted(date: .omitted, time: .shortened),
+                        range: resetRange
                     )
+
+                    if isBackdated {
+                        Button("Now") {
+                            withAnimation(.smooth(duration: 0.25)) { resetDate = Date() }
+                        }
+                        .font(.rounded(15, weight: .medium))
+                        .foregroundColor(.primaryGreen)
+                        .transition(.opacity)
+                    }
+                }
+                .animation(.smooth(duration: 0.25), value: isBackdated)
+
+                TextField(
+                    "Note",
+                    text: $note,
+                    prompt: Text("what happened? (optional)").foregroundColor(Color(hex: "8a888a")),
+                    axis: .vertical
+                )
+                .lineLimit(1...3)
+                .font(.system(size: 16))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.9))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                )
+
+                Button(action: resetEvent) {
+                    Text("Reset counter")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Capsule().fill(Color(hex: "E5484D")))
+                }
+                .buttonStyle(PressableButtonStyle())
             }
-            
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primaryGreen)
-                    .opacity(lastNowTap.timeIntervalSinceNow > -1.5 ? 1 : 0.4)
-                    .animation(.easeInOut(duration: 0.2), value: lastNowTap)
-                
-                Text("Your current streak will be saved to history.")
-                    .font(.roundedCaption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Button(role: .destructive, action: {
-                resetEvent()
-            }) {
-                Label("Reset & Save", systemImage: "arrow.counterclockwise")
-                    .font(.roundedHeadline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 28)
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .padding(.bottom, 24)
         }
         .scrollBounceBehavior(.basedOnSize)
         // Extra detent so large Dynamic Type can still reach the button
-        .presentationDetents([.height(360), .large])
+        .presentationDetents([.height(400), .large])
         .presentationDragIndicator(.visible)
     }
-    
+
     private func resetEvent() {
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        let finalNote = trimmedNote.isEmpty ? nil : trimmedNote
-        
-        viewModel.resetEvent(event, at: min(resetDate, Date()), note: finalNote)
-        
-        // Haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
-        
-        // Dismiss with animation
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-            dismiss()
-        }
+        viewModel.resetEvent(event, at: min(resetDate, Date()), note: trimmedNote.isEmpty ? nil : trimmedNote)
+        onReset()
+        dismiss()
     }
 }
 
@@ -127,8 +137,6 @@ struct ResetSheetView: View {
         title: "Coffee",
         startedAt: Date().addingTimeInterval(-3600 * 24 * 3)
     )
-    
+
     ResetSheetView(event: sampleEvent, viewModel: EventViewModel())
 }
-
-

@@ -20,6 +20,9 @@ struct EventDetailView: View {
     @State private var showingEditSheet = false
     @State private var currentTime = Date()
     @State private var localEvent: SinceEvent
+    /// Shown for a moment after a reset from here, with an undo button
+    @State private var showingUndoBanner = false
+    @State private var showingAllRuns = false
     
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
     
@@ -44,11 +47,9 @@ struct EventDetailView: View {
                             // Crossfade when renamed instead of snapping
                             .contentTransition(.opacity)
                         
-                        // 2. Started on date
-                        Text("Started on \(localEvent.smartFormattedStartDate)")
-                            .font(.roundedSubheadline)
-                            .foregroundColor(.secondary)
-                            .contentTransition(.opacity)
+                        // 2. Start dates: the current run, and the very first start
+                        // once there have been resets, so the original is never lost
+                        RunStartSummary(event: localEvent)
                         
                         // 4. Native Segmented Control - Major prominence
                         VStack(spacing: 16) {
@@ -168,28 +169,15 @@ struct EventDetailView: View {
                         .frame(maxWidth: geometry.size.width - 40)
                         .padding(.horizontal, 20)
                     
-                    // Timeline / History - Cleaner section
-                    if !localEvent.history.isEmpty {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("History")
-                                    .font(.roundedHeadline)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text("\(localEvent.history.count) reset\(localEvent.history.count == 1 ? "" : "s")")
-                                    .font(.roundedCaption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.horizontal, 20)
-                            
-                            VStack(spacing: 10) {
-                                ForEach(localEvent.history.prefix(5)) { reset in
-                                    TimelineItemView(reset: reset)
-                                        .frame(maxWidth: geometry.size.width - 40)
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                        }
+                    // Runs: stats and every past run, so resets never erase the story
+                    if localEvent.hasBeenReset {
+                        RunsSection(
+                            event: localEvent,
+                            now: currentTime,
+                            showingAll: $showingAllRuns
+                        )
+                        .frame(maxWidth: geometry.size.width - 40)
+                        .padding(.horizontal, 20)
                         .padding(.top, 16)
                     }
                     
@@ -225,7 +213,9 @@ struct EventDetailView: View {
                 }
             }
             .sheet(isPresented: $showingResetSheet) {
-                ResetSheetView(event: localEvent, viewModel: viewModel)
+                ResetSheetView(event: localEvent, viewModel: viewModel) {
+                    withAnimation(.smooth(duration: 0.3)) { showingUndoBanner = true }
+                }
             }
             .sheet(isPresented: $showingEditSheet) {
                 AddEventBottomSheet(
@@ -246,6 +236,22 @@ struct EventDetailView: View {
                 )
                 .presentationDetents([.height(280), .large])
                 .presentationDragIndicator(.visible)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if showingUndoBanner {
+                UndoResetBanner(event: localEvent) {
+                    viewModel.undoReset(localEvent)
+                    withAnimation(.smooth(duration: 0.3)) { showingUndoBanner = false }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task {
+                    // Same window the widget offers
+                    try? await Task.sleep(for: .seconds(8))
+                    withAnimation(.smooth(duration: 0.3)) { showingUndoBanner = false }
+                }
             }
         }
         .onReceive(timer) { _ in

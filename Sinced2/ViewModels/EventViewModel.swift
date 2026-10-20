@@ -111,6 +111,16 @@ class EventViewModel: ObservableObject {
         refreshAllNotifications()
     }
     
+    /// Put back the run that was just reset, if it's still within the undo window
+    @discardableResult
+    func undoReset(_ event: SinceEvent) -> Bool {
+        guard storageManager.undoRecentReset(eventID: event.id) else { return false }
+        loadEvents()
+        triggerHaptic()
+        refreshAllNotifications()
+        return true
+    }
+    
     /// Complete onboarding
     func completeOnboarding() {
         hasCompletedOnboarding = true
