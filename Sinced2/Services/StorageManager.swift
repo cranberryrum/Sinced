@@ -13,7 +13,7 @@ class StorageManager {
     static let shared = StorageManager()
     
     // AppGroup identifier for sharing data with widget
-    private let appGroupIdentifier = "group.com.adityakolte.sinced2.x7q3"
+    private let appGroupIdentifier = "group.com.kolteaditya.sinced2"
     
     private let fileName = "events.json"
     
