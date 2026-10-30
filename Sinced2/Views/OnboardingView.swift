@@ -15,6 +15,7 @@ struct OnboardingView: View {
     @State private var nameOpacity: Double = 0
     @State private var nameInput: String = ""
     @FocusState private var nameFieldFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     private var trimmedName: String {
         nameInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -26,22 +27,18 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            GrainBackground()
+            Color(UIColor.systemBackground)
+                .ignoresSafeArea()
+                // The animation doesn't take touches, so a tap here skips the intro
+                .onTapGesture(perform: revealName)
 
             if !showName {
                 LottiePlayerView(
                     name: "Fadedproper",
                     loopMode: .playOnce,
-                    contentMode: .scaleAspectFit
-                ) {
-                    withAnimation(.easeInOut(duration: 0.45)) {
-                        lottieOpacity = 0
-                    }
-                    withAnimation(.easeInOut(duration: 0.45).delay(0.1)) {
-                        nameOpacity = 1
-                        showName = true
-                    }
-                }
+                    contentMode: .scaleAspectFit,
+                    onFinished: revealName
+                )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scaleEffect(1.0 / 3.0)
                 .clipped()
@@ -50,14 +47,41 @@ struct OnboardingView: View {
                 .transition(.opacity)
             }
 
+            // Grain sits above the animation so its shapes get the same
+            // texture as the background, not just the empty space around them
+            GrainOverlay()
+                .ignoresSafeArea()
+
             if showName {
                 nameView
                     .opacity(nameOpacity)
                     .transition(.opacity)
             }
         }
+        .task {
+            // Reduce Motion skips the animation; otherwise move on even if
+            // playback never reports finishing (interrupted or failed to load)
+            if !reduceMotion {
+                try? await Task.sleep(for: Self.introTimeout)
+            }
+            revealName()
+        }
     }
-    
+
+    /// The intro runs 8s; give it a little slack before moving on regardless
+    private static let introTimeout: Duration = .seconds(9)
+
+    private func revealName() {
+        guard !showName else { return }
+        withAnimation(.easeInOut(duration: 0.45)) {
+            lottieOpacity = 0
+        }
+        withAnimation(.easeInOut(duration: 0.45).delay(0.1)) {
+            nameOpacity = 1
+            showName = true
+        }
+    }
+
     private var nameView: some View {
         VStack(spacing: 24) {
             Spacer()
@@ -98,6 +122,14 @@ struct OnboardingView: View {
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(!canContinue)
                 .opacity(canContinue ? 1 : 0.5)
+
+                // A name is optional; it only personalises greetings
+                Button("Skip") {
+                    viewModel.completeOnboarding()
+                }
+                .font(.roundedBody)
+                .foregroundColor(.secondary)
+                .frame(height: 44)
             }
             .padding(.horizontal, 24)
             

@@ -32,56 +32,35 @@ class StorageManager {
         }
         
         // Fallback to documents directory
-        print("StorageManager: WARNING - AppGroup not available, falling back to documents directory")
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return documentsPath.appendingPathComponent(fileName)
     }
     
     /// Load all events from storage.
-    /// Records that can't be decoded are skipped rather than failing the whole
-    /// list, and the original file is backed up first so nothing is lost when
-    /// the remaining events are saved again.
+    /// Records that can't be decoded are skipped here but kept in the file
+    /// (see `EventsFile`), and a copy of the file is backed up once.
     func loadEvents() -> [SinceEvent] {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+        guard let data = try? Data(contentsOf: fileURL) else {
             return []
         }
         
         do {
-            let data = try Data(contentsOf: fileURL)
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let results = try decoder.decode([LossyDecodable<SinceEvent>].self, from: data)
-            let events = results.compactMap(\.value)
-            if events.count < results.count {
-                print("StorageManager: Skipped \(results.count - events.count) unreadable events")
-                backUpUnreadableFile(data)
+            let (events, skipped) = try EventsFile.decode(data)
+            if skipped > 0 {
+                EventsFile.backUp(data, nextTo: fileURL)
             }
             return events
         } catch {
-            print("StorageManager: Error loading events: \(error)")
-            if let data = try? Data(contentsOf: fileURL) {
-                backUpUnreadableFile(data)
-            }
+            EventsFile.backUp(data, nextTo: fileURL)
             return []
         }
-    }
-    
-    /// Keep a copy of an events file that couldn't be fully read
-    private func backUpUnreadableFile(_ data: Data) {
-        let backupURL = fileURL.deletingLastPathComponent()
-            .appendingPathComponent("events.unreadable-\(Int(Date().timeIntervalSince1970)).json")
-        try? data.write(to: backupURL, options: .atomic)
     }
     
     /// Save events to storage
     func saveEvents(_ events: [SinceEvent]) {
         do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            encoder.outputFormatting = .prettyPrinted
-            let data = try encoder.encode(events)
+            let data = try EventsFile.encode(events, keepingUnreadableFrom: try? Data(contentsOf: fileURL))
             try data.write(to: fileURL, options: [.atomic])
-            
             
             // Notify widget to update
             WidgetCenter.shared.reloadAllTimelines()
@@ -89,7 +68,7 @@ class StorageManager {
             // Siri matches spoken event names against this list
             SincedShortcuts.updateAppShortcutParameters()
         } catch {
-            print("StorageManager: Error saving events: \(error.localizedDescription)")
+            assertionFailure("StorageManager: Error saving events: \(error)")
         }
     }
     
@@ -262,12 +241,3 @@ import UIKit
 
 // Import WidgetKit for timeline reload
 import WidgetKit
-
-/// Decodes a value if possible, otherwise records nil instead of throwing
-private struct LossyDecodable<Value: Decodable>: Decodable {
-    let value: Value?
-    
-    init(from decoder: Decoder) throws {
-        value = try? Value(from: decoder)
-    }
-}

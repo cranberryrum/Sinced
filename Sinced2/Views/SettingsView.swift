@@ -15,7 +15,8 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     
     private static let privacyPolicyURL = URL(string: "https://github.com/cranberryrum/Sinced/blob/main/PRIVACY.md")!
-    private static let supportURL = URL(string: "mailto:adityakoltedes@gmail.com?subject=Sinced")!
+    private static let supportEmailURL = URL(string: "mailto:adityakoltedes@gmail.com?subject=Sinced")!
+    private static let supportPageURL = URL(string: "https://github.com/cranberryrum/Sinced/blob/main/SUPPORT.md")!
 
     private var displayName: String {
         let trimmed = viewModel.userName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -74,7 +75,10 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
 
                     Button {
-                        openURL(Self.supportURL)
+                        // No mail app set up → open the support page instead
+                        openURL(Self.supportEmailURL) { accepted in
+                            if !accepted { openURL(Self.supportPageURL) }
+                        }
                     } label: {
                         SettingsRowLabel(icon: "envelope", title: "Contact Support")
                     }

@@ -162,22 +162,24 @@ extension SinceEvent {
     /// How long the widget offers to undo a reset
     static let undoWindow: TimeInterval = 120
 
-    /// The latest reset, if it happened within the undo window and can be reverted
-    func undoableReset(at date: Date) -> Reset? {
+    /// The latest reset, if it can be reverted and happened within the undo
+    /// window. In the app a reset can be backdated, so the banner shown right
+    /// after it skips the window check (`requiringWindow: false`).
+    func undoableReset(at date: Date, requiringWindow: Bool = true) -> Reset? {
         guard let reset = history.first,
               reset.previousStart != nil,
-              reset.at == startedAt,
-              date.timeIntervalSince(reset.at) < Self.undoWindow else { return nil }
+              reset.at == startedAt else { return nil }
+        if requiringWindow, date.timeIntervalSince(reset.at) >= Self.undoWindow { return nil }
         return reset
     }
 }
 
 extension StorageManager {
     /// Reverts the latest reset if it's still within the undo window
-    func undoRecentReset(eventID: UUID, now: Date = Date()) -> Bool {
+    func undoRecentReset(eventID: UUID, now: Date = Date(), requiringWindow: Bool = true) -> Bool {
         var events = loadEvents()
         guard let index = events.firstIndex(where: { $0.id == eventID }),
-              let reset = events[index].undoableReset(at: now),
+              let reset = events[index].undoableReset(at: now, requiringWindow: requiringWindow),
               let previousStart = reset.previousStart else { return false }
 
         events[index].history.removeFirst()

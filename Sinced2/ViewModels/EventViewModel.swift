@@ -114,7 +114,8 @@ class EventViewModel: ObservableObject {
     /// Put back the run that was just reset, if it's still within the undo window
     @discardableResult
     func undoReset(_ event: SinceEvent) -> Bool {
-        guard storageManager.undoRecentReset(eventID: event.id) else { return false }
+        // Only offered by the banner right after a reset, which may be backdated
+        guard storageManager.undoRecentReset(eventID: event.id, requiringWindow: false) else { return false }
         loadEvents()
         triggerHaptic()
         refreshAllNotifications()
