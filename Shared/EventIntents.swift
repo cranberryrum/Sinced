@@ -192,12 +192,24 @@ extension StorageManager {
 // MARK: - Duration Text
 enum SincedDurationText {
     /// "12 days" or, with 2 units, "12 days, 4 hours"
-    static func text(for interval: TimeInterval, units: Int = 1) -> String {
+    static func text(for interval: TimeInterval, units: Int = 1, now: Date = Date()) -> String {
+        let interval = max(0, interval)
         let formatter = DateComponentsFormatter()
         formatter.unitsStyle = .full
-        formatter.maximumUnitCount = units
-        formatter.allowedUnits = interval < 60 ? [.second] : [.year, .month, .day, .hour, .minute]
-        return formatter.string(from: max(0, interval)) ?? ""
+        guard interval >= 60 else {
+            formatter.allowedUnits = [.second]
+            return formatter.string(from: interval) ?? ""
+        }
+        // DateComponentsFormatter rounds the last unit it shows (47 days →
+        // "2 months"), so drop the smaller units first to always round down
+        let all: [Calendar.Component] = [.year, .month, .day, .hour, .minute]
+        let full = Calendar.current.dateComponents(Set(all), from: now.addingTimeInterval(-interval), to: now)
+        var shown = DateComponents()
+        for unit in all.filter({ (full.value(for: $0) ?? 0) > 0 }).prefix(units) {
+            shown.setValue(full.value(for: unit), for: unit)
+        }
+        formatter.allowedUnits = [.year, .month, .day, .hour, .minute]
+        return formatter.string(from: shown) ?? ""
     }
 }
 

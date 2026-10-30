@@ -61,6 +61,18 @@ struct EventsFileTests {
     }
 }
 
+struct DurationTextTests {
+
+    @Test func roundsDownInsteadOfToNearest() {
+        let day: TimeInterval = 86_400
+        let now = Date(timeIntervalSince1970: 1_793_000_000)
+        #expect(SincedDurationText.text(for: 47 * day, now: now) == "1 month")
+        #expect(SincedDurationText.text(for: 20 * day, now: now) == "20 days")
+        #expect(SincedDurationText.text(for: 20 * day + 23 * 3600, units: 2, now: now) == "20 days, 23 hours")
+        #expect(SincedDurationText.text(for: 30, now: now) == "30 seconds")
+    }
+}
+
 struct UndoResetTests {
 
     @Test func backdatedResetIsUndoableOnlyWithoutWindow() {
