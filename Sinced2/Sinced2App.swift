@@ -20,6 +20,8 @@ struct Sinced2App: App {
         // Initialize notification manager (sets up delegate)
         _ = NotificationManager.shared
         
+        ReviewPrompter.noteLaunch()
+        
         // Widget, Control Center and Siri resets can happen while the app is open
         CFNotificationCenterAddObserver(
             CFNotificationCenterGetDarwinNotifyCenter(),
@@ -71,6 +73,10 @@ struct Sinced2App: App {
                 // Reminders are scheduled a limited number of days ahead with
                 // pre-computed day counts, so top them up whenever the app is opened
                 viewModel.refreshAllNotifications()
+                // Someone a week or more into a run may be happy to rate the app
+                if viewModel.hasCompletedOnboarding {
+                    ReviewPrompter.considerOnForeground(events: viewModel.events)
+                }
             }
         }
     }

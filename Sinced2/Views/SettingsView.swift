@@ -84,6 +84,23 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                Section {
+                    Button {
+                        openURL(AppStoreLinks.writeReview)
+                    } label: {
+                        SettingsRowLabel(icon: "star", title: "Rate Sinced")
+                    }
+                    .buttonStyle(.plain)
+
+                    ShareLink(
+                        item: AppStoreLinks.listing,
+                        message: Text("I use Sinced to count the days since the moments that matter. No account, no ads.")
+                    ) {
+                        SettingsRowLabel(icon: "heart", title: "Tell a Friend")
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .listStyle(.insetGrouped)
             .grainListBackground()

@@ -22,6 +22,7 @@ struct ShareSheetView: View {
     @State private var previewImageData: Data?
     @State private var showPhotoPicker = false
     @State private var saveError: SaveError?
+    @State private var didShareOrSave = false
     
     private enum SaveError: Identifiable {
         case permissionDenied, failed
@@ -132,6 +133,12 @@ struct ShareSheetView: View {
             // Pre-render the image
             Task {
                 await renderImage()
+            }
+        }
+        .onDisappear {
+            // Asked once this sheet is gone, so the two never stack
+            if didShareOrSave {
+                ReviewPrompter.considerAfterShare(events: [event])
             }
         }
         .onChange(of: selectedPhotoItem) { _, newItem in
@@ -318,6 +325,11 @@ struct ShareSheetView: View {
         return resizedImage?.jpegData(compressionQuality: 0.85)
     }
     
+    /// Goes along with the card so whoever receives it can tap through to the app
+    private var shareText: String {
+        "Counting the days since \(event.title) with Sinced \(AppStoreLinks.listing.absoluteString)"
+    }
+    
     private func shareImage() {
         isSharing = true
         
@@ -335,7 +347,7 @@ struct ShareSheetView: View {
             await MainActor.run {
                 // Share the UIImage (system will handle compression appropriately for each destination)
                 let activityViewController = UIActivityViewController(
-                    activityItems: [image],
+                    activityItems: [image, shareText],
                     applicationActivities: nil
                 )
                 
@@ -367,8 +379,9 @@ struct ShareSheetView: View {
                         height: 0
                     )
                     
-                    activityViewController.completionWithItemsHandler = { _, _, _, _ in
+                    activityViewController.completionWithItemsHandler = { _, completed, _, _ in
                         isSharing = false
+                        if completed { didShareOrSave = true }
                     }
                     
                     topController.present(activityViewController, animated: true)
@@ -423,6 +436,7 @@ struct ShareSheetView: View {
                     generator.notificationOccurred(.success)
                     
                     isSharing = false
+                    didShareOrSave = true
                     
                     // Reset after delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
