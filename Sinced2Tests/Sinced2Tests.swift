@@ -86,3 +86,75 @@ struct UndoResetTests {
         #expect(event.undoableReset(at: now, requiringWindow: false) != nil)
     }
 }
+
+/// The rules that keep people's history safe on disk
+@Suite(.serialized)
+struct EventsFileSafetyTests {
+    private let folder: URL
+    private var fileURL: URL { folder.appendingPathComponent("events.json") }
+
+    init() throws {
+        folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("EventsFileSafetyTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    }
+
+    @Test func oneUnreadableResetKeepsTheRestOfTheHistory() throws {
+        let data = Data("""
+        [{ "id": "6F1D1D5C-6C55-4D0A-9E43-8B8E1E2B0F01", "title": "Coffee", "startedAt": "2026-03-01T00:00:00Z",
+           "history": [
+             { "id": "6F1D1D5C-6C55-4D0A-9E43-8B8E1E2B0F11", "at": "2026-03-01T00:00:00Z", "previousStart": "2026-02-01T00:00:00Z" },
+             { "id": "not a uuid", "at": "2026-02-01T00:00:00Z", "previousStart": "2026-01-01T00:00:00Z" },
+             { "note": "no date, can't be used" }
+           ] }]
+        """.utf8)
+        let (events, _) = try EventsFile.decode(data)
+        let event = try #require(events.first)
+        // The bad id gets a fresh one; only the entry with no date is dropped
+        #expect(event.history.count == 2)
+        #expect(event.pastRuns.count == 2)
+    }
+
+    @Test func savingKeepsTheLastGoodFile() throws {
+        try EventsFile.save([SinceEvent(title: "First")], to: fileURL)
+        try EventsFile.save([SinceEvent(title: "Second")], to: fileURL)
+
+        let previous = try Data(contentsOf: EventsFile.lastGoodURL(for: fileURL))
+        #expect(try EventsFile.decode(previous).events.map(\.title) == ["First"])
+    }
+
+    @Test func aDamagedFileIsKeptAndTheLastGoodOneIsUsed() throws {
+        try EventsFile.save([SinceEvent(title: "Coffee")], to: fileURL)
+        try EventsFile.save([SinceEvent(title: "Coffee"), SinceEvent(title: "Gym")], to: fileURL)
+        let damaged = Data("[{ this is not json".utf8)
+        try damaged.write(to: fileURL)
+
+        #expect(EventsFile.load(from: fileURL).map(\.title) == ["Coffee"])
+
+        let kept = try FileManager.default.contentsOfDirectory(atPath: folder.path)
+            .filter { $0.hasPrefix("events.damaged-") }
+        #expect(kept.count == 1)
+        #expect(try Data(contentsOf: folder.appendingPathComponent(kept[0])) == damaged)
+    }
+
+    @Test func aFileThatCantBeReadIsNeverOverwritten() throws {
+        try EventsFile.save([SinceEvent(title: "Coffee")], to: fileURL)
+        let original = try Data(contentsOf: fileURL)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: fileURL.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileURL.path) }
+
+        #expect(EventsFile.load(from: fileURL).isEmpty)
+        #expect(throws: EventsFileError.self) {
+            try EventsFile.save([SinceEvent(title: "New")], to: fileURL)
+        }
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileURL.path)
+        #expect(try Data(contentsOf: fileURL) == original)
+    }
+
+    @Test func noFileYetStartsEmptyAndCanBeSaved() throws {
+        #expect(EventsFile.load(from: fileURL).isEmpty)
+        try EventsFile.save([SinceEvent(title: "Coffee")], to: fileURL)
+        #expect(EventsFile.load(from: fileURL).map(\.title) == ["Coffee"])
+    }
+}

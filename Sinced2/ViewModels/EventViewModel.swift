@@ -39,25 +39,30 @@ class EventViewModel: ObservableObject {
         archivedEvents = allEvents.filter { $0.isArchived }
     }
     
-    /// Add a new event
-    func addEvent(_ event: SinceEvent) {
-        storageManager.addEvent(event)
+    /// Add a new event. Returns false if it couldn't be saved.
+    @discardableResult
+    func addEvent(_ event: SinceEvent) -> Bool {
+        let saved = storageManager.addEvent(event)
         loadEvents()
+        guard saved else { return false }
         triggerHaptic()
         
         // Schedule reminders if enabled
         if event.reminderSettings.isEnabled {
             refreshAllNotifications()
         }
+        return true
     }
     
-    /// Update an existing event
-    func updateEvent(_ event: SinceEvent) {
-        storageManager.updateEvent(event)
+    /// Update an existing event. Returns false if it couldn't be saved.
+    @discardableResult
+    func updateEvent(_ event: SinceEvent) -> Bool {
+        let saved = storageManager.updateEvent(event)
         loadEvents()
         
         // Reschedule notifications with new settings
         refreshAllNotifications()
+        return saved
     }
     
     /// Delete an event
@@ -132,6 +137,7 @@ class EventViewModel: ObservableObject {
     func updateUserName(_ name: String) {
         userName = name
         UserDefaults.standard.set(name, forKey: "userName")
+        SharedSettings.userName = name
         // Queued reminders use the name, so rebuild them
         NotificationManager.shared.refreshAllReminders()
     }
@@ -144,6 +150,8 @@ class EventViewModel: ObservableObject {
     /// Load the stored user name
     private func loadUserName() {
         userName = UserDefaults.standard.string(forKey: "userName") ?? ""
+        // Names saved before the widget needed them
+        if SharedSettings.userName != userName { SharedSettings.userName = userName }
     }
     
     /// Start timer to refresh UI every minute

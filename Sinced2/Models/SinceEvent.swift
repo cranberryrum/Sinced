@@ -389,10 +389,11 @@ struct SinceEvent: Identifiable, Codable, Hashable {
         startedAt = try container.decode(Date.self, forKey: .startedAt)
         colorHex = (try? container.decodeIfPresent(String.self, forKey: .colorHex)) ?? nil
         goalDays = (try? container.decodeIfPresent(Int.self, forKey: .goalDays)) ?? nil
-        history = Self.migrateLegacyResets(
-            (try? container.decodeIfPresent([Reset].self, forKey: .history)) ?? [],
-            currentStart: startedAt
-        )
+        // Each reset on its own: one that can't be read is skipped, instead
+        // of the whole history being dropped (and then saved over)
+        let resets = (try? container.decodeIfPresent([LossyDecodable<Reset>].self, forKey: .history))?
+            .compactMap(\.value) ?? []
+        history = Self.migrateLegacyResets(resets, currentStart: startedAt)
         isArchived = (try? container.decodeIfPresent(Bool.self, forKey: .isArchived)) ?? false
         imageData = (try? container.decodeIfPresent(Data.self, forKey: .imageData)) ?? nil
         let unitRaw = (try? container.decodeIfPresent(String.self, forKey: .widgetTimeUnit)) ?? nil
@@ -503,6 +504,20 @@ struct Reset: Identifiable, Codable, Hashable {
         self.at = at
         self.note = note
         self.previousStart = previousStart
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, at, note, previousStart
+    }
+
+    // Only when it happened is required; anything else that's missing or
+    // malformed falls back, so the reset itself isn't lost
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        at = try container.decode(Date.self, forKey: .at)
+        id = (try? container.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
+        note = (try? container.decodeIfPresent(String.self, forKey: .note)) ?? nil
+        previousStart = (try? container.decodeIfPresent(Date.self, forKey: .previousStart)) ?? nil
     }
 }
 

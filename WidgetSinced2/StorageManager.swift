@@ -37,38 +37,28 @@ class StorageManager {
         return documentsPath.appendingPathComponent(fileName)
     }
     
-    /// Load all events from storage.
-    /// Records that can't be decoded are skipped here but kept in the file
-    /// (see `EventsFile`), and a copy of the file is backed up once.
+    /// Load all events from storage. A file that can't be used gives an
+    /// empty list, and saving is then refused so it's never overwritten
+    /// (see `EventsFile`).
     func loadEvents() -> [SinceEvent] {
-        guard let data = try? Data(contentsOf: fileURL) else {
-            return []
-        }
-        
-        do {
-            let (events, skipped) = try EventsFile.decode(data)
-            if skipped > 0 {
-                EventsFile.backUp(data, nextTo: fileURL)
-            }
-            return events
-        } catch {
-            EventsFile.backUp(data, nextTo: fileURL)
-            return []
-        }
+        EventsFile.load(from: fileURL)
     }
     
     /// Save events to storage
-    func saveEvents(_ events: [SinceEvent]) {
+    /// Returns false if the change couldn't be saved; intents then report it
+    @discardableResult
+    func saveEvents(_ events: [SinceEvent]) -> Bool {
         do {
-            let data = try EventsFile.encode(events, keepingUnreadableFrom: try? Data(contentsOf: fileURL))
-            try data.write(to: fileURL, options: [.atomic])
-            
-            // Notify widget to update
-            WidgetCenter.shared.reloadAllTimelines()
-            ControlCenter.shared.reloadAllControls()
+            try EventsFile.save(events, to: fileURL)
         } catch {
-            assertionFailure("StorageManager: Error saving events: \(error)")
+            print("StorageManager: couldn't save events: \(error)")
+            return false
         }
+
+        // Notify widget to update
+        WidgetCenter.shared.reloadAllTimelines()
+        ControlCenter.shared.reloadAllControls()
+        return true
     }
     
     /// Force widget to reload immediately
@@ -77,7 +67,8 @@ class StorageManager {
     }
     
     /// Add a new event
-    func addEvent(_ event: SinceEvent) {
+    @discardableResult
+    func addEvent(_ event: SinceEvent) -> Bool {
         var events = loadEvents()
         var newEvent = event
         
@@ -88,11 +79,12 @@ class StorageManager {
         }
         
         events.append(newEvent)
-        saveEvents(events)
+        return saveEvents(events)
     }
     
     /// Update an existing event
-    func updateEvent(_ event: SinceEvent) {
+    @discardableResult
+    func updateEvent(_ event: SinceEvent) -> Bool {
         var events = loadEvents()
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             var updatedEvent = event
@@ -104,35 +96,41 @@ class StorageManager {
             }
             
             events[index] = updatedEvent
-            saveEvents(events)
+            return saveEvents(events)
         }
+        return false
     }
     
     /// Delete an event
-    func deleteEvent(_ event: SinceEvent) {
+    @discardableResult
+    func deleteEvent(_ event: SinceEvent) -> Bool {
         var events = loadEvents()
         events.removeAll { $0.id == event.id }
-        saveEvents(events)
+        return saveEvents(events)
     }
     
     /// Archive/unarchive an event
-    func toggleArchive(_ event: SinceEvent) {
+    @discardableResult
+    func toggleArchive(_ event: SinceEvent) -> Bool {
         var events = loadEvents()
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events[index].isArchived.toggle()
-            saveEvents(events)
+            return saveEvents(events)
         }
+        return false
     }
     
     /// Reset an event with optional note
-    func resetEvent(_ event: SinceEvent, at date: Date = Date(), note: String? = nil) {
+    @discardableResult
+    func resetEvent(_ event: SinceEvent, at date: Date = Date(), note: String? = nil) -> Bool {
         var events = loadEvents()
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             let reset = Reset(at: date, note: note, previousStart: events[index].startedAt)
             events[index].history.insert(reset, at: 0)
             events[index].startedAt = date
-            saveEvents(events)
+            return saveEvents(events)
         }
+        return false
     }
     
     /// Get a specific event by ID (useful for widgets)

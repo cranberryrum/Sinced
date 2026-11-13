@@ -68,11 +68,13 @@ struct EventEntityQuery: EntityStringQuery {
 enum SincedIntentError: Error, CustomLocalizedStringResourceConvertible {
     case eventNotFound
     case nothingToUndo
+    case couldNotSave
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
         case .eventNotFound: return "Couldn't find that event. Add or choose one in Sinced."
         case .nothingToUndo: return "There's no recent reset to undo."
+        case .couldNotSave: return "Couldn't save the reset. Open Sinced and try again."
         }
     }
 }
@@ -102,7 +104,7 @@ struct ResetEventIntent: AppIntent {
         }
 
         let previousRun = SincedDurationText.text(for: Date().timeIntervalSince(stored.startedAt))
-        storage.resetEvent(stored)
+        guard storage.resetEvent(stored) else { throw SincedIntentError.couldNotSave }
         await ExternalEventChanges.didChange(eventID: id)
 
         return .result(dialog: "Reset \(stored.title). Your last run was \(previousRun).")
@@ -184,8 +186,7 @@ extension StorageManager {
 
         events[index].history.removeFirst()
         events[index].startedAt = previousStart
-        saveEvents(events)
-        return true
+        return saveEvents(events)
     }
 }
 
@@ -220,15 +221,7 @@ enum ExternalEventChanges {
     static let darwinName = "com.adityakolte.sinced2.eventsChanged"
 
     static func didChange(eventID: UUID) async {
-        // Reminders carry pre-computed day counts, so drop this event's ones
-        // rather than let them show a stale count. The app rebuilds the
-        // schedule as soon as it's open.
-        let center = UNUserNotificationCenter.current()
-        let prefix = "sinced-\(eventID.uuidString)"
-        let stale = await center.pendingNotificationRequests()
-            .map(\.identifier)
-            .filter { $0.hasPrefix(prefix) }
-        center.removePendingNotificationRequests(withIdentifiers: stale)
+        await refreshReminders(for: eventID)
 
         ControlCenter.shared.reloadAllControls()
         CFNotificationCenterPostNotification(
@@ -236,5 +229,38 @@ enum ExternalEventChanges {
             CFNotificationName(darwinName as CFString),
             nil, nil, true
         )
+    }
+
+    /// Reminders carry day counts worked out when they were queued, so after
+    /// a reset each of this event's queued reminders is rewritten with the new
+    /// count, at the same time. Before, they were deleted and only came back
+    /// once the app was opened.
+    private static func refreshReminders(for eventID: UUID) async {
+        let center = UNUserNotificationCenter.current()
+        let prefix = "sinced-\(eventID.uuidString)"
+        let queued = await center.pendingNotificationRequests()
+            .filter { $0.identifier.hasPrefix(prefix) }
+        guard !queued.isEmpty else { return }
+
+        guard let event = StorageManager.shared.loadEvents().first(where: { $0.id == eventID }),
+              !event.isArchived else {
+            center.removePendingNotificationRequests(withIdentifiers: queued.map(\.identifier))
+            return
+        }
+
+        let userName = SharedSettings.userName
+        for request in queued {
+            guard let trigger = request.trigger as? UNCalendarNotificationTrigger,
+                  let fireDate = trigger.nextTriggerDate(),
+                  let content = request.content.mutableCopy() as? UNMutableNotificationContent else {
+                center.removePendingNotificationRequests(withIdentifiers: [request.identifier])
+                continue
+            }
+            let copy = NotificationCopy.make(for: event, firingAt: fireDate, userName: userName)
+            content.title = copy.title
+            content.body = copy.body
+            // Same identifier, so this replaces the queued one
+            try? await center.add(UNNotificationRequest(identifier: request.identifier, content: content, trigger: trigger))
+        }
     }
 }

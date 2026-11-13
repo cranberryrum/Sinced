@@ -36,40 +36,39 @@ class StorageManager {
         return documentsPath.appendingPathComponent(fileName)
     }
     
-    /// Load all events from storage.
-    /// Records that can't be decoded are skipped here but kept in the file
-    /// (see `EventsFile`), and a copy of the file is backed up once.
+    /// Load all events from storage. A file that can't be used gives an
+    /// empty list, and saving is then refused so it's never overwritten
+    /// (see `EventsFile`).
     func loadEvents() -> [SinceEvent] {
-        guard let data = try? Data(contentsOf: fileURL) else {
-            return []
-        }
-        
-        do {
-            let (events, skipped) = try EventsFile.decode(data)
-            if skipped > 0 {
-                EventsFile.backUp(data, nextTo: fileURL)
-            }
-            return events
-        } catch {
-            EventsFile.backUp(data, nextTo: fileURL)
-            return []
-        }
+        EventsFile.load(from: fileURL)
     }
     
-    /// Save events to storage
-    func saveEvents(_ events: [SinceEvent]) {
+    /// Save events to storage. Returns false, and tells the person, if it
+    /// couldn't be saved; callers reload from disk, so the screen shows
+    /// what was actually kept.
+    @discardableResult
+    func saveEvents(_ events: [SinceEvent]) -> Bool {
         do {
-            let data = try EventsFile.encode(events, keepingUnreadableFrom: try? Data(contentsOf: fileURL))
-            try data.write(to: fileURL, options: [.atomic])
-            
-            // Notify widget to update
-            WidgetCenter.shared.reloadAllTimelines()
-            ControlCenter.shared.reloadAllControls()
-            // Siri matches spoken event names against this list
-            SincedShortcuts.updateAppShortcutParameters()
+            try EventsFile.save(events, to: fileURL)
         } catch {
-            assertionFailure("StorageManager: Error saving events: \(error)")
+            print("StorageManager: couldn't save events: \(error)")
+            DispatchQueue.main.async {
+                HapticManager.shared.warning()
+                ToastManager.shared.show(
+                    "Couldn't save that change. Try again.",
+                    icon: "exclamationmark.triangle.fill",
+                    duration: 3
+                )
+            }
+            return false
         }
+
+        // Notify widget to update
+        WidgetCenter.shared.reloadAllTimelines()
+        ControlCenter.shared.reloadAllControls()
+        // Siri matches spoken event names against this list
+        SincedShortcuts.updateAppShortcutParameters()
+        return true
     }
     
     /// Force widget to reload immediately
@@ -78,7 +77,8 @@ class StorageManager {
     }
     
     /// Add a new event
-    func addEvent(_ event: SinceEvent) {
+    @discardableResult
+    func addEvent(_ event: SinceEvent) -> Bool {
         var events = loadEvents()
         var newEvent = event
         
@@ -89,11 +89,12 @@ class StorageManager {
         }
         
         events.append(newEvent)
-        saveEvents(events)
+        return saveEvents(events)
     }
     
     /// Update an existing event
-    func updateEvent(_ event: SinceEvent) {
+    @discardableResult
+    func updateEvent(_ event: SinceEvent) -> Bool {
         var events = loadEvents()
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             var updatedEvent = event
@@ -105,8 +106,9 @@ class StorageManager {
             }
             
             events[index] = updatedEvent
-            saveEvents(events)
+            return saveEvents(events)
         }
+        return false
     }
 
     /// Reorder active (non-archived) events
@@ -122,10 +124,26 @@ class StorageManager {
         saveEvents(reorderedActive + archivedEvents)
     }
 
-    /// Save active events in their current order, keep archived after
-    func saveActiveEvents(_ activeEvents: [SinceEvent]) {
-        let archivedEvents = loadEvents().filter { $0.isArchived }
-        saveEvents(activeEvents + archivedEvents)
+    /// Put the active events in the order given, keeping archived ones after.
+    /// Only the order comes from the screen: each event's data is what's on
+    /// disk, so a widget reset made a moment ago isn't saved over, and an
+    /// event the screen didn't know about isn't dropped.
+    @discardableResult
+    func saveActiveEvents(_ activeEvents: [SinceEvent]) -> Bool {
+        let stored = loadEvents()
+        let position = Dictionary(
+            activeEvents.enumerated().map { ($1.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let active = stored.enumerated()
+            .filter { !$0.element.isArchived }
+            .sorted { a, b in
+                let pa = position[a.element.id] ?? Int.max
+                let pb = position[b.element.id] ?? Int.max
+                return pa != pb ? pa < pb : a.offset < b.offset
+            }
+            .map(\.element)
+        return saveEvents(active + stored.filter(\.isArchived))
     }
 
     private func move<T>(_ array: inout [T], fromOffsets: IndexSet, toOffset: Int) {
@@ -138,30 +156,35 @@ class StorageManager {
     }
     
     /// Delete an event
-    func deleteEvent(_ event: SinceEvent) {
+    @discardableResult
+    func deleteEvent(_ event: SinceEvent) -> Bool {
         var events = loadEvents()
         events.removeAll { $0.id == event.id }
-        saveEvents(events)
+        return saveEvents(events)
     }
     
     /// Archive/unarchive an event
-    func toggleArchive(_ event: SinceEvent) {
+    @discardableResult
+    func toggleArchive(_ event: SinceEvent) -> Bool {
         var events = loadEvents()
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events[index].isArchived.toggle()
-            saveEvents(events)
+            return saveEvents(events)
         }
+        return false
     }
     
     /// Reset an event with optional note
-    func resetEvent(_ event: SinceEvent, at date: Date = Date(), note: String? = nil) {
+    @discardableResult
+    func resetEvent(_ event: SinceEvent, at date: Date = Date(), note: String? = nil) -> Bool {
         var events = loadEvents()
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             let reset = Reset(at: date, note: note, previousStart: events[index].startedAt)
             events[index].history.insert(reset, at: 0)
             events[index].startedAt = date
-            saveEvents(events)
+            return saveEvents(events)
         }
+        return false
     }
     
     /// Get a specific event by ID (useful for widgets)

@@ -288,7 +288,8 @@ struct AddEventBottomSheet: View {
             cardTheme: selectedTheme ?? .mosaic
         )
         
-        viewModel.addEvent(newEvent)
+        // On failure the sheet stays open with everything typed, and an error shows
+        guard viewModel.addEvent(newEvent) else { return }
         viewModel.completeOnboarding()
         
         // Success haptic
@@ -299,9 +300,13 @@ struct AddEventBottomSheet: View {
     
     /// Apply edits while keeping the event's id, history, reminders and widget unit
     private func saveChanges(to original: SinceEvent) {
-        var updated = original
+        // Start from what's saved now, not from when this sheet opened, so a
+        // reset made from a widget in the meantime isn't undone
+        var updated = StorageManager.shared.getEvent(byId: original.id) ?? original
         updated.title = trimmedTitle
-        updated.startedAt = min(startDate, Date())
+        if abs(startDate.timeIntervalSince(original.startedAt)) >= 1 {
+            updated.startedAt = min(startDate, Date())
+        }
         updated.cardTheme = selectedTheme ?? updated.cardTheme
         
         if selectedTheme != .custom {
@@ -310,7 +315,7 @@ struct AddEventBottomSheet: View {
             updated.imageData = selectedImage?.jpegData(compressionQuality: 0.8)
         }
         
-        viewModel.updateEvent(updated)
+        guard viewModel.updateEvent(updated) else { return }
         HapticManager.shared.success()
         isPresented = false
     }

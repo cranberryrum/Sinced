@@ -1,6 +1,6 @@
 //
 //  NotificationCopy.swift
-//  Sinced2
+//  Shared (app + widget)
 //
 //  The words in reminder notifications. Lines are lowercase and deliberately
 //  ambiguous, so they read right whether the event is a chore, a habit, an
