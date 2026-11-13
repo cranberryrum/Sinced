@@ -45,12 +45,14 @@ struct AddEventBottomSheet: View {
     }
     
     private var isEditing: Bool { editingEvent != nil }
+    /// Read once, so the title doesn't change as the first event is saved
+    @State private var isFirstEvent = false
     
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text(isEditing ? "Edit event" : "Add an event")
+                Text(isEditing ? "Edit event" : (isFirstEvent ? "What are you counting?" : "Add an event"))
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.primaryGreen)
                 
@@ -191,6 +193,9 @@ struct AddEventBottomSheet: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fittedSheet(estimate: isEditing ? 440 : 490)
+        .onAppear {
+            isFirstEvent = !isEditing && viewModel.events.isEmpty && viewModel.archivedEvents.isEmpty
+        }
         .preferredColorScheme(.light)
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(image: Binding(

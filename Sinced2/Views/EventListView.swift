@@ -20,6 +20,8 @@ struct EventListView: View {
     @ObservedObject private var widgetStatus = WidgetStatus.shared
     @ObservedObject private var guideRouter = WidgetGuideRouter.shared
     @AppStorage("widgetGuide.cardDismissed") private var guideCardDismissed = false
+    /// The add sheet opens by itself once, straight after onboarding
+    @AppStorage("firstRun.addSheetOffered") private var addSheetOffered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Only once iOS has confirmed there's no widget, so it never flashes for people who have one
@@ -236,6 +238,16 @@ struct EventListView: View {
             }
             .animation(.spring(duration: 0.4, bounce: 0), value: showsGuideCard)
             .onAppear(perform: openRequestedGuide)
+            .task {
+                // Someone who's just finished onboarding has nothing to look
+                // at yet, so go straight to adding their first event
+                guard !addSheetOffered, viewModel.events.isEmpty else { return }
+                addSheetOffered = true
+                // Let the home screen settle in first, so the sheet reads as
+                // the next step rather than a pop-up
+                try? await Task.sleep(for: .seconds(0.45))
+                showingCreateEvent = true
+            }
             .onChange(of: guideRouter.isRequested) { openRequestedGuide() }
         }
     }

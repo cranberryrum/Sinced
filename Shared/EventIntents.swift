@@ -104,7 +104,10 @@ struct ResetEventIntent: AppIntent {
         }
 
         let previousRun = SincedDurationText.text(for: Date().timeIntervalSince(stored.startedAt))
-        guard storage.resetEvent(stored) else { throw SincedIntentError.couldNotSave }
+        let resetAt = Date()
+        guard storage.resetEvent(stored, at: resetAt) else { throw SincedIntentError.couldNotSave }
+        // The app asks about it next time it opens, in case it was a mis-tap
+        OutsideResets.record(eventID: id, at: resetAt)
         await ExternalEventChanges.didChange(eventID: id)
 
         return .result(dialog: "Reset \(stored.title). Your last run was \(previousRun).")
@@ -130,6 +133,7 @@ struct UndoResetIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         guard let id = UUID(uuidString: event.id) else { throw SincedIntentError.eventNotFound }
         guard StorageManager.shared.undoRecentReset(eventID: id) else { throw SincedIntentError.nothingToUndo }
+        OutsideResets.forget(eventID: id)
         await ExternalEventChanges.didChange(eventID: id)
         return .result()
     }

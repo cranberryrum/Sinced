@@ -43,6 +43,7 @@ struct Sinced2App: App {
                 OnboardingView()
                     .environmentObject(viewModel)
                     .preferredColorScheme(.light)
+                    .transition(.opacity)
             } else {
                 MainTabView()
                     .environmentObject(viewModel)
@@ -55,6 +56,8 @@ struct Sinced2App: App {
                     .onReceive(NotificationCenter.default.publisher(for: .eventsChangedExternally)) { _ in
                         viewModel.loadEvents()
                         viewModel.refreshAllNotifications()
+                        // e.g. a reset from Control Center pulled down over the app
+                        viewModel.checkOutsideResets()
                     }
                     // Widget taps open sinced://event/<id>; sinced://widget-guide opens the guide
                     .onOpenURL { url in
@@ -82,6 +85,10 @@ struct Sinced2App: App {
                 let hasEvents = !viewModel.events.isEmpty
                 WidgetStatus.shared.refresh {
                     WidgetNudge.sync(hasEvents: hasEvents)
+                }
+                // Ask about resets made from a widget, Control Center or Siri
+                if viewModel.hasCompletedOnboarding {
+                    viewModel.checkOutsideResets()
                 }
                 // Someone a week or more into a run may be happy to rate the app
                 if viewModel.hasCompletedOnboarding {

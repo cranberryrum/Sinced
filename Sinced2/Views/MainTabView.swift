@@ -17,6 +17,7 @@ struct MainTabView: View {
     @EnvironmentObject var viewModel: EventViewModel
     @State private var selectedTab: Tab = .home
     @StateObject private var toastManager = ToastManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -38,9 +39,27 @@ struct MainTabView: View {
             // Events open from the home tab
             selectedTab = .home
         }
+        // Launching straight from a widget is a cold start, which doesn't
+        // count as coming to the foreground, so ask here too
+        .task { viewModel.checkOutsideResets() }
         .onReceive(WidgetGuideRouter.shared.$isRequested.filter { $0 }) { _ in
             // So does the widget guide
             selectedTab = .home
+        }
+        // Asks about a reset made from a widget, Control Center or Siri
+        .overlay(alignment: .bottom) {
+            if let offer = viewModel.outsideReset {
+                OutsideResetBanner(
+                    offer: offer,
+                    onUndo: viewModel.undoOutsideReset,
+                    onDismiss: viewModel.dismissOutsideReset
+                )
+                .padding(.horizontal, 16)
+                // Clear of the tab bar
+                .padding(.bottom, 84)
+                .transition(.banner(reduceMotion: reduceMotion))
+                .id(offer.eventID)
+            }
         }
         .toast(
             isShowing: $toastManager.isShowing,

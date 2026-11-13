@@ -17,6 +17,9 @@ class EventViewModel: ObservableObject {
     @Published var userName: String = ""
     /// Event to open from a notification tap or widget tap
     @Published var eventToOpen: SinceEvent?
+    /// A reset made from a widget, Control Center or Siri that the app is
+    /// asking about, in case it was a mistake
+    @Published private(set) var outsideReset: OutsideResetOffer?
     
     private let storageManager = StorageManager.shared
     private let notificationManager = NotificationManager.shared
@@ -110,6 +113,8 @@ class EventViewModel: ObservableObject {
     func resetEvent(_ event: SinceEvent, at date: Date = Date(), note: String? = nil) {
         storageManager.resetEvent(event, at: date, note: note)
         loadEvents()
+        // A reset made here replaces any from outside that was being asked about
+        checkOutsideResets()
         triggerHaptic()
         
         // Reschedule notifications after reset (day counts start over)
@@ -124,12 +129,19 @@ class EventViewModel: ObservableObject {
         loadEvents()
         triggerHaptic()
         refreshAllNotifications()
+        // Nothing left to ask about for this event
+        OutsideResets.forget(eventID: event.id)
+        checkOutsideResets()
         return true
     }
     
     /// Complete onboarding
     func completeOnboarding() {
-        hasCompletedOnboarding = true
+        guard !hasCompletedOnboarding else { return }
+        // Fades from the name step into the app
+        withAnimation(.easeOut(duration: 0.3)) {
+            hasCompletedOnboarding = true
+        }
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
     }
 
@@ -172,6 +184,63 @@ class EventViewModel: ObservableObject {
         notificationManager.refreshAllReminders()
     }
     
+    // MARK: - Resets made outside the app
+
+    /// Offer to undo the newest reset made outside the app that can still be
+    /// undone. Older or already-answered ones are dropped.
+    func checkOutsideResets() {
+        let now = Date()
+        var offer: OutsideResetOffer?
+        for entry in OutsideResets.all().sorted(by: { $0.at > $1.at }) {
+            guard now.timeIntervalSince(entry.at) < OutsideResets.askWithin,
+                  let event = events.first(where: { $0.id == entry.eventID }),
+                  let reset = event.undoableReset(at: now, requiringWindow: false),
+                  abs(reset.at.timeIntervalSince(entry.at)) < 1,
+                  let previousStart = reset.previousStart else {
+                // Undone, reset again, edited, deleted or too old
+                OutsideResets.forget(eventID: entry.eventID)
+                continue
+            }
+            offer = OutsideResetOffer(
+                eventID: event.id,
+                title: event.title,
+                resetAt: reset.at,
+                lostRun: reset.at.timeIntervalSince(previousStart)
+            )
+            break
+        }
+        guard offer != outsideReset else { return }
+        withAnimation(.spring(duration: 0.4, bounce: 0)) { outsideReset = offer }
+    }
+
+    /// It was a mistake: put the run back
+    func undoOutsideReset() {
+        guard let offer = outsideReset,
+              let event = events.first(where: { $0.id == offer.eventID }) else { return }
+        OutsideResets.forget(eventID: offer.eventID)
+        withAnimation(.spring(duration: 0.3, bounce: 0)) { outsideReset = nil }
+        if undoReset(event) {
+            HapticManager.shared.success()
+            ToastManager.shared.show(
+                "\(StreakText.text(for: offer.lostRun)) back on \(event.title)",
+                icon: "arrow.uturn.backward",
+                duration: 2.4
+            )
+        }
+        checkOutsideResets()
+    }
+
+    /// It was meant: stop asking
+    func dismissOutsideReset() {
+        guard let offer = outsideReset else { return }
+        OutsideResets.forget(eventID: offer.eventID)
+        withAnimation(.spring(duration: 0.3, bounce: 0)) { outsideReset = nil }
+        // Any other one comes up after this one has gone
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.checkOutsideResets()
+        }
+    }
+    
     /// Open an event's detail sheet if it still exists and isn't archived
     func openEvent(id: UUID) {
         loadEvents()
@@ -183,4 +252,11 @@ class EventViewModel: ObservableObject {
     }
 }
 
-
+/// What the app shows when asking about a reset made outside it
+struct OutsideResetOffer: Equatable {
+    let eventID: UUID
+    let title: String
+    let resetAt: Date
+    /// The run the reset ended, which undo brings back
+    let lostRun: TimeInterval
+}

@@ -23,6 +23,19 @@ struct EventDetailView: View {
     /// Shown for a moment after a reset from here, with an undo button
     @State private var showingUndoBanner = false
     @State private var showingAllRuns = false
+    @State private var showingUndoConfirm = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The latest reset, while it can still be put back
+    private var undoableReset: Reset? {
+        localEvent.undoableReset(at: currentTime, requiringWindow: false)
+    }
+
+    /// Asked about a reset of this event made from a widget or Control Center
+    private var outsideOffer: OutsideResetOffer? {
+        guard let offer = viewModel.outsideReset, offer.eventID == localEvent.id else { return nil }
+        return offer
+    }
     
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
     
@@ -115,6 +128,43 @@ struct EventDetailView: View {
                         }
                         .frame(maxWidth: geometry.size.width - 40)
                         .padding(.horizontal, 20)
+
+                        // A reset by mistake shouldn't cost the streak, so the
+                        // latest one can always be put back from here
+                        if let reset = undoableReset, let previousStart = reset.previousStart {
+                            Button {
+                                HapticManager.shared.light()
+                                showingUndoConfirm = true
+                            } label: {
+                                VStack(spacing: 2) {
+                                    Label("Undo last reset", systemImage: "arrow.uturn.backward")
+                                        .font(.rounded(15, weight: .semibold))
+                                        .foregroundColor(.primaryGreen)
+                                    Text("Brings back \(StreakText.text(for: reset.at.timeIntervalSince(previousStart)))")
+                                        .font(.roundedCaption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PressableButtonStyle())
+                            .padding(.top, -12)
+                            .transition(.opacity)
+                            .confirmationDialog(
+                                "Undo this reset?",
+                                isPresented: $showingUndoConfirm,
+                                titleVisibility: .visible
+                            ) {
+                                Button("Undo Reset") {
+                                    if viewModel.undoReset(localEvent) {
+                                        HapticManager.shared.success()
+                                    }
+                                }
+                            } message: {
+                                Text("It was made \(reset.at.formatted(.dateTime.day().month(.abbreviated).hour().minute())). Your run since \(previousStart.formatted(.dateTime.day().month(.abbreviated))) carries on as if it never happened.")
+                            }
+                        }
                         
                         // Reminders Section
                         ReminderToggleSection(
@@ -238,7 +288,19 @@ struct EventDetailView: View {
                 )
             }
         }
+        .animation(.easeOut(duration: 0.2), value: undoableReset?.id)
         .overlay(alignment: .bottom) {
+            if let offer = outsideOffer, !showingUndoBanner {
+                // Opened from the widget straight after resetting it
+                OutsideResetBanner(
+                    offer: offer,
+                    onUndo: viewModel.undoOutsideReset,
+                    onDismiss: viewModel.dismissOutsideReset
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+                .transition(.banner(reduceMotion: reduceMotion))
+            }
             if showingUndoBanner {
                 UndoResetBanner(event: localEvent) {
                     viewModel.undoReset(localEvent)

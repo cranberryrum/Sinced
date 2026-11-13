@@ -14,6 +14,8 @@ struct OnboardingView: View {
     @State private var lottieOpacity: Double = 1
     @State private var nameOpacity: Double = 0
     @State private var nameInput: String = ""
+    /// Fades in a moment after the intro starts, so it isn't tapped by accident
+    @State private var showSkip = false
     @FocusState private var nameFieldFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
@@ -33,18 +35,25 @@ struct OnboardingView: View {
                 .onTapGesture(perform: revealName)
 
             if !showName {
-                LottiePlayerView(
-                    name: "Fadedproper",
-                    loopMode: .playOnce,
-                    contentMode: .scaleAspectFit,
-                    onFinished: revealName
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .scaleEffect(1.0 / 3.0)
-                .clipped()
-                .opacity(lottieOpacity)
-                .ignoresSafeArea()
-                .transition(.opacity)
+                // The animation's natural size is far bigger than the screen.
+                // Hosting it in an overlay keeps that from stretching this
+                // screen's layout, which pushed Skip off the edge.
+                Color.clear
+                    .overlay {
+                        LottiePlayerView(
+                            name: "Fadedproper",
+                            loopMode: .playOnce,
+                            contentMode: .scaleAspectFit,
+                            onFinished: revealName
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .scaleEffect(1.0 / 3.0)
+                    }
+                    .clipped()
+                    .opacity(lottieOpacity)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
             }
 
             // Grain sits above the animation so its shapes get the same
@@ -57,6 +66,30 @@ struct OnboardingView: View {
                     .opacity(nameOpacity)
                     .transition(.opacity)
             }
+        }
+        // An overlay, so it sits above the animation's own view
+        .overlay(alignment: .topTrailing) {
+            if !showName {
+                Button {
+                    HapticManager.shared.light()
+                    revealName()
+                } label: {
+                    Text("Skip")
+                        .font(.roundedBody.weight(.medium))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 20)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableButtonStyle())
+                .padding(.trailing, 4)
+                .opacity(showSkip ? 1 : 0)
+                .transition(.opacity)
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(1))
+            withAnimation(.easeOut(duration: 0.3)) { showSkip = true }
         }
         .task {
             // Reduce Motion skips the animation; otherwise move on even if
