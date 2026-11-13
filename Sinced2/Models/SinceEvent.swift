@@ -15,6 +15,9 @@ enum CardTheme: String, Codable, CaseIterable, Identifiable {
     case circles = "Circles"
     case clouds = "Clouds"
     case puffs = "Puffs"
+    case waves = "Waves"
+    case blooms = "Blooms"
+    case steps = "Steps"
     case custom = "Custom"
     
     var id: String { rawValue }
@@ -27,6 +30,9 @@ enum CardTheme: String, Codable, CaseIterable, Identifiable {
         case .circles: return Color(hex: "4D4AFD")
         case .clouds: return Color(hex: "4B800E")
         case .puffs: return Color(hex: "C09CF9")
+        case .waves: return Color(hex: "0E7C7B")
+        case .blooms: return Color(hex: "D23C77")
+        case .steps: return Color(hex: "1F1F24")
         // Shown only if a custom photo is missing; keeps white text readable
         case .custom: return Color(hex: "313131")
         }
@@ -40,6 +46,9 @@ enum CardTheme: String, Codable, CaseIterable, Identifiable {
         case .circles: return Color(hex: "2C2B45")
         case .clouds: return Color(hex: "BDD47E")
         case .puffs: return Color(hex: "2A1C57")
+        case .waves: return Color(hex: "8FE3CF")
+        case .blooms: return Color(hex: "FFD45E")
+        case .steps: return Color(hex: "FF7A2F")
         case .custom: return Color.white
         }
     }
@@ -52,6 +61,9 @@ enum CardTheme: String, Codable, CaseIterable, Identifiable {
         case .circles: return .white
         case .clouds: return Color(hex: "4B800E")
         case .puffs: return Color(hex: "C09CF9")
+        case .waves: return Color(hex: "0E7C7B")
+        case .blooms: return Color(hex: "8E1B4A")
+        case .steps: return Color(hex: "1F1F24")
         case .custom: return .black
         }
     }
@@ -64,6 +76,9 @@ enum CardTheme: String, Codable, CaseIterable, Identifiable {
         case .circles: return "EventCardSquareSVG/Circles"
         case .clouds: return "EventCardSquareSVG/Clouds"
         case .puffs: return "EventCardSquareSVG/Puffs"
+        case .waves: return "EventCardSquareSVG/Waves"
+        case .blooms: return "EventCardSquareSVG/Blooms"
+        case .steps: return "EventCardSquareSVG/Steps"
         case .custom: return nil
         }
     }
@@ -76,6 +91,9 @@ enum CardTheme: String, Codable, CaseIterable, Identifiable {
         case .circles: return "EventCardSquareSVG/Circles"
         case .clouds: return "EventCardSquareSVG/Clouds"
         case .puffs: return "EventCardSquareSVG/Puffs"
+        case .waves: return "EventCardSquareSVG/Waves"
+        case .blooms: return "EventCardSquareSVG/Blooms"
+        case .steps: return "EventCardSquareSVG/Steps"
         case .custom: return nil
         }
     }
@@ -88,13 +106,16 @@ enum CardTheme: String, Codable, CaseIterable, Identifiable {
         case .circles: return "EventCardSquareSVG/Circles"
         case .clouds: return "EventCardSquareSVG/Clouds"
         case .puffs: return "EventCardSquareSVG/Puffs"
+        case .waves: return "EventCardSquareSVG/Waves"
+        case .blooms: return "EventCardSquareSVG/Blooms"
+        case .steps: return "EventCardSquareSVG/Steps"
         case .custom: return nil
         }
     }
     
     /// Display themes (excludes custom)
     static var displayThemes: [CardTheme] {
-        [.mosaic, .eyes, .circles, .clouds, .puffs]
+        [.mosaic, .eyes, .circles, .clouds, .puffs, .waves, .blooms, .steps]
     }
 }
 

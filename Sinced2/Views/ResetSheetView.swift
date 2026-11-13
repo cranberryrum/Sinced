@@ -117,11 +117,11 @@ struct ResetSheetView: View {
             .padding(.horizontal, 20)
             .padding(.top, 24)
             .padding(.bottom, 24)
+            .sheetHeightPart()
         }
+        // Only scrolls when large text makes it taller than the screen
         .scrollBounceBehavior(.basedOnSize)
-        // Extra detent so large Dynamic Type can still reach the button
-        .presentationDetents([.height(400), .large])
-        .presentationDragIndicator(.visible)
+        .fittedSheet(estimate: 400)
     }
 
     private func resetEvent() {

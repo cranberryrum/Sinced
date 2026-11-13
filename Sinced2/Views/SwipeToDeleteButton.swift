@@ -13,6 +13,9 @@ struct SwipeToDeleteButton: View {
     
     @State private var dragOffset: CGFloat = 0
     @State private var hasTriggered = false
+    /// Past the point where letting go deletes, so a tick can mark it once
+    @State private var isPastThreshold = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     private let height: CGFloat = 56
     private let handleSize: CGFloat = 44
@@ -36,11 +39,14 @@ struct SwipeToDeleteButton: View {
                     .fill(Color.red.opacity(0.22))
                     .frame(width: dragOffset + handleSize + horizontalPadding)
                 
-                Text(hasTriggered ? "Deleting..." : title)
+                Text(hasTriggered ? "Deleting…" : title)
                     .font(.roundedSubheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.red)
                     .frame(maxWidth: .infinity)
+                    // Fades as the handle slides over it, so the two never overlap at full strength
+                    .opacity(hasTriggered ? 1 : 1 - Double(dragOffset / max(maxOffset, 1)) * 0.7)
+                    .contentTransition(.opacity)
                 
                 Circle()
                     .fill(Color.red)
@@ -63,31 +69,41 @@ struct SwipeToDeleteButton: View {
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
                         guard !hasTriggered else { return }
+                        // Follows the finger exactly: no animation while dragging
                         let translation = max(0, value.translation.width)
                         dragOffset = min(translation, maxOffset)
+
+                        let past = dragOffset >= maxOffset * completionThreshold
+                        if past != isPastThreshold {
+                            isPastThreshold = past
+                            if past { HapticManager.shared.selection() }
+                        }
                     }
-                    .onEnded { _ in
+                    .onEnded { value in
                         guard !hasTriggered else { return }
-                        if dragOffset >= maxOffset * completionThreshold {
+                        isPastThreshold = false
+                        // A quick flick counts, not just a long drag
+                        let projected = max(dragOffset, value.predictedEndTranslation.width)
+                        if projected >= maxOffset * completionThreshold {
                             hasTriggered = true
                             HapticManager.shared.warning()
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                dragOffset = maxOffset
-                            }
+                            withAnimation(release) { dragOffset = maxOffset }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                                 onDelete()
                             }
                         } else {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                dragOffset = 0
-                            }
+                            withAnimation(release) { dragOffset = 0 }
                             HapticManager.shared.light()
                         }
                     }
             )
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: dragOffset)
         }
         .frame(height: height)
+    }
+
+    /// Settles on release; no bounce on a destructive control
+    private var release: Animation {
+        reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35, bounce: 0)
     }
 }
 

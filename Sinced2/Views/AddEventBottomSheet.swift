@@ -59,6 +59,7 @@ struct AddEventBottomSheet: View {
             .padding(.horizontal, 16)
             .padding(.top, 24)
             .padding(.bottom, 24)
+            .sheetHeightPart()
             
             ScrollView {
                 VStack(spacing: 0) {
@@ -162,7 +163,10 @@ struct AddEventBottomSheet: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)
                 }
+                .sheetHeightPart()
             }
+            // Only scrolls when large text makes it taller than the screen
+            .scrollBounceBehavior(.basedOnSize)
             
             // Action Buttons
             VStack(spacing: 0) {
@@ -183,8 +187,10 @@ struct AddEventBottomSheet: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 24)
+            .sheetHeightPart()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .fittedSheet(estimate: isEditing ? 440 : 490)
         .preferredColorScheme(.light)
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(image: Binding(
@@ -571,6 +577,9 @@ struct StartDatePill: View {
             .labelsHidden()
             .tint(.primaryGreen)
             .accessibilityLabel(components == .date ? "Start date" : "Start time")
+            // The visible label is fixed size, so don't let the hidden picker
+            // grow past it at large text sizes and push the row off screen
+            .dynamicTypeSize(...DynamicTypeSize.large)
             .overlay {
                 // Fully opaque, so none of the native text shows through
                 Text(text)

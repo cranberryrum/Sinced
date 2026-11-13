@@ -355,7 +355,8 @@ struct ThemeCodePatternView: View {
             CloudsPatternView(size: size)
         case .puffs:
             PuffsPatternView(size: size)
-        case .custom:
+        // Newer themes exist only as artwork in the asset catalog
+        case .waves, .blooms, .steps, .custom:
             EmptyView()
         }
     }

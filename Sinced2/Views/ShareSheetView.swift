@@ -91,6 +91,7 @@ struct ShareSheetView: View {
                                 .fill(Color.primaryGreen)
                         )
                     }
+                    .buttonStyle(PressableButtonStyle())
                     .disabled(isSharing)
                     
                     // Save to Photos Button
@@ -98,8 +99,11 @@ struct ShareSheetView: View {
                         HStack(spacing: 10) {
                             Image(systemName: showingSaveSuccess ? "checkmark" : "square.and.arrow.down")
                                 .font(.system(size: 18, weight: .semibold))
+                                // The arrow turns into the tick instead of swapping
+                                .contentTransition(.symbolEffect(.replace))
                             Text(showingSaveSuccess ? "Saved!" : "Save to Photos")
                                 .font(.system(size: 17, weight: .semibold))
+                                .contentTransition(.opacity)
                         }
                         .foregroundColor(showingSaveSuccess ? .green : .primaryGreen)
                         .frame(maxWidth: .infinity)
@@ -109,6 +113,7 @@ struct ShareSheetView: View {
                                 .fill(showingSaveSuccess ? Color.green.opacity(0.1) : Color.primaryGreen.opacity(0.1))
                         )
                     }
+                    .buttonStyle(PressableButtonStyle())
                     .disabled(isSharing || showingSaveSuccess)
                 }
                 .padding(.horizontal, 20)
@@ -193,11 +198,11 @@ struct ShareSheetView: View {
         }
         
         switch event.cardTheme {
-        case .clouds:
+        case .clouds, .waves:
             return .green
         case .circles, .puffs:
             return .blue
-        case .mosaic, .eyes:
+        case .mosaic, .eyes, .blooms, .steps:
             return .red
         case .custom:
             return .blue
@@ -427,7 +432,7 @@ struct ShareSheetView: View {
                 
                 await MainActor.run {
                     // Show success feedback
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(.spring(duration: 0.3, bounce: 0)) {
                         showingSaveSuccess = true
                     }
                     
@@ -440,7 +445,8 @@ struct ShareSheetView: View {
                     
                     // Reset after delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        withAnimation {
+                        // Quieter on the way back than on arrival
+                        withAnimation(.easeOut(duration: 0.2)) {
                             showingSaveSuccess = false
                         }
                     }

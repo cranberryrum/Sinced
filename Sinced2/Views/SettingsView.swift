@@ -41,6 +41,13 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    Button {
+                        activeSheet = .widgetGuide
+                    } label: {
+                        SettingsRowLabel(icon: "square.grid.2x2", title: "Add a Widget")
+                    }
+                    .buttonStyle(.plain)
+
                     NavigationLink {
                         NotificationSettingsView()
                             .environmentObject(viewModel)
@@ -114,11 +121,11 @@ struct SettingsView: View {
                         imageName: nil,
                         actions: []
                     )
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
                 case .aboutDeveloper:
                     DeveloperInfoSheet()
-                        .presentationDetents([.height(340), .medium])
+                case .widgetGuide:
+                    WidgetGuideView(event: viewModel.events.first)
+                        .presentationDetents([.large])
                         .presentationDragIndicator(.visible)
                 }
             }
@@ -126,8 +133,6 @@ struct SettingsView: View {
                 EditNameSheet(currentName: viewModel.userName) { newName in
                     viewModel.updateUserName(newName)
                 }
-                .presentationDetents([.height(240)])
-                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -136,6 +141,7 @@ struct SettingsView: View {
 private enum SettingsSheet: Identifiable {
     case aboutApp
     case aboutDeveloper
+    case widgetGuide
 
     var id: Int {
         switch self {
@@ -143,6 +149,8 @@ private enum SettingsSheet: Identifiable {
             return 0
         case .aboutDeveloper:
             return 1
+        case .widgetGuide:
+            return 2
         }
     }
 }
@@ -236,38 +244,47 @@ private struct EditNameSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                TextField("Your name", text: $nameInput)
-                    .font(.roundedBody)
-                    .textInputAutocapitalization(.words)
-                    .disableAutocorrection(true)
-                    .padding(.horizontal, 14)
-                    .frame(height: 48)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(Color(UIColor.secondarySystemBackground))
-                    )
-                    .focused($isFocused)
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Your name")
+                .font(.rounded(22, weight: .semibold))
+                .foregroundColor(.primary)
 
-                Button("Save") {
-                    guard !trimmedName.isEmpty else { return }
-                    onSave(trimmedName)
-                    dismiss()
-                }
+            TextField("Your name", text: $nameInput)
+                .font(.roundedBody)
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(true)
+                .padding(.horizontal, 14)
+                .frame(height: 48)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color(UIColor.secondarySystemBackground))
+                )
+                .focused($isFocused)
+                .submitLabel(.done)
+                .onSubmit(save)
+
+            Button("Save", action: save)
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(trimmedName.isEmpty)
                 .opacity(trimmedName.isEmpty ? 0.5 : 1)
-
-                Spacer()
-            }
-            .padding(20)
-            .navigationTitle("Edit Name")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                isFocused = true
-            }
+                .animation(.easeOut(duration: 0.2), value: trimmedName.isEmpty)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 28)
+        .padding(.bottom, 20)
+        .sheetHeightPart()
+        .frame(maxHeight: .infinity, alignment: .top)
+        .fittedSheet(estimate: 210)
+        .onAppear {
+            isFocused = true
+        }
+    }
+
+    private func save() {
+        guard !trimmedName.isEmpty else { return }
+        HapticManager.shared.success()
+        onSave(trimmedName)
+        dismiss()
     }
 }
 
@@ -313,8 +330,13 @@ private struct SimpleInfoSheet: View {
                     }
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.top, 28)
+            .padding(.bottom, 20)
+            .sheetHeightPart()
         }
+        .scrollBounceBehavior(.basedOnSize)
+        .fittedSheet(estimate: 300)
     }
 }
 

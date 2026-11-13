@@ -38,6 +38,10 @@ struct MainTabView: View {
             // Events open from the home tab
             selectedTab = .home
         }
+        .onReceive(WidgetGuideRouter.shared.$isRequested.filter { $0 }) { _ in
+            // So does the widget guide
+            selectedTab = .home
+        }
         .toast(
             isShowing: $toastManager.isShowing,
             message: toastManager.message,

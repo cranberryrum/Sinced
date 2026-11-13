@@ -204,13 +204,17 @@ struct EventDetailView: View {
                 }
             }
             .overlay {
-                if showingResetSheet {
-                    Color.black
-                        .opacity(0.12)
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
+                ZStack {
+                    if showingResetSheet {
+                        Color.black
+                            .opacity(0.12)
+                            .ignoresSafeArea()
+                            .allowsHitTesting(false)
+                            .transition(.opacity)
+                    }
                 }
+                // Fades with the sheet sliding over it instead of switching on and off
+                .animation(.easeOut(duration: 0.3), value: showingResetSheet)
             }
             .sheet(isPresented: $showingResetSheet) {
                 ResetSheetView(event: localEvent, viewModel: viewModel) {
@@ -223,8 +227,6 @@ struct EventDetailView: View {
                     isPresented: $showingEditSheet,
                     editingEvent: localEvent
                 )
-                .presentationDetents([.height(440)])
-                .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheetView(event: localEvent)
@@ -234,8 +236,6 @@ struct EventDetailView: View {
                     eventTitle: localEvent.title,
                     onConfirmDelete: confirmDelete
                 )
-                .presentationDetents([.height(280), .large])
-                .presentationDragIndicator(.visible)
             }
         }
         .overlay(alignment: .bottom) {

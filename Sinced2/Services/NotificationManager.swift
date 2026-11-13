@@ -201,6 +201,8 @@ class NotificationManager: NSObject, ObservableObject {
     
     private func rebuildSchedule(events: [SinceEvent]) {
         notificationCenter.removeAllPendingNotificationRequests()
+        // Clearing everything also took the widget guide nudge, so put it back if it's still due
+        defer { WidgetNudge.sync(hasEvents: events.contains { !$0.isArchived }) }
         
         guard notificationsEnabled else { return }
         
@@ -267,7 +269,9 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
     ) {
         let userInfo = response.notification.request.content.userInfo
         
-        if let eventIdString = userInfo["eventId"] as? String,
+        if userInfo[WidgetNudge.userInfoKey] as? String == WidgetNudge.userInfoValue {
+            WidgetGuideRouter.shared.isRequested = true
+        } else if let eventIdString = userInfo["eventId"] as? String,
            let eventId = UUID(uuidString: eventIdString) {
             // Post notification for app to handle navigation
             NotificationCenter.default.post(

@@ -14,12 +14,14 @@ struct DeleteConfirmationSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        // Scroll only when the content doesn't fit (e.g. large Dynamic Type),
-        // so the swipe gesture isn't competing with a scroll view normally
-        ViewThatFits(in: .vertical) {
+        ScrollView {
             content
-            ScrollView { content }
+                .sheetHeightPart()
         }
+        // The sheet fits its content, so this only scrolls at very large text
+        // sizes and otherwise never competes with the swipe to delete
+        .scrollBounceBehavior(.basedOnSize)
+        .fittedSheet(estimate: 280)
     }
     
     private var content: some View {

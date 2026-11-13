@@ -16,6 +16,16 @@ struct EventListView: View {
     @State private var draggingEvent: SinceEvent?
     @State private var eventPendingDelete: SinceEvent?
     @State private var eventBeingEdited: SinceEvent?
+    @State private var showingWidgetGuide = false
+    @ObservedObject private var widgetStatus = WidgetStatus.shared
+    @ObservedObject private var guideRouter = WidgetGuideRouter.shared
+    @AppStorage("widgetGuide.cardDismissed") private var guideCardDismissed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Only once iOS has confirmed there's no widget, so it never flashes for people who have one
+    private var showsGuideCard: Bool {
+        widgetStatus.hasWidget == false && !guideCardDismissed && !viewModel.events.isEmpty
+    }
     
     private var isEmptyState: Bool {
         viewModel.events.isEmpty
@@ -52,66 +62,92 @@ struct EventListView: View {
                 } else {
                     // Large Cards with Vertical Scroll
                     ScrollView(.vertical, showsIndicators: false) {
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(viewModel.events) { event in
-                                HomeEventCardView(event: event)
-                                    .frame(height: cardHeight)
-                                    .contentShape(Rectangle())
-                                    .scaleEffect(draggingEvent?.id == event.id ? 0.96 : 1.0)
-                                    .zIndex(draggingEvent?.id == event.id ? 1 : 0)
-                                    .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.86), value: draggingEvent?.id)
-                                    .onTapGesture {
+                        VStack(spacing: 16) {
+                            if showsGuideCard, let first = viewModel.events.first {
+                                WidgetGuideCard(
+                                    event: first,
+                                    onOpen: {
                                         HapticManager.shared.light()
-                                        selectedEvent = event
-                                    }
-                                    .onDrag {
-                                        draggingEvent = event
+                                        showingWidgetGuide = true
+                                    },
+                                    onDismiss: {
                                         HapticManager.shared.light()
-                                        return NSItemProvider(object: event.id.uuidString as NSString)
-                                    } preview: {
-                                        HomeEventCardView(event: event)
-                                            .frame(height: cardHeight)
-                                            .clipShape(RoundedRectangle(cornerRadius: 24))
-                                            .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
-                                            .background(Color.clear)
+                                        withAnimation(.easeOut(duration: 0.2)) {
+                                            guideCardDismissed = true
+                                        }
                                     }
-                                    .onDrop(
-                                        of: [UTType.text],
-                                        delegate: EventReorderDropDelegate(
-                                            targetEvent: event,
-                                            viewModel: viewModel,
-                                            draggingEvent: $draggingEvent
+                                )
+                                .transition(
+                                    reduceMotion
+                                        ? .opacity
+                                        : .opacity.combined(with: .scale(scale: 0.96, anchor: .top))
+                                )
+                            }
+
+                            LazyVGrid(columns: columns, spacing: 16) {
+                                ForEach(viewModel.events) { event in
+                                    HomeEventCardView(event: event)
+                                        .frame(height: cardHeight)
+                                        // Lands as the add sheet clears; leaves the same way
+                                        .transition(cardTransition)
+                                        .contentShape(Rectangle())
+                                        .scaleEffect(draggingEvent?.id == event.id ? 0.96 : 1.0)
+                                        .zIndex(draggingEvent?.id == event.id ? 1 : 0)
+                                        .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.86), value: draggingEvent?.id)
+                                        .onTapGesture {
+                                            HapticManager.shared.light()
+                                            selectedEvent = event
+                                        }
+                                        .onDrag {
+                                            draggingEvent = event
+                                            HapticManager.shared.light()
+                                            return NSItemProvider(object: event.id.uuidString as NSString)
+                                        } preview: {
+                                            HomeEventCardView(event: event)
+                                                .frame(height: cardHeight)
+                                                .clipShape(RoundedRectangle(cornerRadius: 24))
+                                                .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
+                                                .background(Color.clear)
+                                        }
+                                        .onDrop(
+                                            of: [UTType.text],
+                                            delegate: EventReorderDropDelegate(
+                                                targetEvent: event,
+                                                viewModel: viewModel,
+                                                draggingEvent: $draggingEvent
+                                            )
                                         )
-                                    )
-                                    .contextMenu {
-                                        Button {
-                                            eventBeingEdited = event
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
+                                        .contextMenu {
+                                            Button {
+                                                eventBeingEdited = event
+                                            } label: {
+                                                Label("Edit", systemImage: "pencil")
+                                            }
                                         
-                                        Button(role: .destructive) {
-                                            eventPendingDelete = event
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
+                                            Button(role: .destructive) {
+                                                eventPendingDelete = event
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
                                         
-                                        Button {
-                                            viewModel.archiveEvent(event)
-                                        } label: {
-                                            Label("Archive", systemImage: "archivebox")
+                                            Button {
+                                                viewModel.archiveEvent(event)
+                                            } label: {
+                                                Label("Archive", systemImage: "archivebox")
+                                            }
                                         }
-                                    }
-                            }
+                                }
                             
-                            Button {
-                                HapticManager.shared.medium()
-                                showingCreateEvent = true
-                            } label: {
-                                AddEventPlaceholderCard()
-                                    .frame(height: cardHeight)
+                                Button {
+                                    HapticManager.shared.medium()
+                                    showingCreateEvent = true
+                                } label: {
+                                    AddEventPlaceholderCard()
+                                        .frame(height: cardHeight)
+                                }
+                                .buttonStyle(AddPlaceholderButtonStyle())
                             }
-                            .buttonStyle(AddPlaceholderButtonStyle())
+                            .animation(cardCountAnimation, value: viewModel.events.count)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, geometry.safeAreaInsets.top + 16)
@@ -189,17 +225,61 @@ struct EventListView: View {
                     ),
                     editingEvent: event
                 )
-                .presentationDetents([.height(440)])
-                .presentationDragIndicator(.visible)
             }
-            .sheet(isPresented: $showingCreateEvent) {
+            .sheet(isPresented: $showingCreateEvent, onDismiss: offerGuideAfterFirstEvent) {
                 AddEventBottomSheet(viewModel: viewModel, isPresented: $showingCreateEvent)
-                    .presentationDetents([.height(490)])
+            }
+            .sheet(isPresented: $showingWidgetGuide) {
+                WidgetGuideView(event: viewModel.events.first)
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
+            .animation(.spring(duration: 0.4, bounce: 0), value: showsGuideCard)
+            .onAppear(perform: openRequestedGuide)
+            .onChange(of: guideRouter.isRequested) { openRequestedGuide() }
         }
     }
     
+    /// Nothing appears from nothing: just under full size, and faded
+    private var cardTransition: AnyTransition {
+        reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95))
+    }
+
+    /// Cards coming and going. A short delay lets the sheet that caused it
+    /// get out of the way first. Reordering keeps its own quicker spring,
+    /// since it doesn't change the count.
+    private var cardCountAnimation: Animation {
+        (reduceMotion ? Animation.easeOut(duration: 0.2) : .spring(duration: 0.35, bounce: 0))
+            .delay(0.12)
+    }
+
+    /// Right after the first event is saved is when a widget makes the most sense
+    private func offerGuideAfterFirstEvent() {
+        guard viewModel.events.count == 1,
+              !WidgetNudge.introShown,
+              widgetStatus.hasWidget != true else { return }
+        WidgetNudge.introShown = true
+        // Let the new card land before the guide comes up over it
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            showingWidgetGuide = true
+        }
+    }
+
+    /// From the reminder notification or a sinced://widget-guide link
+    private func openRequestedGuide() {
+        guard guideRouter.isRequested else { return }
+        guideRouter.isRequested = false
+        let wasShowingSomething = selectedEvent != nil || eventBeingEdited != nil || showingCreateEvent
+        selectedEvent = nil
+        eventBeingEdited = nil
+        showingCreateEvent = false
+        guard !showingWidgetGuide else { return }
+        // A sheet can't open while another is still closing
+        DispatchQueue.main.asyncAfter(deadline: .now() + (wasShowingSomething ? 0.5 : 0)) {
+            showingWidgetGuide = true
+        }
+    }
+
     private func showSuccessToast(title: String) {
         ToastManager.shared.show(
             "\(title) deleted successfully",

@@ -56,9 +56,14 @@ struct Sinced2App: App {
                         viewModel.loadEvents()
                         viewModel.refreshAllNotifications()
                     }
-                    // Widget taps open sinced://event/<id>
+                    // Widget taps open sinced://event/<id>; sinced://widget-guide opens the guide
                     .onOpenURL { url in
-                        guard url.scheme == "sinced", url.host == "event",
+                        guard url.scheme == "sinced" else { return }
+                        if url.host == "widget-guide" {
+                            WidgetGuideRouter.shared.isRequested = true
+                            return
+                        }
+                        guard url.host == "event",
                               let eventId = UUID(uuidString: url.lastPathComponent) else { return }
                         viewModel.openEvent(id: eventId)
                     }
@@ -73,6 +78,11 @@ struct Sinced2App: App {
                 // Reminders are scheduled a limited number of days ahead with
                 // pre-computed day counts, so top them up whenever the app is opened
                 viewModel.refreshAllNotifications()
+                // Hides the guide card once a widget is added, and stops the nudge
+                let hasEvents = !viewModel.events.isEmpty
+                WidgetStatus.shared.refresh {
+                    WidgetNudge.sync(hasEvents: hasEvents)
+                }
                 // Someone a week or more into a run may be happy to rate the app
                 if viewModel.hasCompletedOnboarding {
                     ReviewPrompter.considerOnForeground(events: viewModel.events)
