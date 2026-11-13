@@ -30,12 +30,6 @@ struct EventDetailView: View {
     private var undoableReset: Reset? {
         localEvent.undoableReset(at: currentTime, requiringWindow: false)
     }
-
-    /// Asked about a reset of this event made from a widget or Control Center
-    private var outsideOffer: OutsideResetOffer? {
-        guard let offer = viewModel.outsideReset, offer.eventID == localEvent.id else { return nil }
-        return offer
-    }
     
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
     
@@ -290,17 +284,6 @@ struct EventDetailView: View {
         }
         .animation(.easeOut(duration: 0.2), value: undoableReset?.id)
         .overlay(alignment: .bottom) {
-            if let offer = outsideOffer, !showingUndoBanner {
-                // Opened from the widget straight after resetting it
-                OutsideResetBanner(
-                    offer: offer,
-                    onUndo: viewModel.undoOutsideReset,
-                    onDismiss: viewModel.dismissOutsideReset
-                )
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
-                .transition(.banner(reduceMotion: reduceMotion))
-            }
             if showingUndoBanner {
                 UndoResetBanner(event: localEvent) {
                     viewModel.undoReset(localEvent)

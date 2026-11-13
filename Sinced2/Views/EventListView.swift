@@ -22,6 +22,8 @@ struct EventListView: View {
     @AppStorage("widgetGuide.cardDismissed") private var guideCardDismissed = false
     /// The add sheet opens by itself once, straight after onboarding
     @AppStorage("firstRun.addSheetOffered") private var addSheetOffered = false
+    /// The card currently showing its "look here" ring
+    @State private var ringedEventID: UUID?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Only once iOS has confirmed there's no widget, so it never flashes for people who have one
@@ -92,6 +94,14 @@ struct EventListView: View {
                                         .frame(height: cardHeight)
                                         // Lands as the add sheet clears; leaves the same way
                                         .transition(cardTransition)
+                                        // Where to look, after a widget tap
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                                .strokeBorder(Color.black.opacity(0.85), lineWidth: 2.5)
+                                                .padding(-5)
+                                                .opacity(ringedEventID == event.id ? 1 : 0)
+                                                .allowsHitTesting(false)
+                                        }
                                         .contentShape(Rectangle())
                                         .scaleEffect(draggingEvent?.id == event.id ? 0.96 : 1.0)
                                         .zIndex(draggingEvent?.id == event.id ? 1 : 0)
@@ -238,6 +248,17 @@ struct EventListView: View {
             }
             .animation(.spring(duration: 0.4, bounce: 0), value: showsGuideCard)
             .onAppear(perform: openRequestedGuide)
+            // A widget tap landed here: ring the card once, then let the
+            // screen lift to ask about the reset
+            .task(id: viewModel.focusedEventID) {
+                guard let id = viewModel.focusedEventID else { return }
+                selectedEvent = nil
+                try? await Task.sleep(for: .seconds(0.35))
+                withAnimation(.easeOut(duration: 0.24)) { ringedEventID = id }
+                try? await Task.sleep(for: .seconds(0.5))
+                withAnimation(.easeOut(duration: 0.24)) { ringedEventID = nil }
+                viewModel.focusedEventID = nil
+            }
             .task {
                 // Someone who's just finished onboarding has nothing to look
                 // at yet, so go straight to adding their first event
@@ -479,6 +500,8 @@ struct HomeEventCardView: View {
     private var timeLabel: some View {
         Text(widgetTimeValue(for: currentTime).uppercased())
             .font(.custom("GeistMono-Medium", size: 20))
+            // Digits roll when the count changes, e.g. after an undo
+            .contentTransition(.numericText())
             .foregroundColor(.white)
             .tracking(-0.6)
             .lineLimit(1)

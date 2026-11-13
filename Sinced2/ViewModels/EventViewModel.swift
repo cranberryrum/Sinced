@@ -20,6 +20,9 @@ class EventViewModel: ObservableObject {
     /// A reset made from a widget, Control Center or Siri that the app is
     /// asking about, in case it was a mistake
     @Published private(set) var outsideReset: OutsideResetOffer?
+    /// A home card to ring briefly, to show where to look (set when a widget
+    /// tap lands on Home instead of opening the event)
+    @Published var focusedEventID: UUID?
     
     private let storageManager = StorageManager.shared
     private let notificationManager = NotificationManager.shared
@@ -204,6 +207,7 @@ class EventViewModel: ObservableObject {
             offer = OutsideResetOffer(
                 eventID: event.id,
                 title: event.title,
+                theme: event.cardTheme,
                 resetAt: reset.at,
                 lostRun: reset.at.timeIntervalSince(previousStart)
             )
@@ -218,14 +222,19 @@ class EventViewModel: ObservableObject {
         guard let offer = outsideReset,
               let event = events.first(where: { $0.id == offer.eventID }) else { return }
         OutsideResets.forget(eventID: offer.eventID)
-        withAnimation(.spring(duration: 0.3, bounce: 0)) { outsideReset = nil }
-        if undoReset(event) {
+        withAnimation(.spring(duration: 0.35, bounce: 0)) { outsideReset = nil }
+        // The card's count rolls back up as the screen settles
+        let restored = withAnimation(.spring(duration: 0.6, bounce: 0)) { undoReset(event) }
+        if restored {
             HapticManager.shared.success()
-            ToastManager.shared.show(
-                "\(StreakText.text(for: offer.lostRun)) back on \(event.title)",
-                icon: "arrow.uturn.backward",
-                duration: 2.4
-            )
+            // After the drop, so two things don't move at the bottom at once
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                ToastManager.shared.show(
+                    "\(StreakText.text(for: offer.lostRun)) back on \(event.title)",
+                    icon: "arrow.uturn.backward",
+                    duration: 2.4
+                )
+            }
         }
         checkOutsideResets()
     }
@@ -241,9 +250,17 @@ class EventViewModel: ObservableObject {
         }
     }
     
-    /// Open an event's detail sheet if it still exists and isn't archived
+    /// Open an event's detail sheet if it still exists and isn't archived.
+    /// If it was just reset outside the app, land on Home instead: ring its
+    /// card and ask about the reset there, rather than opening the event
+    /// page with the question fighting the sheet for attention.
     func openEvent(id: UUID) {
         loadEvents()
+        checkOutsideResets()
+        if outsideReset?.eventID == id {
+            focusedEventID = id
+            return
+        }
         eventToOpen = events.first { $0.id == id }
     }
     
@@ -256,6 +273,8 @@ class EventViewModel: ObservableObject {
 struct OutsideResetOffer: Equatable {
     let eventID: UUID
     let title: String
+    /// The event's card theme, which colours the strip
+    let theme: CardTheme
     let resetAt: Date
     /// The run the reset ended, which undo brings back
     let lostRun: TimeInterval
