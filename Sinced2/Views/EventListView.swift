@@ -499,7 +499,7 @@ struct HomeEventCardView: View {
 
     private var timeLabel: some View {
         Text(widgetTimeValue(for: currentTime).uppercased())
-            .font(.custom("GeistMono-Medium", size: 20))
+            .font(.allo(20, weight: .medium).monospacedDigit())
             // Digits roll when the count changes, e.g. after an undo
             .contentTransition(.numericText())
             .foregroundColor(.white)
@@ -512,7 +512,7 @@ struct HomeEventCardView: View {
 
     private func subtitleLabel(multilineAlignment: TextAlignment) -> some View {
         Text("Since \(event.title)")
-            .font(.system(size: 14, weight: .medium))
+            .font(.allo(14, weight: .medium))
             .foregroundColor(Color.white.opacity(0.6))
             .lineLimit(1)
             .minimumScaleFactor(0.7)

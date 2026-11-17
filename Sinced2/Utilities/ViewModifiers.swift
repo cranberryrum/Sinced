@@ -62,49 +62,48 @@ extension View {
     }
 }
 
-/// App fonts: SF Pro (the system default design, which iOS draws as
-/// SF Pro Display at larger sizes). Names kept from the old rounded set.
+/// App fonts: Allo (see Shared/AlloFont.swift). Names kept from the old rounded set.
 extension Font {
-    /// SF Pro at the given size and weight
+    /// Allo at the given size and weight
     static func rounded(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        return .system(size: size, weight: weight)
+        return .allo(size, weight: weight)
     }
     
-    /// SF Pro versions of standard text styles
+    /// Allo versions of standard text styles, scaled with Dynamic Type
     static var roundedLargeTitle: Font {
-        return .system(.largeTitle, weight: .semibold)
+        return .allo(.largeTitle, weight: .semibold)
     }
     
     static var roundedTitle: Font {
-        return .system(.title, weight: .semibold)
+        return .allo(.title, weight: .semibold)
     }
     
     static var roundedTitle2: Font {
-        return .system(.title2, weight: .medium)
+        return .allo(.title2, weight: .medium)
     }
     
     static var roundedTitle3: Font {
-        return .system(.title3, weight: .medium)
+        return .allo(.title3, weight: .medium)
     }
     
     static var roundedHeadline: Font {
-        return .system(.headline)
+        return .allo(.headline, weight: .semibold)
     }
     
     static var roundedSubheadline: Font {
-        return .system(.subheadline)
+        return .allo(.subheadline)
     }
     
     static var roundedBody: Font {
-        return .system(.body)
+        return .allo(.body)
     }
     
     static var roundedCallout: Font {
-        return .system(.callout)
+        return .allo(.callout)
     }
     
     static var roundedCaption: Font {
-        return .system(.caption)
+        return .allo(.caption)
     }
 }
 

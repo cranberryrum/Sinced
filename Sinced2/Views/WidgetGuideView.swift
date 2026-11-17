@@ -199,7 +199,7 @@ private struct StepBadge: View {
 
     var body: some View {
         Text("\(number)")
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .font(.allo(13, weight: .semibold))
             .monospacedDigit()
             .foregroundColor(isActive ? .white : .secondary)
             .frame(width: 26, height: 26)
@@ -562,11 +562,11 @@ private struct GuideLockScreen: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(dayCount)
-                    .font(.custom("GeistMono-Medium", size: 12))
+                    .font(.allo(12, weight: .medium).monospacedDigit())
                     .tracking(-0.3)
                     .foregroundColor(.white)
                 Text("Since \(event.title)")
-                    .font(.system(size: 8.5, weight: .medium))
+                    .font(.allo(8.5, weight: .medium))
                     .foregroundColor(.white.opacity(0.75))
                     .lineLimit(1)
             }

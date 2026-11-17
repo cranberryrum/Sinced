@@ -33,6 +33,15 @@
 	<string>Sinced needs access to save your event cards to your photo library for sharing.</string>
 	<key>UIAppFonts</key>
 	<array>
+		<string>Allo-Thin.otf</string>
+		<string>Allo-ExtraLight.otf</string>
+		<string>Allo-Light.otf</string>
+		<string>Allo-Regular.otf</string>
+		<string>Allo-Medium.otf</string>
+		<string>Allo-SemiBold.otf</string>
+		<string>Allo-Bold.otf</string>
+		<string>Allo-ExtraBold.otf</string>
+		<string>Allo-Black.otf</string>
 		<string>GeistMono-Black.ttf</string>
 		<string>GeistMono-Bold.ttf</string>
 		<string>GeistMono-ExtraBold.ttf</string>

@@ -21,6 +21,8 @@ struct Sinced2App: App {
         _ = NotificationManager.shared
         
         ReviewPrompter.noteLaunch()
+
+        Self.applyAlloToNavigationBars()
         
         // Widget, Control Center and Siri resets can happen while the app is open
         CFNotificationCenterAddObserver(
@@ -37,16 +39,31 @@ struct Sinced2App: App {
         )
     }
     
+    /// Navigation titles are drawn by UIKit, so they get Allo through the appearance proxy
+    private static func applyAlloToNavigationBars() {
+        func scaled(_ name: String, _ size: CGFloat, _ style: UIFont.TextStyle) -> UIFont {
+            let base = UIFont(name: name, size: size) ?? .systemFont(ofSize: size)
+            return UIFontMetrics(forTextStyle: style).scaledFont(for: base)
+        }
+        let bar = UINavigationBar.appearance()
+        bar.titleTextAttributes = [.font: scaled("Allo-SemiBold", 17, .headline)]
+        bar.largeTitleTextAttributes = [.font: scaled("Allo-Bold", 34, .largeTitle)]
+    }
+
     var body: some Scene {
         WindowGroup {
             if !viewModel.hasCompletedOnboarding {
                 OnboardingView()
                     .environmentObject(viewModel)
+                    // Allo for any text that doesn't set its own font
+                    .font(.roundedBody)
                     .preferredColorScheme(.light)
                     .transition(.opacity)
             } else {
                 MainTabView()
                     .environmentObject(viewModel)
+                    // Allo for any text that doesn't set its own font
+                    .font(.roundedBody)
                     .preferredColorScheme(.light)
                     .onReceive(NotificationCenter.default.publisher(for: .didTapEventNotification)) { notification in
                         if let eventId = notification.userInfo?["eventId"] as? UUID {

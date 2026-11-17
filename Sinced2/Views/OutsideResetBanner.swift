@@ -179,13 +179,13 @@ private struct ResetStrip: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(offer.title) was reset")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.allo(13, weight: .medium))
                     .foregroundStyle(palette.text.opacity(0.78))
                     .lineLimit(1)
                     .entering(appeared, delay: 0.12, reduceMotion: reduceMotion)
 
                 Text(StreakText.label(for: offer.lostRun))
-                    .font(.custom("GeistMono-Medium", size: 19))
+                    .font(.allo(19, weight: .medium).monospacedDigit())
                     .tracking(-0.4)
                     .foregroundStyle(palette.text)
                     .lineLimit(1)
@@ -203,7 +203,7 @@ private struct ResetStrip: View {
 
             Button(action: onUndo) {
                 Text("Undo")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.allo(15, weight: .semibold))
                     .foregroundStyle(palette.pillText)
                     .frame(width: 84, height: 40)
                     .background {

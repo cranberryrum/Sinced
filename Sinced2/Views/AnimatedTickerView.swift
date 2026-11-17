@@ -16,7 +16,7 @@ struct AnimatedTickerView: View {
     
     var body: some View {
         Text(text)
-            .font(.system(size: fontSize, weight: fontWeight))
+            .font(.allo(fontSize, weight: fontWeight))
             .monospacedDigit()
             .foregroundColor(color)
             .contentTransition(.numericText())
@@ -85,7 +85,7 @@ struct AnimatedNumberOnly: View {
     
     var body: some View {
         Text(numberString)
-            .font(.system(size: fontSize, weight: .semibold))
+            .font(.allo(fontSize, weight: .semibold))
             .monospacedDigit()
             .foregroundColor(color)
             .contentTransition(.numericText(value: Double(number)))

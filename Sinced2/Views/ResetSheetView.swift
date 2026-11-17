@@ -56,7 +56,7 @@ struct ResetSheetView: View {
                 // When it happened, in case it was earlier than now
                 HStack(spacing: 8) {
                     Text("When")
-                        .font(.system(size: 16))
+                        .font(.allo(16))
                         .foregroundColor(.secondary)
 
                     Spacer()
@@ -92,7 +92,7 @@ struct ResetSheetView: View {
                     axis: .vertical
                 )
                 .lineLimit(1...3)
-                .font(.system(size: 16))
+                .font(.allo(16))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .background(
@@ -106,7 +106,7 @@ struct ResetSheetView: View {
 
                 Button(action: resetEvent) {
                     Text("Reset counter")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.allo(16, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)

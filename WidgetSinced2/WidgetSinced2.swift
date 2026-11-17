@@ -124,7 +124,7 @@ struct WidgetResetButton: View {
         if event.undoableReset(at: currentDate) != nil {
             Button(intent: UndoResetIntent(event: entity)) {
                 Text("Undo")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.allo(12, weight: .semibold))
                     .padding(.horizontal, 10)
                     .frame(height: 26)
                     .background(theme.badgeBackgroundColor, in: Capsule())
@@ -192,11 +192,11 @@ struct PlaceholderWidgetView: View {
     var body: some View {
         VStack(spacing: 4) {
             Text("No event")
-                .font(.custom("GeistMono-Medium", size: 16))
+                .font(.allo(16, weight: .medium).monospacedDigit())
                 .foregroundColor(.white)
             
             Text("Add one in Sinced, then hold to choose it")
-                .font(.system(size: 12, weight: .medium))
+                .font(.allo(12, weight: .medium))
                 .foregroundColor(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
         }
@@ -251,7 +251,7 @@ struct CustomImageWidgetView: View {
                 // Time value - Geist Mono Medium, 40px (scaled), tracking -3.2px, white
                 Text(formattedTime)
                     .invalidatableContent()
-                    .font(.custom("GeistMono-Medium", size: size.width < 160 ? 16 : 20))
+                    .font(.allo(size.width < 160 ? 16 : 20, weight: .medium).monospacedDigit())
                     .tracking(-1.6)  // Scaled from -3.2px for 40px to widget size
                     .foregroundColor(.white)
                     .lineLimit(1)
@@ -259,7 +259,7 @@ struct CustomImageWidgetView: View {
                 
                 // Event title - SF Pro Rounded Medium, 20px (scaled), white 60%
                 Text("Since \(event.title)")
-                    .font(.system(size: size.width < 160 ? 10 : 12, weight: .medium))
+                    .font(.allo(size.width < 160 ? 10 : 12, weight: .medium))
                     .foregroundColor(.white.opacity(0.6))
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -283,7 +283,7 @@ struct ThemeBasedWidgetView: View {
             // Time value - using Geist Mono Medium
             Text(formattedTime)
                 .invalidatableContent()
-                .font(.custom("GeistMono-Medium", size: size.width < 160 ? 18 : 22))
+                .font(.allo(size.width < 160 ? 18 : 22, weight: .medium).monospacedDigit())
                 .tracking(-1.5)
                 .foregroundColor(.white)
                 .lineLimit(1)
@@ -291,7 +291,7 @@ struct ThemeBasedWidgetView: View {
             
             // Event title - using SF Pro Rounded
             Text("Since \(event.title)")
-                .font(.system(size: size.width < 160 ? 11 : 13, weight: .medium))
+                .font(.allo(size.width < 160 ? 11 : 13, weight: .medium))
                 .foregroundColor(.white.opacity(0.6))
                 .lineLimit(1)
                 .truncationMode(.tail)

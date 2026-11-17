@@ -53,7 +53,7 @@ struct AddEventBottomSheet: View {
             // Header
             HStack {
                 Text(isEditing ? "Edit event" : (isFirstEvent ? "What are you counting?" : "Add an event"))
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.allo(22, weight: .semibold))
                     .foregroundColor(.primaryGreen)
                 
                 Spacer()
@@ -73,7 +73,7 @@ struct AddEventBottomSheet: View {
                             prompt: Text("eg: last cigarette, no coffee")
                                 .foregroundColor(Self.labelColor)
                         )
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.allo(16, weight: .medium))
                             .foregroundColor(Color(hex: "1a1a1a"))
                             .focused($isTextFieldFocused)
                             .onChange(of: eventTitle) { _, newValue in
@@ -104,7 +104,7 @@ struct AddEventBottomSheet: View {
                     VStack(spacing: 12) {
                         HStack(spacing: 8) {
                             Text("Started on")
-                                .font(.system(size: 16))
+                                .font(.allo(16))
                                 .foregroundColor(Self.labelColor)
                             
                             Spacer()
@@ -124,7 +124,7 @@ struct AddEventBottomSheet: View {
                         
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Card theme")
-                                .font(.system(size: 16))
+                                .font(.allo(16))
                                 .foregroundColor(Self.labelColor)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -174,7 +174,7 @@ struct AddEventBottomSheet: View {
             VStack(spacing: 0) {
                 Button(action: { saveEvent() }) {
                     Text(isEditing ? "Save changes" : "Save")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.allo(16, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
@@ -439,7 +439,7 @@ struct ThemeCarouselItem: View {
                         Image(systemName: "photo.badge.plus")
                             .font(.system(size: 20, weight: .medium))
                         Text("Photo")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.allo(11, weight: .medium))
                     }
                     .foregroundColor(.primaryGreen)
                     RoundedRectangle(cornerRadius: 12)
@@ -510,7 +510,7 @@ private struct NameSuggestionChip: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 14, weight: .regular))
+            .font(.allo(14, weight: .regular))
             .foregroundColor(isSelected ? .primaryGreen : Color(hex: "4a484a"))
             .padding(.horizontal, 14)
             .frame(height: 34)
@@ -593,7 +593,7 @@ struct StartDatePill: View {
             .overlay {
                 // Fully opaque, so none of the native text shows through
                 Text(text)
-                    .font(.system(size: 15, weight: .regular))
+                    .font(.allo(15, weight: .regular))
                     .foregroundColor(Color(hex: "1a1a1a"))
                     .lineLimit(1)
                     .fixedSize()

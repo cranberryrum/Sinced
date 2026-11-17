@@ -55,7 +55,7 @@ struct ShareSheetView: View {
                 // Theme Selection
                 VStack(spacing: 12) {
                     Text("Theme")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.allo(14, weight: .semibold))
                         .foregroundColor(.primary.opacity(0.4))
                     
                     HStack(spacing: 16) {
@@ -81,7 +81,7 @@ struct ShareSheetView: View {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.system(size: 18, weight: .semibold))
                             Text("Share")
-                                .font(.system(size: 17, weight: .semibold))
+                                .font(.allo(17, weight: .semibold))
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -102,7 +102,7 @@ struct ShareSheetView: View {
                                 // The arrow turns into the tick instead of swapping
                                 .contentTransition(.symbolEffect(.replace))
                             Text(showingSaveSuccess ? "Saved!" : "Save to Photos")
-                                .font(.system(size: 17, weight: .semibold))
+                                .font(.allo(17, weight: .semibold))
                                 .contentTransition(.opacity)
                         }
                         .foregroundColor(showingSaveSuccess ? .green : .primaryGreen)

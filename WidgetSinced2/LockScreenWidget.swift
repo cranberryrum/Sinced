@@ -77,13 +77,13 @@ struct CircularLockScreenView: View {
         } currentValueLabel: {
             VStack(spacing: -2) {
                 Text("\(count)")
-                    .font(.custom("GeistMono-Medium", size: 20))
+                    .font(.allo(20, weight: .medium).monospacedDigit())
                     .tracking(-1)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
 
                 Text(event.widgetTimeUnit.shortLabel)
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(.allo(8, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 2)
@@ -104,14 +104,14 @@ struct RectangularLockScreenView: View {
 
         VStack(alignment: .leading, spacing: 1) {
             Text(event.countLabel(at: date))
-                .font(.custom("GeistMono-Medium", size: 20))
+                .font(.allo(20, weight: .medium).monospacedDigit())
                 .tracking(-1)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .widgetAccentable()
 
             Text("Since \(event.title)")
-                .font(.system(size: 13, weight: .medium))
+                .font(.allo(13, weight: .medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
@@ -119,7 +119,7 @@ struct RectangularLockScreenView: View {
                 MilestoneBar(fraction: milestone.fraction)
 
                 Text("\(milestone.targetText) in \(milestone.remainingText)")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.allo(11, weight: .medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .fixedSize()
@@ -178,9 +178,9 @@ struct EmptyLockScreenView: View {
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 2) {
                 Text("No event")
-                    .font(.custom("GeistMono-Medium", size: 18))
+                    .font(.allo(18, weight: .medium).monospacedDigit())
                 Text("Add one in Sinced")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.allo(13, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

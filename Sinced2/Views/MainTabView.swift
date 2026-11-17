@@ -81,7 +81,7 @@ struct TabButton: View {
                 
                 if currentTab == tab {
                     Text(title)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.allo(14, weight: .semibold))
                 }
             }
             .foregroundColor(currentTab == tab ? .primaryGreen : .secondary)
