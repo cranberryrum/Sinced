@@ -29,8 +29,12 @@ struct ShareSheetView: View {
         var id: Self { self }
     }
     
-    init(event: SinceEvent) {
+    /// Set when sharing from a milestone or goal moment, for the message
+    var moment: ShareMessage.Moment? = nil
+
+    init(event: SinceEvent, moment: ShareMessage.Moment? = nil) {
         self.event = event
+        self.moment = moment
         _selectedTheme = State(initialValue: ShareSheetView.defaultShareTheme(for: event))
     }
     
@@ -51,6 +55,7 @@ struct ShareSheetView: View {
                 }
                 .padding(.horizontal, 40)
                 .padding(.vertical, 30) // Extra vertical padding for shadows
+                .sheetEntrance(0)
                 
                 // Theme Selection
                 VStack(spacing: 12) {
@@ -70,6 +75,7 @@ struct ShareSheetView: View {
                     }
                 }
                 .padding(.vertical, 10)
+                .sheetEntrance(1)
                 
                 Spacer()
                 
@@ -118,6 +124,7 @@ struct ShareSheetView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 30)
+                .sheetEntrance(2)
             }
             .background(Color(UIColor.systemBackground))
             .navigationTitle("Share Event")
@@ -331,8 +338,9 @@ struct ShareSheetView: View {
     }
     
     /// Goes along with the card so whoever receives it can tap through to the app
+    /// The streak, the event and a link to Sinced, sent along with the card
     private var shareText: String {
-        "Counting the days since \(event.title) with Sinced \(AppStoreLinks.listing.absoluteString)"
+        ShareMessage.text(for: event, moment: moment)
     }
     
     private func shareImage() {
@@ -352,7 +360,10 @@ struct ShareSheetView: View {
             await MainActor.run {
                 // Share the UIImage (system will handle compression appropriately for each destination)
                 let activityViewController = UIActivityViewController(
-                    activityItems: [image, shareText],
+                    activityItems: [
+                        image,
+                        ShareMessageItem(message: shareText, subject: "\(ShareMessage.streak(for: event)) since \(event.title)", image: image)
+                    ],
                     applicationActivities: nil
                 )
                 

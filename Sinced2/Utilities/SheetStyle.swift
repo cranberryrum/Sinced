@@ -39,28 +39,50 @@ extension View {
 private struct FittedSheet: ViewModifier {
     let estimate: CGFloat
 
-    @State private var contentHeight: CGFloat?
-
-    /// iOS already leaves room for the home indicator below a height detent
-    private var height: CGFloat {
-        contentHeight ?? estimate
-    }
+    /// The height the sheet sits at
+    @State private var height: CGFloat?
+    /// Detents on offer. Normally just `height`; while resizing, the old and
+    /// new heights side by side. iOS won't move a presented sheet when its
+    /// only detent is swapped for another, but it will move between two.
+    @State private var detents: Set<PresentationDetent> = []
+    @State private var selection: PresentationDetent = .large
+    @State private var settle: Task<Void, Never>?
 
     func body(content: Content) -> some View {
         content
             .onPreferenceChange(SheetHeightKey.self) { measured in
                 guard measured > 0 else { return }
-                let rounded = measured.rounded(.up)
-                guard let current = contentHeight else {
-                    contentHeight = rounded
+                let new = measured.rounded(.up)
+                guard let old = height else {
+                    height = new
+                    detents = [.height(new)]
+                    selection = .height(new)
                     return
                 }
-                // Grows and shrinks with its content, e.g. a note getting a second line
-                guard abs(current - rounded) > 0.5 else { return }
-                withAnimation(.smooth(duration: 0.3)) { contentHeight = rounded }
+                // Grows and shrinks with its content, e.g. the goal dial opening
+                guard abs(old - new) > 0.5 else { return }
+                height = new
+                detents = [.height(old), .height(new)]
+                withAnimation(.smooth(duration: 0.3)) { selection = .height(new) }
+                // Once it's there, take the old height away so it can't be dragged to
+                settle?.cancel()
+                settle = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.45))
+                    guard !Task.isCancelled else { return }
+                    detents = [.height(new)]
+                }
             }
             // iOS stops a taller height at the top of the screen, and the content scrolls
-            .presentationDetents([.height(height)])
+            .presentationDetents(
+                detents.isEmpty ? [.height(estimate)] : detents,
+                selection: Binding(
+                    get: { detents.isEmpty ? .height(estimate) : selection },
+                    set: { selection = $0 }
+                )
+            )
             .presentationDragIndicator(.visible)
+            // Solid white instead of the system's glass, so text keeps full
+            // contrast whatever colourful cards sit behind the sheet
+            .presentationBackground(Color.white)
     }
 }

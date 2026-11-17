@@ -16,7 +16,6 @@ enum Tab {
 struct MainTabView: View {
     @EnvironmentObject var viewModel: EventViewModel
     @State private var selectedTab: Tab = .home
-    @StateObject private var toastManager = ToastManager.shared
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -40,7 +39,10 @@ struct MainTabView: View {
         }
         // Launching straight from a widget is a cold start, which doesn't
         // count as coming to the foreground, so ask here too
-        .task { viewModel.checkOutsideResets() }
+        .task {
+            viewModel.checkOutsideResets()
+            viewModel.checkMilestones()
+        }
         .onReceive(WidgetGuideRouter.shared.$isRequested.filter { $0 }) { _ in
             // So does the widget guide
             selectedTab = .home
@@ -53,12 +55,23 @@ struct MainTabView: View {
             onUndo: viewModel.undoOutsideReset,
             onTimeout: viewModel.dismissOutsideReset
         )
-        .toast(
-            isShowing: $toastManager.isShowing,
-            message: toastManager.message,
-            icon: toastManager.icon,
-            style: toastManager.style
-        )
+        // A milestone or goal reached since the app last looked
+        .overlay {
+            if let celebration = viewModel.celebration {
+                MilestoneCelebrationView(
+                    celebration: celebration,
+                    event: viewModel.events.first { $0.id == celebration.eventID },
+                    onClose: viewModel.closeCelebration,
+                    onSetNextGoal: viewModel.setNextGoal
+                )
+                // Fades in; leaves a touch smaller, quicker than it came
+                .transition(.asymmetric(
+                    insertion: .opacity,
+                    removal: .opacity.combined(with: .scale(scale: 0.98))
+                ))
+                .zIndex(10)
+            }
+        }
     }
 }
 

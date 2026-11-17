@@ -102,6 +102,10 @@ extension Font {
         return .allo(.callout)
     }
     
+    static var roundedFootnote: Font {
+        return .allo(.footnote)
+    }
+
     static var roundedCaption: Font {
         return .allo(.caption)
     }

@@ -87,6 +87,7 @@ struct WidgetGuideView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 12)
+                .sheetEntrance(0)
 
                 Picker("Where", selection: $place) {
                     ForEach(WidgetGuidePlace.allCases) { place in
@@ -94,14 +95,17 @@ struct WidgetGuideView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .sheetEntrance(1)
 
                 WidgetGuideStage(place: place, step: step, event: event)
+                    .sheetEntrance(2)
 
                 VStack(spacing: 2) {
                     ForEach(Array(place.steps.enumerated()), id: \.offset) { index, text in
                         stepRow(index: index, text: text)
                     }
                 }
+                .sheetEntrance(3)
 
                 Text(place.tip)
                     .font(.roundedCaption)
@@ -109,6 +113,7 @@ struct WidgetGuideView: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
+                    .sheetEntrance(4)
             }
             .padding(.horizontal, 20)
             .padding(.top, 32)
@@ -122,6 +127,7 @@ struct WidgetGuideView: View {
                 dismiss()
             }
             .buttonStyle(PrimaryButtonStyle())
+            .sheetEntrance(5)
             .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 8)

@@ -73,23 +73,6 @@ struct SettingsView: View {
                         SettingsRowLabel(icon: "hammer", title: "About Developer")
                     }
                     .buttonStyle(.plain)
-
-                    Button {
-                        openURL(Self.privacyPolicyURL)
-                    } label: {
-                        SettingsRowLabel(icon: "hand.raised", title: "Privacy Policy")
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        // No mail app set up → open the support page instead
-                        openURL(Self.supportEmailURL) { accepted in
-                            if !accepted { openURL(Self.supportPageURL) }
-                        }
-                    } label: {
-                        SettingsRowLabel(icon: "envelope", title: "Contact Support")
-                    }
-                    .buttonStyle(.plain)
                 }
 
                 Section {
@@ -107,6 +90,29 @@ struct SettingsView: View {
                         SettingsRowLabel(icon: "heart", title: "Tell a Friend")
                     }
                     .buttonStyle(.plain)
+                } footer: {
+                    // The small print, kept quiet at the very bottom
+                    VStack(spacing: 8) {
+                        HStack(spacing: 6) {
+                            Button("Privacy Policy") { openURL(Self.privacyPolicyURL) }
+                            Text("·").accessibilityHidden(true)
+                            Button("Support") {
+                                // No mail app set up → open the support page instead
+                                openURL(Self.supportEmailURL) { accepted in
+                                    if !accepted { openURL(Self.supportPageURL) }
+                                }
+                            }
+                        }
+                        .font(.roundedFootnote)
+                        .foregroundColor(.secondary)
+                        .buttonStyle(.plain)
+
+                        Text(AppVersion.label)
+                            .font(.roundedCaption)
+                            .foregroundColor(Color(UIColor.tertiaryLabel))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 28)
                 }
             }
             .listStyle(.insetGrouped)
@@ -115,14 +121,9 @@ struct SettingsView: View {
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .aboutApp:
-                    SimpleInfoSheet(
-                        title: "About Sinced",
-                        bodyText: "Sinced is a simple way to keep the moments that matter visible. Add an event, track the time since it started, and check in with your progress whenever you need to.",
-                        imageName: nil,
-                        actions: []
-                    )
+                    AboutSincedSheet()
                 case .aboutDeveloper:
-                    DeveloperInfoSheet()
+                    DeveloperSheet()
                 case .widgetGuide:
                     WidgetGuideView(event: viewModel.events.first)
                         .presentationDetents([.large])
@@ -245,9 +246,16 @@ private struct EditNameSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Your name")
-                .font(.rounded(22, weight: .semibold))
-                .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Your name")
+                    .font(.rounded(22, weight: .semibold))
+                    .foregroundColor(.primary)
+                Text("Some reminders use it, so they feel written for you.")
+                    .font(.roundedSubheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .sheetEntrance(0)
 
             TextField("Your name", text: $nameInput)
                 .font(.roundedBody)
@@ -257,24 +265,26 @@ private struct EditNameSheet: View {
                 .frame(height: 48)
                 .background(
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(Color(UIColor.secondarySystemBackground))
+                        .fill(AddEventBottomSheet.fieldFill)
                 )
                 .focused($isFocused)
                 .submitLabel(.done)
                 .onSubmit(save)
+                .sheetEntrance(1)
 
             Button("Save", action: save)
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(trimmedName.isEmpty)
                 .opacity(trimmedName.isEmpty ? 0.5 : 1)
                 .animation(.easeOut(duration: 0.2), value: trimmedName.isEmpty)
+                .sheetEntrance(2)
         }
         .padding(.horizontal, 20)
         .padding(.top, 28)
         .padding(.bottom, 20)
         .sheetHeightPart()
         .frame(maxHeight: .infinity, alignment: .top)
-        .fittedSheet(estimate: 210)
+        .fittedSheet(estimate: 240)
         .onAppear {
             isFocused = true
         }
@@ -285,96 +295,6 @@ private struct EditNameSheet: View {
         HapticManager.shared.success()
         onSave(trimmedName)
         dismiss()
-    }
-}
-
-private struct SimpleInfoSheet: View {
-    let title: String
-    let bodyText: String
-    let imageName: String?
-    let actions: [SheetAction]
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                if let imageName, UIImage(named: imageName) != nil {
-                    Image(imageName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                }
-
-                Text(title)
-                    .font(.roundedTitle2)
-                    .foregroundColor(.primary)
-
-                Text(bodyText)
-                    .font(.roundedBody)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                ForEach(actions) { action in
-                    if action.isPrimary {
-                        Link(destination: action.url) {
-                            Text(action.title)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
-                    } else {
-                        Link(destination: action.url) {
-                            Text(action.title)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(SubtleButtonStyle())
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 28)
-            .padding(.bottom, 20)
-            .sheetHeightPart()
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .fittedSheet(estimate: 300)
-    }
-}
-
-private struct DeveloperInfoSheet: View {
-    var body: some View {
-        SimpleInfoSheet(
-            title: "About Developer",
-            bodyText: "Aditya Kolte is a product designer building thoughtful consumer experiences, and Sinced is one of those small Swift experiments made with a focus on clarity and feeling.",
-            imageName: nil,
-            actions: [
-                SheetAction(title: "Visit Website", url: URL(string: "https://adityakolte.com/")!, isPrimary: true),
-                SheetAction(title: "Open Twitter", url: URL(string: "https://x.com/adityakvlte")!, isPrimary: false)
-            ]
-        )
-    }
-}
-
-private struct SheetAction: Identifiable {
-    let id = UUID()
-    let title: String
-    let url: URL
-    let isPrimary: Bool
-}
-
-private struct SubtleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.roundedHeadline)
-            .foregroundColor(.primary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(UIColor.secondarySystemBackground))
-            )
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .scaleEffect(configuration.isPressed ? 0.99 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)
     }
 }
 

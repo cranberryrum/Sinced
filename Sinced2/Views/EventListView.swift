@@ -24,6 +24,8 @@ struct EventListView: View {
     @AppStorage("firstRun.addSheetOffered") private var addSheetOffered = false
     /// The card currently showing its "look here" ring
     @State private var ringedEventID: UUID?
+    /// The edit sheet opens with the goal dial out ("Set the next goal")
+    @State private var editOpensGoal = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Only once iOS has confirmed there's no widget, so it never flashes for people who have one
@@ -92,6 +94,8 @@ struct EventListView: View {
                                 ForEach(viewModel.events) { event in
                                     HomeEventCardView(event: event)
                                         .frame(height: cardHeight)
+                                        // A soft lift off the page, part of the hairline look
+                                        .shadow(color: .black.opacity(0.10), radius: 9, y: 8)
                                         // Lands as the add sheet clears; leaves the same way
                                         .transition(cardTransition)
                                         // Where to look, after a widget tap
@@ -131,6 +135,7 @@ struct EventListView: View {
                                         )
                                         .contextMenu {
                                             Button {
+                                                editOpensGoal = false
                                                 eventBeingEdited = event
                                             } label: {
                                                 Label("Edit", systemImage: "pencil")
@@ -235,8 +240,16 @@ struct EventListView: View {
                         get: { eventBeingEdited != nil },
                         set: { if !$0 { eventBeingEdited = nil } }
                     ),
-                    editingEvent: event
+                    editingEvent: event,
+                    openGoal: editOpensGoal
                 )
+            }
+            .onChange(of: viewModel.goalEditRequest) { _, id in
+                guard let id, let event = viewModel.events.first(where: { $0.id == id }) else { return }
+                viewModel.goalEditRequest = nil
+                selectedEvent = nil
+                editOpensGoal = true
+                eventBeingEdited = event
             }
             .sheet(isPresented: $showingCreateEvent, onDismiss: offerGuideAfterFirstEvent) {
                 AddEventBottomSheet(viewModel: viewModel, isPresented: $showingCreateEvent)
@@ -314,12 +327,7 @@ struct EventListView: View {
     }
 
     private func showSuccessToast(title: String) {
-        ToastManager.shared.show(
-            "\(title) deleted successfully",
-            icon: "trash.fill",
-            style: .deleteBanner,
-            duration: 2.0
-        )
+        ToastManager.shared.show("Deleted “\(title)”", icon: "trash", kind: .destructive)
     }
 }
 
@@ -415,11 +423,8 @@ struct HomeEventCardView: View {
 
             textStack
         }
-        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: cardCornerRadius)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .cardEdge(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         .onReceive(timer) { _ in
             currentTime = Date()
         }

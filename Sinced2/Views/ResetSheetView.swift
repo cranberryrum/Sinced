@@ -52,6 +52,7 @@ struct ResetSheetView: View {
                         .font(.roundedCaption)
                         .foregroundColor(Color(UIColor.tertiaryLabel))
                 }
+                .sheetEntrance(0)
 
                 // When it happened, in case it was earlier than now
                 HStack(spacing: 8) {
@@ -84,6 +85,7 @@ struct ResetSheetView: View {
                     }
                 }
                 .animation(.smooth(duration: 0.25), value: isBackdated)
+                .sheetEntrance(1)
 
                 TextField(
                     "Note",
@@ -97,12 +99,13 @@ struct ResetSheetView: View {
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white.opacity(0.9))
+                        .fill(AddEventBottomSheet.fieldFill)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.black.opacity(0.08), lineWidth: 1)
                 )
+                .sheetEntrance(2)
 
                 Button(action: resetEvent) {
                     Text("Reset counter")
@@ -113,6 +116,7 @@ struct ResetSheetView: View {
                         .background(Capsule().fill(Color(hex: "E5484D")))
                 }
                 .buttonStyle(PressableButtonStyle())
+                .sheetEntrance(3)
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)

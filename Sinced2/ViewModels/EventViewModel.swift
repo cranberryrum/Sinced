@@ -23,6 +23,10 @@ class EventViewModel: ObservableObject {
     /// A home card to ring briefly, to show where to look (set when a widget
     /// tap lands on Home instead of opening the event)
     @Published var focusedEventID: UUID?
+    /// The milestone moment on screen, if any
+    @Published private(set) var celebration: MilestoneCelebration?
+    /// Asks Home to open this event's edit sheet with the goal dial open
+    @Published var goalEditRequest: UUID?
     
     private let storageManager = StorageManager.shared
     private let notificationManager = NotificationManager.shared
@@ -52,6 +56,8 @@ class EventViewModel: ObservableObject {
         loadEvents()
         guard saved else { return false }
         triggerHaptic()
+        // A backdated event shouldn't celebrate the milestones it starts past
+        MilestoneLedger.setBaseline(for: event)
         
         // Schedule reminders if enabled
         if event.reminderSettings.isEnabled {
@@ -226,13 +232,13 @@ class EventViewModel: ObservableObject {
         // The card's count rolls back up as the screen settles
         let restored = withAnimation(.spring(duration: 0.6, bounce: 0)) { undoReset(event) }
         if restored {
-            HapticManager.shared.success()
-            // After the drop, so two things don't move at the bottom at once
+            // After the screen settles, so two things don't move at once
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                 ToastManager.shared.show(
-                    "\(StreakText.text(for: offer.lostRun)) back on \(event.title)",
+                    "Streak restored",
+                    subtitle: "\(StreakText.text(for: offer.lostRun)) back on \(event.title)",
                     icon: "arrow.uturn.backward",
-                    duration: 2.4
+                    kind: .success
                 )
             }
         }
@@ -250,6 +256,34 @@ class EventViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Milestones
+
+    /// Show the biggest milestone (or goal) reached since the app last looked,
+    /// across all events. One moment per open, never right after the
+    /// "was it a mistake?" strip, and never during onboarding.
+    func checkMilestones() {
+        guard hasCompletedOnboarding, outsideReset == nil, celebration == nil else { return }
+        guard let found = MilestoneLedger.nextCelebration(in: events) else { return }
+        withAnimation(.easeOut(duration: 0.35)) { celebration = found }
+    }
+
+    /// The milestone moment is always on a dark ground, so the status bar
+    /// turns light while it shows
+    var celebrationIsDark: Bool { celebration != nil }
+
+    func closeCelebration() {
+        withAnimation(.easeOut(duration: 0.25)) { celebration = nil }
+    }
+
+    /// "Set the next goal": close the moment, then open the goal dial
+    func setNextGoal() {
+        guard let id = celebration?.eventID else { return }
+        closeCelebration()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.goalEditRequest = id
+        }
+    }
+
     /// Open an event's detail sheet if it still exists and isn't archived.
     /// If it was just reset outside the app, land on Home instead: ring its
     /// card and ask about the reset there, rather than opening the event
@@ -261,6 +295,11 @@ class EventViewModel: ObservableObject {
             focusedEventID = id
             return
         }
+        // A milestone reached since the app last looked takes priority:
+        // check now, because a widget tap arrives before the app's own check
+        // on becoming active, and the event page would cover the moment
+        checkMilestones()
+        if celebration != nil { return }
         eventToOpen = events.first { $0.id == id }
     }
     
@@ -278,4 +317,96 @@ struct OutsideResetOffer: Equatable {
     let resetAt: Date
     /// The run the reset ended, which undo brings back
     let lostRun: TimeInterval
+}
+
+/// Which milestone each event's current run has already celebrated, so each
+/// one shows exactly once. Kept on this device only, like the rest of the
+/// app's settings.
+enum MilestoneLedger {
+    private struct Entry: Codable {
+        /// The run this applies to
+        var runStart: Date
+        /// Biggest milestone already shown (or passed silently)
+        var level: Int
+    }
+
+    private static let key = "milestoneLedger"
+    private static var defaults: UserDefaults { .standard }
+
+    private static func load() -> [String: Entry] {
+        guard let data = defaults.data(forKey: key),
+              let entries = try? JSONDecoder().decode([String: Entry].self, from: data) else { return [:] }
+        return entries
+    }
+
+    private static func save(_ entries: [String: Entry]) {
+        guard let data = try? JSONEncoder().encode(entries) else { return }
+        defaults.set(data, forKey: key)
+    }
+
+    /// What the event has reached right now: the biggest milestone, or its goal
+    private static func level(of event: SinceEvent, at date: Date) -> Int {
+        let days = event.daysElapsed(at: date)
+        let goal = event.goalDays ?? 0
+        return max(Milestones.reached(at: days), goal > 0 && days >= goal ? goal : 0)
+    }
+
+    /// Count everything already reached as seen, without celebrating
+    static func setBaseline(for event: SinceEvent, at date: Date = Date()) {
+        var entries = load()
+        entries[event.id.uuidString] = Entry(runStart: event.startedAt, level: level(of: event, at: date))
+        save(entries)
+    }
+
+    /// The single biggest new milestone across events, marked as shown
+    static func nextCelebration(in events: [SinceEvent], at date: Date = Date()) -> MilestoneCelebration? {
+        var entries = load()
+        var best: (event: SinceEvent, level: Int, comeback: Bool)?
+
+        for event in events {
+            let key = event.id.uuidString
+            let reached = level(of: event, at: date)
+            guard var entry = entries[key] else {
+                // First look at an event from before this version: no backlog
+                entries[key] = Entry(runStart: event.startedAt, level: reached)
+                continue
+            }
+
+            var comeback = false
+            if abs(entry.runStart.timeIntervalSince(event.startedAt)) >= 1 {
+                // A reset started a new run: its milestones count again.
+                // Any other change (an undo, an edited start date) is silent.
+                let startedByReset = event.history.first.map { abs($0.at.timeIntervalSince(event.startedAt)) < 1 } ?? false
+                if startedByReset, event.startedAt > entry.runStart {
+                    entry = Entry(runStart: event.startedAt, level: 0)
+                    comeback = true
+                } else {
+                    entry = Entry(runStart: event.startedAt, level: reached)
+                }
+                entries[key] = entry
+            }
+
+            if reached > entry.level, reached > (best?.level ?? 0) {
+                best = (event, reached, comeback || event.hasBeenReset)
+            }
+        }
+
+        guard let best else {
+            save(entries)
+            return nil
+        }
+        // Everything this event reached is now seen, so only the biggest shows
+        entries[best.event.id.uuidString]?.level = best.level
+        save(entries)
+
+        let goal = best.event.goalDays ?? 0
+        return MilestoneCelebration(
+            eventID: best.event.id,
+            title: best.event.title,
+            theme: best.event.cardTheme,
+            days: best.level,
+            isGoal: goal > 0 && best.level == goal,
+            isComeback: best.comeback
+        )
+    }
 }

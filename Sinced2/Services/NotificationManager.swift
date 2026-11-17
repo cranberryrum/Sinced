@@ -161,10 +161,11 @@ class NotificationManager: NSObject, ObservableObject {
     /// Notification Center (so they can't be tapped after a delete/archive)
     func cancelReminders(for event: SinceEvent) {
         let baseIdentifier = "\(Self.identifierPrefix)\(event.id.uuidString)"
+        let milestoneIdentifier = Self.milestoneIdentifier(for: event.id)
         
         notificationCenter.getPendingNotificationRequests { [weak self] requests in
             let identifiersToRemove = requests
-                .filter { $0.identifier.hasPrefix(baseIdentifier) }
+                .filter { $0.identifier.hasPrefix(baseIdentifier) || $0.identifier == milestoneIdentifier }
                 .map { $0.identifier }
             self?.notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
         }
@@ -208,6 +209,11 @@ class NotificationManager: NSObject, ObservableObject {
         
         let reminderEvents = events.filter { !$0.isArchived && $0.reminderSettings.isEnabled }
         let now = Date()
+
+        // One note for each event's next milestone or goal, for everyone who
+        // allows notifications. These come first; reminders share what's left.
+        let milestones = scheduleMilestoneNotifications(for: events.filter { !$0.isArchived }, from: now)
+        let reminderBudget = max(0, Self.maxPendingNotifications - milestones)
         
         // Share the budget by date rather than per event: take the soonest
         // reminders across all events, so busy schedules stay covered for as
@@ -218,7 +224,7 @@ class NotificationManager: NSObject, ObservableObject {
                     .map { (event: event, fireDate: $0) }
             }
             .sorted { $0.fireDate < $1.fireDate }
-            .prefix(Self.maxPendingNotifications)
+            .prefix(reminderBudget)
         
         for (event, fireDate) in upcoming {
             let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
@@ -234,6 +240,66 @@ class NotificationManager: NSObject, ObservableObject {
                 }
             }
         }
+    }
+    
+    // MARK: - Milestone Notifications
+
+    static func milestoneIdentifier(for eventID: UUID) -> String {
+        "milestone-\(eventID.uuidString)"
+    }
+
+    /// Schedules each event's next milestone (or its goal, if that comes
+    /// first). Returns how many were scheduled.
+    private func scheduleMilestoneNotifications(for events: [SinceEvent], from now: Date) -> Int {
+        var count = 0
+        for event in events {
+            let days = event.daysElapsed(at: now)
+            var target = Milestones.next(after: days)
+            var isGoal = false
+            if let goal = event.goalDays, goal > days, goal <= target {
+                target = goal
+                isGoal = true
+            }
+            let reached = event.startedAt.addingTimeInterval(Double(target) * 86400)
+            let fireDate = Self.politeTime(for: reached)
+            guard fireDate > now else { continue }
+
+            let content = UNMutableNotificationContent()
+            if isGoal {
+                content.title = "You reached your \(Milestones.goalAdjective(target)) goal"
+                content.body = "\(Milestones.label(target)) since \(event.title). Open Sinced to celebrate."
+            } else {
+                content.title = "\(Milestones.label(target)) since \(event.title)"
+                content.body = "\(Milestones.words(for: target, isGoal: false, isComeback: false)) Open Sinced to celebrate."
+            }
+            content.sound = UNNotificationSound(named: UNNotificationSoundName("NotifSound.wav"))
+            // A tap opens the app, which shows the milestone moment
+            content.userInfo = ["eventId": event.id.uuidString]
+            content.threadIdentifier = "sinced-milestones"
+
+            let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            notificationCenter.add(UNNotificationRequest(
+                identifier: Self.milestoneIdentifier(for: event.id),
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            ))
+            count += 1
+        }
+        return count
+    }
+
+    /// The moment it's reached, unless that's in the night: then 9:00
+    private static func politeTime(for date: Date) -> Date {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+        if hour >= 22 {
+            let next = calendar.date(byAdding: .day, value: 1, to: date) ?? date
+            return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: next) ?? date
+        }
+        if hour < 9 {
+            return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: date) ?? date
+        }
+        return date
     }
     
     func setNotificationsEnabled(_ enabled: Bool) {

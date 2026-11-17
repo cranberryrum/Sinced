@@ -124,7 +124,7 @@ struct OnboardingView: View {
                     .font(.roundedTitle2)
                     .multilineTextAlignment(.center)
                 
-                Text("This shows up in your settings and greeting.")
+                Text("Some reminders use your name, so they feel written for you.")
                     .font(.roundedBody)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

@@ -79,20 +79,11 @@ extension SinceEvent {
         }
     }
 
-    /// Uses the app's milestones (1, 7, 30, 90, 365 days), then every year after
+    /// Progress towards the next milestone (the same ones the app celebrates)
     func milestoneProgress(at date: Date) -> MilestoneProgress {
         let days = max(0, date.timeIntervalSince(startedAt)) / 86400
-        let marks = [1, 7, 30, 90, 365]
-
-        let target: Int
-        let previous: Int
-        if let next = marks.first(where: { Double($0) > days }) {
-            target = next
-            previous = marks.last(where: { $0 < next }) ?? 0
-        } else {
-            target = (Int(days / 365) + 1) * 365
-            previous = target - 365
-        }
+        let target = Milestones.next(after: Int(days))
+        let previous = Milestones.previous(before: target)
 
         let fraction = (days - Double(previous)) / Double(target - previous)
         return MilestoneProgress(

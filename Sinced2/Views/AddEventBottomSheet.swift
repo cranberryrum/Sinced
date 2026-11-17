@@ -28,11 +28,24 @@ struct AddEventBottomSheet: View {
     @FocusState private var isTextFieldFocused: Bool
     /// A fresh random pick of name ideas each time the sheet opens
     @State private var nameSuggestions = Array(Self.nameIdeas.shuffled().prefix(8))
+    /// Days, or 0 for no goal
+    @State private var goal: Int
+    @State private var isGoalOpen: Bool
     
-    init(viewModel: EventViewModel, isPresented: Binding<Bool>, editingEvent: SinceEvent? = nil) {
+    /// `openGoal` opens the goal dial straight away, on the next useful stop
+    /// if the current goal has been reached ("Set the next goal")
+    init(viewModel: EventViewModel, isPresented: Binding<Bool>, editingEvent: SinceEvent? = nil, openGoal: Bool = false) {
         self.viewModel = viewModel
         self._isPresented = isPresented
         self.editingEvent = editingEvent
+        
+        var goal = editingEvent?.goalDays ?? 0
+        if openGoal, let event = editingEvent {
+            let days = event.daysElapsed()
+            if goal <= days { goal = Milestones.goalStops.first { $0 > days } ?? 0 }
+        }
+        self._goal = State(initialValue: goal)
+        self._isGoalOpen = State(initialValue: openGoal)
         
         // New events start with no card selected
         let theme = editingEvent?.cardTheme
@@ -58,6 +71,7 @@ struct AddEventBottomSheet: View {
                 
                 Spacer()
             }
+            .sheetEntrance(0)
             .padding(.horizontal, 16)
             .padding(.top, 24)
             .padding(.bottom, 24)
@@ -85,18 +99,19 @@ struct AddEventBottomSheet: View {
                     .padding(.horizontal, 16)
                     .frame(height: 58)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // Near-opaque so the field stays legible over the glass sheet
-                    .background(Color.white.opacity(0.9))
+                    .background(Self.fieldFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.black.opacity(0.08), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 16)
+                    .sheetEntrance(1)
                     .padding(.bottom, isEditing ? 24 : 12)
 
                     if !isEditing {
                         nameSuggestionChips
+                            .sheetEntrance(2)
                             .padding(.bottom, 20)
                     }
                     
@@ -120,7 +135,11 @@ struct AddEventBottomSheet: View {
                                 text: startDate.formatted(date: .omitted, time: .shortened)
                             )
                         }
-                        .padding(.bottom, 8)
+                        .sheetEntrance(3)
+
+                        GoalPicker(goal: $goal, isOpen: $isGoalOpen, startDate: startDate)
+                            .sheetEntrance(4)
+                            .padding(.bottom, 8)
                         
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Card theme")
@@ -161,6 +180,7 @@ struct AddEventBottomSheet: View {
                             .padding(.horizontal, -16)
                             .edgeFade()
                         }
+                        .sheetEntrance(5)
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)
@@ -186,13 +206,14 @@ struct AddEventBottomSheet: View {
                 .buttonStyle(PressableButtonStyle())
                 .disabled(!isSaveEnabled)
             }
+            .sheetEntrance(6)
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 24)
             .sheetHeightPart()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .fittedSheet(estimate: isEditing ? 440 : 490)
+        .fittedSheet(estimate: isEditing ? 470 : 520)
         .onAppear {
             isFirstEvent = !isEditing && viewModel.events.isEmpty && viewModel.archivedEvents.isEmpty
         }
@@ -247,6 +268,9 @@ struct AddEventBottomSheet: View {
 
     /// Secondary text that stays readable on the glass sheet
     static let labelColor = Color(hex: "8a888a")
+    /// Fields, pills and chips on the white sheet: a soft grey, so they read
+    /// as tappable without needing a border to show up
+    static let fieldFill = Color(hex: "F2F2F4")
 
     // MARK: - Computed Properties
     
@@ -269,6 +293,7 @@ struct AddEventBottomSheet: View {
             || abs(startDate.timeIntervalSince(editingEvent.startedAt)) >= 1
             || selectedTheme != editingEvent.cardTheme
             || didPickNewImage
+            || goal != (editingEvent.goalDays ?? 0)
     }
     
     // MARK: - Helper Functions
@@ -288,6 +313,7 @@ struct AddEventBottomSheet: View {
             title: trimmedTitle,
             // A start in the future would give negative counts
             startedAt: min(startDate, Date()),
+            goalDays: goal > 0 ? goal : nil,
             imageData: imageData,
             // Fall back to the default card if none was picked
             cardTheme: selectedTheme ?? .mosaic
@@ -313,6 +339,7 @@ struct AddEventBottomSheet: View {
             updated.startedAt = min(startDate, Date())
         }
         updated.cardTheme = selectedTheme ?? updated.cardTheme
+        updated.goalDays = goal > 0 ? goal : nil
         
         if selectedTheme != .custom {
             updated.imageData = nil
@@ -516,7 +543,7 @@ private struct NameSuggestionChip: View {
             .frame(height: 34)
             .background(
                 Capsule()
-                    .fill(isSelected ? Color.primaryGreen.opacity(0.08) : Color.white.opacity(0.5))
+                    .fill(isSelected ? Color.primaryGreen.opacity(0.08) : Color.white)
             )
             .overlay(
                 Capsule()
@@ -598,7 +625,7 @@ struct StartDatePill: View {
                     .lineLimit(1)
                     .fixedSize()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Capsule().fill(Color.white))
+                    .background(Capsule().fill(AddEventBottomSheet.fieldFill))
                     .overlay(Capsule().strokeBorder(Color.black.opacity(0.08), lineWidth: 1))
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)

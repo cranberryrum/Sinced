@@ -158,3 +158,64 @@ struct EventsFileSafetyTests {
         #expect(EventsFile.load(from: fileURL).map(\.title) == ["Coffee"])
     }
 }
+
+struct MilestoneTests {
+    @Test func stopsThenHundredsAndYears() {
+        #expect(Milestones.next(after: 0) == 1)
+        #expect(Milestones.next(after: 63) == 90)
+        #expect(Milestones.next(after: 100) == 180)
+        #expect(Milestones.next(after: 730) == 800)
+        #expect(Milestones.next(after: 1000) == 1095)
+        #expect(Milestones.reached(at: 0) == 0)
+        #expect(Milestones.reached(at: 63) == 60)
+        #expect(Milestones.reached(at: 100) == 100)
+        #expect(Milestones.previous(before: 90) == 60)
+    }
+
+    @Test func goalLineWording() {
+        let start = Date(timeIntervalSince1970: 0)
+        let now = start.addingTimeInterval(63 * 86400 + 60)
+        var event = SinceEvent(title: "Gym", startedAt: start)
+        #expect(event.goalLine(at: now).text == "90d milestone in 26d 23h")
+        event.goalDays = 100
+        #expect(event.goalLine(at: now).text == "37 days to your 100-day goal")
+        event.goalDays = 64
+        #expect(event.goalLine(at: now).text == "Your 64-day goal is tomorrow")
+        event.goalDays = 60
+        #expect(event.goalLine(at: now).text == "60-day goal reached · set the next")
+    }
+}
+
+struct ShareMessageTests {
+    private let start = Date(timeIntervalSince1970: 0)
+
+    @Test func streakInTheCardsUnit() {
+        let now = start.addingTimeInterval(62 * 86400 + 100)
+        var event = SinceEvent(title: " No sugar ", startedAt: start)
+        #expect(ShareMessage.text(for: event, at: now) ==
+                "62 days since “No sugar”.\nCounting mine with Sinced: https://apps.apple.com/app/id6799975298")
+        event.widgetTimeUnit = .hours
+        #expect(ShareMessage.streak(for: event, at: now) == "1488 hours")
+        event.widgetTimeUnit = .days
+        #expect(ShareMessage.streak(for: event, at: start.addingTimeInterval(5 * 3600)) == "5 hours")
+        #expect(ShareMessage.streak(for: event, at: start.addingTimeInterval(30)) == "1 minute")
+    }
+
+    @Test func milestoneAndGoalWording() {
+        let event = SinceEvent(title: "Started the gym", startedAt: start)
+        #expect(ShareMessage.text(for: event, moment: .milestone(days: 100)).hasPrefix("Just hit 100 days since “Started the gym”."))
+        #expect(ShareMessage.text(for: event, moment: .goal(days: 365)).hasPrefix("Reached my 1-year goal: “Started the gym”."))
+    }
+}
+
+struct CelebrationCountTests {
+    @Test func climbsAtMostThirtyNumbers() {
+        func make(_ days: Int) -> MilestoneCelebration {
+            MilestoneCelebration(eventID: UUID(), title: "Gym", theme: .steps, days: days, isGoal: false, isComeback: false)
+        }
+        #expect(make(7).countFrom == 0)
+        #expect(make(30).countFrom == 0)
+        #expect(make(100).countFrom == 70)
+        #expect(make(365).countFrom == 335)
+    }
+}

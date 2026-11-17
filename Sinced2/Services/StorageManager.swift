@@ -53,11 +53,12 @@ class StorageManager {
         } catch {
             print("StorageManager: couldn't save events: \(error)")
             DispatchQueue.main.async {
-                HapticManager.shared.warning()
                 ToastManager.shared.show(
-                    "Couldn't save that change. Try again.",
-                    icon: "exclamationmark.triangle.fill",
-                    duration: 3
+                    "Couldn’t save that change",
+                    subtitle: "Try again in a moment.",
+                    icon: "exclamationmark",
+                    kind: .error,
+                    duration: 3.5
                 )
             }
             return false

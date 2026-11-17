@@ -700,6 +700,7 @@ struct SinceSmallWidget: Widget {
             SinceWidgetEntryView(entry: entry)
                 .containerBackground(for: .widget) {
                     SinceWidgetBackgroundView(event: entry.event)
+                        .cardEdge(ContainerRelativeShape())
                 }
         }
         .configurationDisplayName("Since Event")

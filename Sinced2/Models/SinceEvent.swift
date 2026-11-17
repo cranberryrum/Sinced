@@ -423,12 +423,9 @@ struct SinceEvent: Identifiable, Codable, Hashable {
     
     /// Calculate next milestone information
     func nextMilestone() -> (days: Int, timeRemaining: String)? {
-        let milestones = [1, 7, 30, 90, 365]
+        // Shared with the widgets and the celebrations (see Milestones)
         let daysSince = Int(elapsedTime / 86400)
-        
-        guard let nextMilestone = milestones.first(where: { $0 > daysSince }) else {
-            return nil
-        }
+        let nextMilestone = Milestones.next(after: daysSince)
         
         let totalSecondsRemaining = Double(nextMilestone) * 86400 - elapsedTime
         let daysRemaining = Int(totalSecondsRemaining / 86400)

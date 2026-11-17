@@ -21,9 +21,10 @@ struct EventDetailView: View {
     @State private var currentTime = Date()
     @State private var localEvent: SinceEvent
     /// Shown for a moment after a reset from here, with an undo button
-    @State private var showingUndoBanner = false
     @State private var showingAllRuns = false
     @State private var showingUndoConfirm = false
+    /// Edit opens with the goal dial already open ("set the next")
+    @State private var editOpensGoal = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The latest reset, while it can still be put back
@@ -80,18 +81,8 @@ struct EventDetailView: View {
                             AnimatedTimeDisplay(event: localEvent, currentTime: currentTime)
                                 .padding(.vertical, 20)
                             
-                            // Next Milestone inline (if applicable)
-                            if let milestone = localEvent.nextMilestone() {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "flag.fill")
-                                        .font(.rounded(14))
-                                        .foregroundColor(.lightGreen)
-                                    
-                                    Text("\(milestone.days)d milestone in \(milestone.timeRemaining)")
-                                        .font(.roundedCallout)
-                                        .foregroundColor(.lightGreen)
-                                }
-                            }
+                            // Next milestone, or the goal when there is one
+                            goalLineView
                         }
                         .padding(.vertical, 24)
                         .padding(.horizontal, 20)
@@ -237,6 +228,7 @@ struct EventDetailView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Edit") {
                         HapticManager.shared.light()
+                        editOpensGoal = false
                         showingEditSheet = true
                     }
                 }
@@ -262,14 +254,15 @@ struct EventDetailView: View {
             }
             .sheet(isPresented: $showingResetSheet) {
                 ResetSheetView(event: localEvent, viewModel: viewModel) {
-                    withAnimation(.smooth(duration: 0.3)) { showingUndoBanner = true }
+                    showResetToast()
                 }
             }
             .sheet(isPresented: $showingEditSheet) {
                 AddEventBottomSheet(
                     viewModel: viewModel,
                     isPresented: $showingEditSheet,
-                    editingEvent: localEvent
+                    editingEvent: localEvent,
+                    openGoal: editOpensGoal
                 )
             }
             .sheet(isPresented: $showingShareSheet) {
@@ -283,22 +276,6 @@ struct EventDetailView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: undoableReset?.id)
-        .overlay(alignment: .bottom) {
-            if showingUndoBanner {
-                UndoResetBanner(event: localEvent) {
-                    viewModel.undoReset(localEvent)
-                    withAnimation(.smooth(duration: 0.3)) { showingUndoBanner = false }
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .task {
-                    // Same window the widget offers
-                    try? await Task.sleep(for: .seconds(8))
-                    withAnimation(.smooth(duration: 0.3)) { showingUndoBanner = false }
-                }
-            }
-        }
         .onReceive(timer) { _ in
             currentTime = Date()
         }
@@ -313,6 +290,55 @@ struct EventDetailView: View {
         }
     }
     
+    /// "37 days to your 100-day goal", or the next milestone with no goal.
+    /// Once the goal is reached it offers to set the next one.
+    @ViewBuilder
+    private var goalLineView: some View {
+        let line = localEvent.goalLine(at: currentTime)
+        let content = HStack(spacing: 6) {
+            Image(systemName: { if case .goalReached = line { return "checkmark.circle.fill" } else { return "flag.fill" } }())
+                .font(.rounded(14))
+            Text(line.text)
+                .font(.roundedCallout)
+                .contentTransition(.numericText())
+        }
+        .foregroundColor(.lightGreen)
+        .animation(.easeOut(duration: 0.2), value: line.text)
+
+        if case .goalReached = line {
+            Button {
+                HapticManager.shared.light()
+                editOpensGoal = true
+                showingEditSheet = true
+            } label: {
+                content.contentShape(Rectangle())
+            }
+            .buttonStyle(PressableButtonStyle())
+            .accessibilityHint("Opens the goal picker")
+        } else {
+            content
+        }
+    }
+    
+    /// Right after a reset from here: says what was kept, with an undo
+    private func showResetToast() {
+        let event = viewModel.events.first { $0.id == localEvent.id } ?? localEvent
+        let kept = event.pastRuns.first.map { "Saved your run of \(StreakText.text(for: $0.duration()))" }
+        ToastManager.shared.show(Toast(
+            title: "Counter reset",
+            subtitle: kept,
+            icon: "arrow.counterclockwise",
+            kind: .info,
+            action: .init(title: "Undo") { [viewModel] in
+                if viewModel.undoReset(event) {
+                    ToastManager.shared.show("Reset undone", icon: "arrow.uturn.backward", kind: .success)
+                }
+            },
+            // Long enough to notice a mis-tap and take it back
+            duration: 6
+        ))
+    }
+
     private func handleDelete() {
         let title = localEvent.title
         

@@ -61,7 +61,7 @@ struct RunsSection: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(visibleRuns.enumerated()), id: \.element.id) { index, run in
-                    RunRow(run: run, isBest: abs(run.duration(at: now) - best) < 1, now: now)
+                    RunRow(run: run, isBest: abs(run.duration(at: now) - best) < 1, goal: event.goalDays, now: now)
                     if index < visibleRuns.count - 1 {
                         Divider().padding(.leading, 16)
                     }
@@ -118,7 +118,14 @@ private struct RunStatTile: View {
 private struct RunRow: View {
     let run: EventRun
     let isBest: Bool
+    /// The event's goal, to mark past runs that reached it
+    let goal: Int?
     let now: Date
+
+    private var reachedGoal: Bool {
+        guard let goal, goal > 0, run.end != nil else { return false }
+        return Int(run.duration(at: now) / 86400) >= goal
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -134,6 +141,14 @@ private struct RunRow: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(Color.primaryGreen.opacity(0.12)))
+                    }
+                    if reachedGoal {
+                        Text("goal ✓")
+                            .font(.rounded(11, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.secondary.opacity(0.12)))
                     }
                 }
 
@@ -156,39 +171,3 @@ private struct RunRow: View {
     }
 }
 
-/// Floats at the bottom of the event screen right after a reset
-struct UndoResetBanner: View {
-    let event: SinceEvent
-    let onUndo: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "arrow.counterclockwise")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.primaryGreen)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Counter reset")
-                    .font(.rounded(15, weight: .medium))
-                if let lastRun = event.pastRuns.first {
-                    Text("Saved your run of \(SincedDurationText.text(for: lastRun.duration()))")
-                        .font(.roundedCaption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Spacer(minLength: 8)
-
-            Button("Undo", action: onUndo)
-                .font(.rounded(15, weight: .semibold))
-                .foregroundColor(.primaryGreen)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.regularMaterial)
-                .shadow(color: .black.opacity(0.12), radius: 16, y: 6)
-        )
-    }
-}

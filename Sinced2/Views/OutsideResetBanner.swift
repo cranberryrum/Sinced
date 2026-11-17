@@ -76,7 +76,7 @@ private struct OutsideResetReveal: ViewModifier {
         ZStack(alignment: .bottom) {
             // What the lifted screen uncovers: the event's colours, edge to edge
             if let shown {
-                ResetStripBackground(theme: shown.theme)
+                ThemeGlowBackground(theme: shown.theme)
                     .ignoresSafeArea()
                     .transition(.opacity)
             }
@@ -104,7 +104,7 @@ private struct OutsideResetReveal: ViewModifier {
             // Reduce Motion: the screen stays put and the strip fades in over it
             if let shown, reduceMotion {
                 strip(for: shown)
-                    .background(ResetStripBackground(theme: shown.theme).ignoresSafeArea())
+                    .background(ThemeGlowBackground(theme: shown.theme).ignoresSafeArea())
                     .transition(.opacity)
             }
         }
@@ -173,7 +173,7 @@ private struct ResetStrip: View {
     @State private var appeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var palette: ResetStripPalette { .init(theme: offer.theme) }
+    private var palette: ThemeGlowPalette { .init(theme: offer.theme) }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -241,11 +241,11 @@ private extension View {
 // MARK: - Colours
 
 /// A soft mesh of the theme's own colours, with a calm area under the text
-private struct ResetStripBackground: View {
+struct ThemeGlowBackground: View {
     let theme: CardTheme
 
     var body: some View {
-        let p = ResetStripPalette(theme: theme)
+        let p = ThemeGlowPalette(theme: theme)
         ZStack {
             MeshGradient(
                 width: 3, height: 3,
@@ -274,7 +274,7 @@ private struct ResetStripBackground: View {
 
 /// Colours for one theme. `calm` sits under the text and is chosen to
 /// contrast with `text`; `base`, `glow` and `deep` give the dreamy edges.
-private struct ResetStripPalette {
+struct ThemeGlowPalette {
     let calm: Color
     let base: Color
     let glow: Color

@@ -241,6 +241,8 @@ enum ExternalEventChanges {
     /// once the app was opened.
     private static func refreshReminders(for eventID: UUID) async {
         let center = UNUserNotificationCenter.current()
+        // A reset moves the next milestone; the app schedules the new one when it opens
+        center.removePendingNotificationRequests(withIdentifiers: ["milestone-\(eventID.uuidString)"])
         let prefix = "sinced-\(eventID.uuidString)"
         let queued = await center.pendingNotificationRequests()
             .filter { $0.identifier.hasPrefix(prefix) }

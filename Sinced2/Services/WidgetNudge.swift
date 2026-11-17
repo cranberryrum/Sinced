@@ -43,8 +43,8 @@ final class WidgetStatus: ObservableObject {
             // Someone who had none and now has one just followed the guide
             if defaults.bool(forKey: Self.sawNoWidgetKey), !defaults.bool(forKey: Self.celebratedKey) {
                 defaults.set(true, forKey: Self.celebratedKey)
-                HapticManager.shared.success()
-                ToastManager.shared.show("Widget added", icon: "checkmark.circle.fill", duration: 2.4)
+                ToastManager.shared.show("Widget added", subtitle: "Your count is on your Home Screen.",
+                                         icon: "checkmark", kind: .success)
             }
         } else {
             defaults.set(true, forKey: Self.sawNoWidgetKey)

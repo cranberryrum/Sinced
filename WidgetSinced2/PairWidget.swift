@@ -143,7 +143,9 @@ struct SincePairWidget: Widget {
         ) { entry in
             SincePairEntryView(entry: entry)
                 .containerBackground(for: .widget) {
+                    // Around the outside only, not down the middle split
                     SincePairBackgroundView(entry: entry)
+                        .cardEdge(ContainerRelativeShape())
                 }
         }
         .configurationDisplayName("Two Events")

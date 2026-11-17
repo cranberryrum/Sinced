@@ -64,7 +64,8 @@ struct Sinced2App: App {
                     .environmentObject(viewModel)
                     // Allo for any text that doesn't set its own font
                     .font(.roundedBody)
-                    .preferredColorScheme(.light)
+                    // Light text in the status bar over a dark milestone moment
+                    .preferredColorScheme(viewModel.celebrationIsDark ? .dark : .light)
                     .onReceive(NotificationCenter.default.publisher(for: .didTapEventNotification)) { notification in
                         if let eventId = notification.userInfo?["eventId"] as? UUID {
                             viewModel.openEvent(id: eventId)
@@ -106,6 +107,8 @@ struct Sinced2App: App {
                 // Ask about resets made from a widget, Control Center or Siri
                 if viewModel.hasCompletedOnboarding {
                     viewModel.checkOutsideResets()
+                    // Only when there was no reset to ask about
+                    viewModel.checkMilestones()
                 }
                 // Someone a week or more into a run may be happy to rate the app
                 if viewModel.hasCompletedOnboarding {

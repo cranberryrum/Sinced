@@ -41,10 +41,12 @@ struct DeleteConfirmationSheet: View {
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
+            .sheetEntrance(0)
             
             SwipeToDeleteButton {
                 onConfirmDelete()
             }
+            .sheetEntrance(1)
             
             Button(action: { dismiss() }) {
                 Text("Cancel")
@@ -54,6 +56,7 @@ struct DeleteConfirmationSheet: View {
                     .frame(height: 44)
             }
             .buttonStyle(.plain)
+            .sheetEntrance(2)
         }
         .padding(24)
     }
