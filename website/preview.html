@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sinced preview</title>
+<style>body{margin:0;background:#FAFAFA}</style>
+<script type="importmap">{"imports":{
+ "react":"https://esm.sh/react@18.3.1",
+ "react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime",
+ "react-dom/client":"https://esm.sh/react-dom@18.3.1/client?deps=react@18.3.1",
+ "framer":"./framer-shim.js"}}</script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+</head><body><div id="root"></div>
+<script type="module">
+const q = new URLSearchParams(location.search), doc = q.get('doc')
+const file = q.get('file') || (doc ? 'SincedDoc' : 'SincedLanding')
+const src = await (await fetch(`./${file}.tsx`)).text()
+const shim = new URL('./framer-shim.js', location.href).href
+const out = Babel.transform(src, {filename:'x.tsx', presets:[['typescript',{isTSX:true,allExtensions:true}],['react',{runtime:'automatic'}]]}).code.replace('"framer"', JSON.stringify(shim))
+const mod = await import(URL.createObjectURL(new Blob([out],{type:'text/javascript'})))
+const React = await import('react'); const {createRoot} = await import('react-dom/client')
+const C = mod.default, a = n => ({src:`./assets/sinced-${n}.png`.replace('.png', n==='icon'?'.png':'.jpg')})
+const props = {...C.defaultProps, ...(doc ? {page: doc} : {}), icon:a('icon'), hero:location.search.includes('nohero')?undefined:a('hero'), widgets:a('widgets'), runs:a('runs'), reminders:a('reminders'), share:a('share'), anywhere:a('anywhere'), alloRegular:'./assets/fonts/Allo-Regular.otf', alloMedium:'./assets/fonts/Allo-Medium.otf', alloSemiBold:'./assets/fonts/Allo-SemiBold.otf', alloBold:'./assets/fonts/Allo-Bold.otf'}
+createRoot(document.getElementById('root')).render(React.createElement(C, props))
+</script></body></html>

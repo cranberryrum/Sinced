@@ -1,0 +1,16 @@
+<svg width="328" height="328" viewBox="0 0 328 328" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip_waves)">
+<rect width="328" height="328" fill="#0E7C7B"/>
+<path d="M-82 -6 Q-61.5 -32 -41 -6 T0 -6 T41 -6 T82 -6 T123 -6 T164 -6 T205 -6 T246 -6 T287 -6 T328 -6 T369 -6 T410 -6" stroke="#8FE3CF" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-41 30 Q-20.5 4 0 30 T41 30 T82 30 T123 30 T164 30 T205 30 T246 30 T287 30 T328 30 T369 30 T410 30" stroke="#4FB8A8" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-82 66 Q-61.5 40 -41 66 T0 66 T41 66 T82 66 T123 66 T164 66 T205 66 T246 66 T287 66 T328 66 T369 66 T410 66" stroke="#8FE3CF" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-41 262 Q-20.5 236 0 262 T41 262 T82 262 T123 262 T164 262 T205 262 T246 262 T287 262 T328 262 T369 262 T410 262" stroke="#4FB8A8" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-82 298 Q-61.5 272 -41 298 T0 298 T41 298 T82 298 T123 298 T164 298 T205 298 T246 298 T287 298 T328 298 T369 298 T410 298" stroke="#8FE3CF" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-41 334 Q-20.5 308 0 334 T41 334 T82 334 T123 334 T164 334 T205 334 T246 334 T287 334 T328 334 T369 334 T410 334" stroke="#4FB8A8" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip_waves">
+<rect width="328" height="328" fill="white"/>
+</clipPath>
+</defs>
+</svg>
