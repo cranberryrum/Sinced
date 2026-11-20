@@ -14,9 +14,9 @@ struct SettingsView: View {
     @State private var showingNameEditor = false
     @Environment(\.openURL) private var openURL
     
-    private static let privacyPolicyURL = URL(string: "https://github.com/cranberryrum/Sinced/blob/main/PRIVACY.md")!
+    private static let privacyPolicyURL = URL(string: "https://adityakolte.com/sinced/privacy")!
     private static let supportEmailURL = URL(string: "mailto:adityakoltedes@gmail.com?subject=Sinced")!
-    private static let supportPageURL = URL(string: "https://github.com/cranberryrum/Sinced/blob/main/SUPPORT.md")!
+    private static let supportPageURL = URL(string: "https://adityakolte.com/sinced/support")!
 
     private var displayName: String {
         let trimmed = viewModel.userName.trimmingCharacters(in: .whitespacesAndNewlines)
