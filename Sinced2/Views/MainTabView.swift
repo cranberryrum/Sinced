@@ -16,7 +16,8 @@ enum Tab {
 struct MainTabView: View {
     @EnvironmentObject var viewModel: EventViewModel
     @State private var selectedTab: Tab = .home
-    
+    @ObservedObject private var addFlow = AddFlow.shared
+
     var body: some View {
         TabView(selection: $selectedTab) {
             EventListView()
@@ -55,6 +56,12 @@ struct MainTabView: View {
             onUndo: viewModel.undoOutsideReset,
             onTimeout: viewModel.dismissOutsideReset
         )
+        // Adding an event: a card over the tab bar that grows out of the + tile
+        .overlay {
+            if addFlow.isPresented {
+                AddEventOverlay(viewModel: viewModel)
+            }
+        }
         // A milestone or goal reached since the app last looked
         .overlay {
             if let celebration = viewModel.celebration {

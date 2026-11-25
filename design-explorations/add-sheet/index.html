@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Sinced Add Sheet</title>
+<style>
+@font-face { font-family: "Allo"; src: url("../../website/assets/fonts/Allo-Regular.otf"); font-weight: 400; }
+@font-face { font-family: "Allo"; src: url("../../website/assets/fonts/Allo-Medium.otf"); font-weight: 500; }
+@font-face { font-family: "Allo"; src: url("../../website/assets/fonts/Allo-SemiBold.otf"); font-weight: 600; }
+@font-face { font-family: "Allo"; src: url("../../website/assets/fonts/Allo-Bold.otf"); font-weight: 700; }
+
+:root {
+  --page: #e9e8e4;
+  --ink: #17171a;
+  --muted: #6b6b73;
+  --green: #488B5A;
+  --muted-btn: #8E8E93;
+  --label: #8a888a;
+  --conn: #a3a1a3;
+  --field: #F2F2F4;
+  --text: #1a1a1a;
+  --allo: "Allo", ui-rounded, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --page: #141416; --ink: #f1f1f3; --muted: #9b9ba3; }
+}
+:root[data-theme="dark"] { --page: #141416; --ink: #f1f1f3; --muted: #9b9ba3; }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+
+/* ---------- Stage ---------- */
+.stage { min-height: 100%; display: flex; gap: 56px; justify-content: center; align-items: flex-start; padding: 32px 24px; }
+.device-wrap { flex: none; }
+.device { position: relative; width: 417px; height: 876px; padding: 12px; border-radius: 64px; background: #0c0c0d; transform-origin: top center;
+  box-shadow: 0 0 0 1.5px #2b2b2e inset, 0 30px 80px -30px rgba(0,0,0,.45); }
+.screen { position: relative; width: 393px; height: 852px; border-radius: 52px; overflow: hidden; isolation: isolate;
+  font-family: var(--allo); color: var(--text); user-select: none; -webkit-user-select: none; touch-action: none;
+  background-color: #F3F2F0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 124px; height: 36px; background: #000; border-radius: 20px; z-index: 90; }
+.statusbar { position: absolute; inset: 0 0 auto 0; height: 54px; z-index: 80; pointer-events: none; display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 30px 0 46px; font: 600 16.5px/1 system-ui, -apple-system, sans-serif; color: #000; }
+.home-ind { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 136px; height: 5px; border-radius: 3px; background: #000; z-index: 95; pointer-events: none; }
+
+/* ---------- Home ---------- */
+.home { position: absolute; inset: 0; padding: 70px 15px 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.card, .add { container-type: inline-size; aspect-ratio: 1; border-radius: 22px; }
+.card { background-size: cover; background-position: center; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 0 8px; text-shadow: 0 1px 8px rgba(0,0,0,.12); box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+.card b, .face b { font-weight: 500; font-size: 12.6cqi; letter-spacing: .04em; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }
+.card span, .face span { font-weight: 500; font-size: 8cqi; opacity: .92; margin-top: 2.5cqi; line-height: 1.2; }
+.add { background: #fff; border: 1.5px dashed rgba(20,20,23,.2); display: grid; place-items: center; transition: transform .18s ease-out; }
+.add:active { transform: scale(.96); }
+.add svg, .face svg { width: 22%; height: 22%; }
+
+.tabbar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; padding: 5px; background: #fff; border-radius: 40px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.08); z-index: 5; }
+.tabbar div { width: 92px; height: 54px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 11px; font-weight: 500; }
+.tabbar div.on { background: #EDEDED; color: var(--green); }
+.tabbar svg { width: 24px; height: 24px; }
+
+/* ---------- Scrim, sheet, keyboard ---------- */
+.scrim { position: absolute; inset: 0; background: rgba(18,18,20,.26); opacity: 0; pointer-events: none; z-index: 40; }
+.scrim.on { pointer-events: auto; }
+.sheet { position: absolute; display: none; z-index: 50; background: #fff; overflow: hidden; border-radius: 44px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 24px 60px -20px rgba(0,0,0,.28); }
+.views { position: absolute; top: 0; left: 0; }
+.view { position: absolute; top: 30px; left: 26px; }
+.face { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; container-type: inline-size;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; }
+.face.plus { background: #fff; box-shadow: inset 0 0 0 1.5px rgba(20,20,23,.0); outline: 1.5px dashed rgba(20,20,23,.2); outline-offset: -1.5px; color: var(--text); }
+.face.cardface { background-size: cover; background-position: center; padding: 0 8px; text-shadow: 0 1px 8px rgba(0,0,0,.12); }
+
+.foot { position: absolute; left: 20px; right: 20px; bottom: 20px; height: 52px; }
+.cta { position: relative; width: 100%; height: 100%; border-radius: 50px; background: var(--green); color: #fff; font: 600 16px var(--allo); overflow: hidden;
+  transition: background-color .2s ease-out, transform .16s ease-out; }
+.cta.off { background: var(--muted-btn); }
+.cta:active { transform: scale(.97); }
+.cta .lbl { position: absolute; inset: 0; display: grid; place-items: center; }
+.cta .tick { width: 22px; height: 22px; }
+
+/* Sentence */
+.line { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: .28em; font-size: 26px; line-height: 38px; font-weight: 500; letter-spacing: -.012em; white-space: nowrap; }
+.conn { color: var(--conn); display: inline-block; }
+.tok { display: inline-flex; align-items: baseline; gap: .22em; color: var(--text); font-weight: 600; border-radius: 12px; padding: 0 6px; margin: 0 -6px; position: relative;
+  transition: background-color .15s, transform .15s; cursor: pointer; }
+.tok:active { background: var(--field); transform: scale(.96); }
+.tok.empty { color: #c4c2c4; }
+.tok.empty::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 4px; border-bottom: 2px dashed #d6d4d6; }
+.tok svg { width: .72em; height: .72em; align-self: center; flex: none; }
+.sw { width: .78em; height: .78em; border-radius: 6px; align-self: center; background-size: cover; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+
+/* Name editor */
+.name-row { display: flex; align-items: baseline; gap: .28em; font-size: 27px; line-height: 38px; font-weight: 500; letter-spacing: -.012em; }
+.name-row .tok { flex: 1; min-width: 0; }
+.name-input { width: 100%; border: 0; outline: 0; background: none; font: 600 27px/38px var(--allo); letter-spacing: -.012em; color: var(--text); caret-color: var(--green); padding: 0; }
+.name-input::placeholder { color: #c4c2c4; }
+.rule { height: 1px; background: rgba(0,0,0,.08); margin: 8px 0 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { height: 34px; padding: 0 14px; border-radius: 34px; font: 400 14px var(--allo); color: #4a484a; background: #fff; border: 1px dashed rgba(0,0,0,.28); transition: transform .15s; }
+.chip:active { transform: scale(.95); }
+.chip.on { color: var(--green); border-color: var(--green); background: rgba(72,139,90,.08); }
+.hint { font-size: 13px; color: var(--label); margin-top: 14px; }
+
+/* Date editor */
+.quick { display: flex; gap: 8px; margin: 14px 0 18px; }
+.qc { height: 34px; padding: 0 13px; white-space: nowrap; border-radius: 34px; font: 500 14px var(--allo); background: var(--field); color: #3a383a; transition: background-color .2s, color .2s, transform .15s; }
+.qc:active { transform: scale(.95); }
+.qc.on { background: var(--text); color: #fff; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-head b { font-weight: 600; font-size: 16px; }
+.cal-nav { display: flex; gap: 6px; }
+.cal-nav button { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--text); background: var(--field); }
+.cal-nav button:disabled { opacity: .3; cursor: default; }
+.cal-nav svg { width: 14px; height: 14px; }
+.wk, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.wk span { font-size: 11px; font-weight: 500; color: var(--label); letter-spacing: .04em; padding: 4px 0 6px; }
+.days { row-gap: 2px; }
+.day { height: 40px; display: grid; place-items: center; position: relative; font: 500 16px var(--allo); color: var(--text); font-variant-numeric: tabular-nums; }
+.day::before { content: ""; position: absolute; width: 38px; height: 38px; border-radius: 50%; background: var(--green); transform: scale(0); opacity: 0;
+  transition: transform .32s cubic-bezier(.3,1.5,.5,1), opacity .2s; z-index: -1; }
+.day.on { color: #fff; }
+.day.on::before { transform: scale(1); opacity: 1; }
+.day.today:not(.on) { color: var(--green); font-weight: 700; }
+.day.fut { color: #d2d0d2; pointer-events: none; }
+.days-wrap { position: relative; isolation: isolate; }
+
+/* Goal editor */
+.goal-row { display: flex; align-items: center; gap: .28em; font-size: 27px; line-height: 38px; font-weight: 500; letter-spacing: -.012em; height: 216px; }
+.wheel { position: relative; height: 216px; flex: 1; overflow: hidden; touch-action: none; cursor: grab;
+  -webkit-mask-image: linear-gradient(transparent, #000 34%, #000 66%, transparent); mask-image: linear-gradient(transparent, #000 34%, #000 66%, transparent); }
+.wheel-track { position: absolute; left: 0; right: 0; top: 0; will-change: transform; }
+.wi { height: 44px; line-height: 44px; font-weight: 600; white-space: nowrap; transform-origin: left center; color: var(--text); }
+.goal-note { font-size: 14px; color: var(--label); margin-top: 4px; min-height: 21px; }
+.goal-note b { color: var(--text); font-weight: 600; }
+
+/* Theme editor */
+.theme-row { display: flex; align-items: baseline; gap: .28em; font-size: 27px; line-height: 38px; font-weight: 500; letter-spacing: -.012em; }
+.preview { position: relative; width: 136px; height: 136px; margin: 18px auto 20px; }
+.preview .card { position: absolute; inset: 0; border-radius: 30px; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.tile { aspect-ratio: 1; border-radius: 16px; background-size: cover; position: relative; transition: transform .2s cubic-bezier(.3,1.4,.5,1); }
+.tile:active { transform: scale(.92); }
+.tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 0 var(--green); transition: box-shadow .25s cubic-bezier(.3,1.4,.5,1); }
+.tile.on::after { box-shadow: inset 0 0 0 3px var(--green), inset 0 0 0 5px #fff; }
+
+/* Keyboard */
+.kb { position: absolute; left: 0; right: 0; bottom: 0; height: 291px; background: #D2D4DA; z-index: 45; transform: translateY(100%); padding: 8px 3px 0;
+  font-family: system-ui, -apple-system, sans-serif; color: #000; }
+.kr { display: flex; justify-content: center; gap: 6px; margin-bottom: 11px; }
+.k { height: 43px; flex: 0 0 calc((100% - 54px) / 10); border-radius: 6px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.28); font-size: 23px; display: grid; place-items: center; }
+.k:active { background: #ABB0BA; }
+.k.sp { background: #ABB0BA; font-size: 16px; flex: 0 0 calc((100% - 54px) / 10 * 1.32); }
+.k.sp.on { background: #fff; }
+.k.space { flex: 1; font-size: 16px; }
+.k.ret { flex: 0 0 calc((100% - 54px) / 10 * 2.6); font-size: 16px; background: var(--green); color: #fff; }
+.kr.r2 { padding: 0 calc((100% - 54px) / 20); }
+.k svg { width: 22px; height: 22px; }
+
+/* ---------- Notes ---------- */
+.notes { max-width: 380px; padding-top: 24px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.notes h1 { font: 600 32px/1.1 var(--allo); letter-spacing: -.02em; margin: 0 0 12px; text-wrap: balance; }
+.notes p { color: var(--muted); margin: 0 0 20px; text-wrap: pretty; }
+.notes ol { padding-left: 20px; margin: 0 0 24px; }
+.notes li { margin-bottom: 8px; }
+.notes li b { font-weight: 600; }
+.ctrls { display: flex; gap: 10px; flex-wrap: wrap; }
+.ctrls button, .ctrls label { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 8%, transparent); font-size: 14px; cursor: pointer; }
+.ctrls input { accent-color: var(--green); }
+
+/* Phone: full bleed, no frame */
+@media (max-width: 560px) {
+  .stage { padding: 0; display: block; }
+  .device { width: 100vw; height: 100dvh; padding: 0; border-radius: 0; box-shadow: none; background: none; transform: none !important; }
+  .device-wrap { height: auto !important; }
+  .screen { width: 100%; height: 100%; border-radius: 0; }
+  .island, .statusbar, .home-ind { display: none; }
+  .home { padding-top: calc(env(safe-area-inset-top) + 20px); }
+  .notes { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="device-wrap" id="wrap">
+    <div class="device" id="device">
+      <div class="screen" id="screen">
+        <div class="statusbar"><span>9:41</span>
+          <svg width="78" height="13" viewBox="0 0 78 13" fill="currentColor" aria-hidden="true"><rect x="0" y="8" width="3.4" height="4.6" rx="1"/><rect x="5" y="5.6" width="3.4" height="7" rx="1"/><rect x="10" y="3" width="3.4" height="9.6" rx="1"/><rect x="15" y="0.4" width="3.4" height="12.2" rx="1"/><path d="M31.5 2.6c2.4 0 4.6.9 6.3 2.5l1.2-1.2A10.6 10.6 0 0 0 31.5 1 10.6 10.6 0 0 0 24 3.9l1.2 1.2a9 9 0 0 1 6.3-2.5Zm0 3.4c1.5 0 2.9.6 3.9 1.5l1.2-1.2a7.2 7.2 0 0 0-10.2 0l1.2 1.2c1-1 2.4-1.5 3.9-1.5Zm0 3.4c.6 0 1.1.2 1.5.6l-1.5 1.5-1.5-1.5c.4-.4.9-.6 1.5-.6Z"/><rect x="50.5" y="0.5" width="24" height="12" rx="3.8" fill="none" stroke="currentColor" opacity=".4"/><rect x="52.3" y="2.3" width="17" height="8.4" rx="2.3"/></svg>
+        </div>
+        <div class="island"></div>
+
+        <div class="home"><div class="grid" id="grid"></div></div>
+
+        <nav class="tabbar">
+          <div class="on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2 2.6 11a1 1 0 0 0 1.3 1.5L5 11.6V20a1 1 0 0 0 1 1h4v-5.5h4V21h4a1 1 0 0 0 1-1v-8.4l1.1.9A1 1 0 0 0 21.4 11Z"/></svg>Home</div>
+          <div><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.7 2.5h-3.4l-.5 2.6a7.6 7.6 0 0 0-1.8 1L5.5 5.3 3.8 8.2l2 1.8a7.7 7.7 0 0 0 0 2.1l-2 1.7 1.7 3 2.5-.9c.5.4 1.1.8 1.8 1l.5 2.6h3.4l.5-2.6c.7-.2 1.3-.6 1.8-1l2.5.9 1.7-3-2-1.7a7.7 7.7 0 0 0 0-2.1l2-1.8-1.7-2.9-2.5.8a7.6 7.6 0 0 0-1.8-1ZM12 8.6a3.4 3.4 0 1 1 0 6.8 3.4 3.4 0 0 1 0-6.8Z"/></svg>Settings</div>
+        </nav>
+
+        <div class="scrim" id="scrim"></div>
+        <div class="kb" id="kb"></div>
+        <div class="sheet" id="sheet">
+          <div class="views" id="views"></div>
+          <div class="foot" id="foot"><button class="cta" id="cta"></button></div>
+          <div class="face" id="face"></div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="notes">
+    <p class="eyebrow">Sinced · Add event prototype</p>
+    <h1>The add sheet as a sentence</h1>
+    <p>One floating card that grows out of the + tile. Each bold word opens its own editor inside the same card, and saving turns the card into your new event.</p>
+    <ol>
+      <li>Tap <b>+</b> to open the sheet.</li>
+      <li>Tap any <b>bold word</b>: the name, the date, the goal or the theme.</li>
+      <li>Pick a name idea, or type on your keyboard (Return finishes).</li>
+      <li>Drag the goal wheel or scroll on it.</li>
+      <li>Tap <b>Save</b> to watch the sheet become a card. Drag down or tap outside to close.</li>
+    </ol>
+    <div class="ctrls">
+      <label><input type="checkbox" id="slow"> Slow motion ×4</label>
+      <button id="resetDemo">Reset home</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  // ---------- Data, mirrored from the app ----------
+  const P = "../../website/assets/patterns/";
+  const THEMES = ["Mosaic", "Eyes", "Circles", "Clouds", "Puffs", "Waves", "Blooms", "Steps"];
+  const GOALS = [0, 7, 14, 30, 60, 90, 100, 180, 365, 500, 730];
+  const IDEAS = ["Quit smoking", "Last cigarette", "No alcohol", "Quit vaping", "No caffeine", "No sugar", "No junk food", "No social media",
+    "Started the gym", "Started running", "Meditating daily", "Started therapy", "New job", "Moved cities", "Got sober", "Last breakup",
+    "First date", "Our anniversary", "Got a pet", "Last haircut", "Last vacation", "Called mom", "Changed bedsheets", "Started journaling"];
+  const DAY = 864e5;
+  const START_CARDS = [
+    { theme: "Eyes", days: 47, title: "No caffeine" },
+    { theme: "Mosaic", days: 112, title: "Started the gym" },
+    { theme: "Clouds", days: 383, title: "Moved cities" },
+  ];
+
+  // ---------- Elements ----------
+  const $ = (s, r = document) => r.querySelector(s);
+  const screen = $("#screen"), grid = $("#grid"), sheet = $("#sheet"), views = $("#views"), face = $("#face"),
+        cta = $("#cta"), foot = $("#foot"), scrim = $("#scrim"), kb = $("#kb");
+  let SLOW = 1;
+
+  // ---------- Springs (SwiftUI-style response / damping) as CSS linear() ----------
+  const springCache = {};
+  function spring(response = 0.5, damping = 0.86) {
+    const key = response + "/" + damping + "/" + SLOW;
+    if (springCache[key]) return springCache[key];
+    const w0 = 2 * Math.PI / response, z = damping;
+    const wd = w0 * Math.sqrt(Math.max(1e-6, 1 - z * z));
+    const f = t => z < 1 ? 1 - Math.exp(-z * w0 * t) * (Math.cos(wd * t) + (z * w0 / wd) * Math.sin(wd * t))
+                         : 1 - (1 + w0 * t) * Math.exp(-w0 * t);
+    let T = 0;
+    for (let t = 0; t < 3; t += 1 / 240) if (Math.abs(1 - f(t)) > 0.002) T = t;
+    T = Math.max(T, 0.1);
+    const pts = [];
+    for (let i = 0; i <= 48; i++) pts.push(+f((i / 48) * T).toFixed(4));
+    pts[48] = 1;
+    return (springCache[key] = { easing: "linear(" + pts.join(", ") + ")", duration: T * 1000 * SLOW });
+  }
+  const S_MORPH = () => spring(0.5, 0.86);
+  const S_OPEN = () => spring(0.52, 0.82);
+  const S_CLOSE = () => spring(0.42, 0.95);
+  const EASE_OUT = "cubic-bezier(.2,.8,.2,1)";
+  const haptic = (ms = 6) => { try { navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive && navigator.vibrate(ms); } catch (e) {} };
+
+  // Rects in the screen's own CSS pixels, whatever the device is scaled by
+  function scale() { return screen.getBoundingClientRect().width / screen.offsetWidth || 1; }
+  function rel(el) {
+    const s = screen.getBoundingClientRect(), r = el.getBoundingClientRect(), k = scale();
+    return { left: (r.left - s.left) / k, top: (r.top - s.top) / k, width: r.width / k, height: r.height / k };
+  }
+  const W = () => screen.clientWidth, H = () => screen.clientHeight;
+
+  // ---------- Sheet geometry ----------
+  const INSET = 8, PAD_TOP = 30, FOOT = 20 + 52 + 24;
+  function sheetRadius() { return W() < 500 && matchMedia("(max-width:560px)").matches ? 40 : 44; }
+  function target(viewH, kbOn) {
+    const h = PAD_TOP + viewH + FOOT;
+    const bottom = INSET + (kbOn ? kb.offsetHeight : 0) + (kbOn ? 0 : safeBottom());
+    return { left: INSET, width: W() - INSET * 2, height: h, top: H() - bottom - h, radius: sheetRadius() };
+  }
+  function safeBottom() {
+    if (!matchMedia("(max-width:560px)").matches) return 0;
+    const d = document.createElement("div"); d.style.cssText = "position:fixed;bottom:0;height:env(safe-area-inset-bottom)";
+    document.body.appendChild(d); const v = d.offsetHeight; d.remove(); return v;
+  }
+  function currentRect() {
+    const cs = getComputedStyle(sheet);
+    return { left: parseFloat(cs.left), top: parseFloat(cs.top), width: parseFloat(cs.width), height: parseFloat(cs.height), radius: parseFloat(cs.borderTopLeftRadius) };
+  }
+  const px = r => ({ left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", borderRadius: r.radius + "px" });
+  function animateRect(to, spr, from) {
+    from = from || currentRect();
+    sheet.getAnimations().forEach(a => a.cancel());
+    Object.assign(sheet.style, px(to));
+    return sheet.animate([px(from), px(to)], { duration: spr.duration, easing: spr.easing });
+  }
+
+  // ---------- Keyboard ----------
+  let kbOn = false, shift = true;
+  function buildKeyboard() {
+    const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+    kb.innerHTML =
+      '<div class="kr">' + [...rows[0]].map(c => '<button class="k" data-c="' + c + '">' + c + "</button>").join("") + "</div>" +
+      '<div class="kr r2">' + [...rows[1]].map(c => '<button class="k" data-c="' + c + '">' + c + "</button>").join("") + "</div>" +
+      '<div class="kr"><button class="k sp" data-a="shift"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4 4 12.5h4.5V20h7v-7.5H20Z"/></svg></button>' +
+      [...rows[2]].map(c => '<button class="k" data-c="' + c + '">' + c + "</button>").join("") +
+      '<button class="k sp" data-a="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8.5 5H20a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H8.5L2.8 12Z"/><path d="m11.5 9.5 5 5m0-5-5 5" stroke-linecap="round"/></svg></button></div>' +
+      '<div class="kr"><button class="k sp">123</button><button class="k space" data-c=" ">space</button><button class="k ret" data-a="ret">done</button></div>';
+    kb.addEventListener("pointerdown", e => {
+      const k = e.target.closest(".k"); if (!k) return;
+      e.preventDefault(); haptic(4);
+      const input = $(".name-input"); if (!input) return;
+      if (k.dataset.c) {
+        if (input.value.length >= 40) return;
+        const c = shift ? k.dataset.c.toUpperCase() : k.dataset.c;
+        input.value += c; shift = false;
+      } else if (k.dataset.a === "del") { input.value = input.value.slice(0, -1); if (!input.value) shift = true; }
+      else if (k.dataset.a === "shift") { shift = !shift; }
+      else if (k.dataset.a === "ret") { finishName(); return; }
+      input.dispatchEvent(new Event("input"));
+    });
+  }
+  function syncShift() {
+    const s = kb.querySelector('[data-a="shift"]'); if (s) s.classList.toggle("on", shift);
+    kb.querySelectorAll(".k[data-c]").forEach(k => { if (k.dataset.c !== " ") k.textContent = shift ? k.dataset.c.toUpperCase() : k.dataset.c; });
+  }
+  function setKeyboard(on) {
+    if (on === kbOn) return;
+    kbOn = on;
+    const spr = S_MORPH();
+    const from = getComputedStyle(kb).transform;
+    kb.getAnimations().forEach(a => a.cancel());
+    kb.style.transform = on ? "translateY(0)" : "translateY(100%)";
+    kb.animate([{ transform: from === "none" ? "translateY(0)" : from }, { transform: kb.style.transform }], { duration: spr.duration, easing: spr.easing });
+  }
+
+  // ---------- Draft ----------
+  let draft;
+  function newDraft() { return { name: "", start: new Date(), goal: 0, theme: "Mosaic" }; }
+  const daysSince = d => Math.max(0, Math.floor((Date.now() - d.getTime()) / DAY));
+  const startOfDay = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  function dateWord(d) {
+    const n = Math.round((startOfDay(new Date()) - startOfDay(d)) / DAY);
+    if (n === 0) return "today";
+    if (n === 1) return "yesterday";
+    if (n < 7) return n + " days ago";
+    const sameYear = d.getFullYear() === new Date().getFullYear();
+    return d.toLocaleDateString("en-GB", Object.assign({ day: "numeric", month: "short" }, sameYear ? {} : { year: "numeric" }));
+  }
+  const goalWord = g => g ? g + " days" : "no goal";
+  const fmtLong = d => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+  // ---------- Icons ----------
+  const I = {
+    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+    flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+    plus: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 4v32M4 20h32"/></svg>',
+    left: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 5 8l5 5"/></svg>',
+    right: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"/></svg>',
+  };
+  const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const swatch = t => '<i class="sw" style="background-image:url(' + P + t + '.svg)"></i>';
+
+  // ---------- Views ----------
+  function viewEl(cls, html) {
+    const v = document.createElement("div");
+    v.className = "view " + cls; v.style.width = (W() - INSET * 2 - 52) + "px"; v.innerHTML = html;
+    return v;
+  }
+  const tokName = () => draft.name ? '<span class="tok" data-key="name" data-go="name">' + esc(draft.name) + "</span>"
+                                   : '<span class="tok empty" data-key="name" data-go="name">something</span>';
+  const tokDate = () => '<span class="tok" data-key="date" data-go="date">' + I.cal + '<span class="tv">' + dateWord(draft.start) + "</span></span>";
+  const tokGoal = () => '<span class="tok" data-key="goal" data-go="goal">' + I.flag + goalWord(draft.goal) + "</span>";
+  const tokTheme = () => '<span class="tok" data-key="theme" data-go="theme">' + swatch(draft.theme) + '<span class="tv">' + draft.theme + "</span></span>";
+
+  const BUILD = {
+    sentence() {
+      return viewEl("v-sentence",
+        '<div class="line"><span class="conn fx">Since</span>' + tokName().replace('class="tok', 'class="fx tok') + "</div>" +
+        '<div class="line"><span class="conn fx">started</span>' + tokDate().replace('class="tok', 'class="fx tok') + "</div>" +
+        '<div class="line"><span class="conn fx">' + (draft.goal ? "aiming for" : "with") + "</span>" + tokGoal().replace('class="tok', 'class="fx tok') + "</div>" +
+        '<div class="line"><span class="conn fx">on</span>' + tokTheme().replace('class="tok', 'class="fx tok') + "</div>");
+    },
+
+    name() {
+      const picks = IDEAS.slice().sort(() => Math.random() - 0.5).slice(0, 7);
+      const v = viewEl("v-name",
+        '<div class="name-row"><span class="conn fx">Since</span><span class="tok" data-key="name"><input class="name-input" inputmode="none" autocomplete="off" spellcheck="false" maxlength="40" placeholder="something" value="' + esc(draft.name) + '"></span></div>' +
+        '<div class="rule fx"></div>' +
+        '<div class="chips">' + picks.map(p => '<button class="chip fx' + (p === draft.name ? " on" : "") + '">' + p + "</button>").join("") + "</div>");
+      const input = $(".name-input", v);
+      input.addEventListener("input", () => { draft.name = input.value; shift = !input.value; syncShift(); v.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c.textContent === input.value.trim())); });
+      input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); finishName(); } });
+      v.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+        haptic(); input.value = c.textContent; input.dispatchEvent(new Event("input"));
+        setTimeout(finishName, 140 * SLOW);
+      }));
+      shift = !draft.name; syncShift();
+      requestAnimationFrame(() => { input.focus({ preventScroll: true }); input.setSelectionRange(input.value.length, input.value.length); });
+      return v;
+    },
+
+    date() {
+      const v = viewEl("v-date",
+        '<div class="line"><span class="conn fx">Started</span>' + tokDate() + "</div>" +
+        '<div class="quick">' + [["Today", 0], ["Yesterday", 1], ["A week ago", 7]].map(([l, n]) =>
+          '<button class="qc fx" data-n="' + n + '">' + l + "</button>").join("") + "</div>" +
+        '<div class="cal"><div class="cal-head fx"><b class="cal-title"></b><div class="cal-nav"><button data-m="-1" aria-label="Previous month">' + I.left + '</button><button data-m="1" aria-label="Next month">' + I.right + "</button></div></div>" +
+        '<div class="wk fx">' + ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(d => "<span>" + d + "</span>").join("") + "</div>" +
+        '<div class="days-wrap"></div></div>');
+      let month = new Date(draft.start.getFullYear(), draft.start.getMonth(), 1);
+      const wrap = $(".days-wrap", v);
+
+      function renderMonth(dir) {
+        $(".cal-title", v).textContent = month.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+        const now = new Date();
+        $('[data-m="1"]', v).disabled = month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
+        const first = (month.getDay() + 6) % 7, n = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+        let html = "";
+        for (let i = 0; i < first; i++) html += "<span></span>";
+        for (let d = 1; d <= n; d++) {
+          const date = new Date(month.getFullYear(), month.getMonth(), d);
+          const cls = ["day", "fx"];
+          if (date > now) cls.push("fut");
+          if (startOfDay(date).getTime() === startOfDay(now).getTime()) cls.push("today");
+          if (startOfDay(date).getTime() === startOfDay(draft.start).getTime()) cls.push("on");
+          html += '<button class="' + cls.join(" ") + '" data-d="' + d + '">' + d + "</button>";
+        }
+        // Always six rows so the card doesn't change height between months
+        const cells = first + n;
+        for (let i = cells; i < 42; i++) html += '<span class="day"></span>';
+        const g = document.createElement("div"); g.className = "days"; g.innerHTML = html;
+        const old = wrap.firstChild;
+        wrap.appendChild(g);
+        if (old) {
+          old.style.position = "absolute"; old.style.inset = "0";
+          old.animate([{ opacity: 1, transform: "none", filter: "blur(0)" }, { opacity: 0, transform: "translateX(" + (-dir * 24) + "px)", filter: "blur(4px)" }], { duration: 200 * SLOW, easing: "ease-in", fill: "forwards" }).finished.then(() => old.remove());
+          g.animate([{ opacity: 0, transform: "translateX(" + (dir * 24) + "px)", filter: "blur(4px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 320 * SLOW, easing: EASE_OUT, delay: 40 * SLOW, fill: "backwards" });
+        }
+        g.querySelectorAll("button.day").forEach(b => b.addEventListener("click", () => {
+          const t = new Date(); const d = new Date(month.getFullYear(), month.getMonth(), +b.dataset.d, t.getHours(), t.getMinutes());
+          pickDate(d > t ? t : d);
+        }));
+      }
+      function pickDate(d) {
+        haptic();
+        draft.start = d;
+        if (d.getMonth() !== month.getMonth() || d.getFullYear() !== month.getFullYear()) {
+          const dir = d < month ? -1 : 1; month = new Date(d.getFullYear(), d.getMonth(), 1); renderMonth(dir);
+        } else {
+          wrap.querySelectorAll("button.day").forEach(b => b.classList.toggle("on", +b.dataset.d === d.getDate()));
+        }
+        swapText($('[data-key="date"] .tv', v), dateWord(d));
+        syncQuick();
+      }
+      function syncQuick() {
+        const n = Math.round((startOfDay(new Date()) - startOfDay(draft.start)) / DAY);
+        v.querySelectorAll(".qc").forEach(q => q.classList.toggle("on", +q.dataset.n === n));
+      }
+      v.querySelectorAll(".qc").forEach(q => q.addEventListener("click", () => { const d = new Date(); d.setDate(d.getDate() - +q.dataset.n); pickDate(d); }));
+      v.querySelectorAll(".cal-nav button").forEach(b => b.addEventListener("click", () => {
+        haptic(4); month = new Date(month.getFullYear(), month.getMonth() + +b.dataset.m, 1); renderMonth(+b.dataset.m);
+      }));
+      $('[data-key="date"]', v).style.pointerEvents = "none";
+      renderMonth(0); syncQuick();
+      return v;
+    },
+
+    goal() {
+      const v = viewEl("v-goal",
+        '<div class="goal-row"><span class="conn fx conn-goal">' + (draft.goal ? "Aiming for" : "With") + '</span><div class="wheel" data-key="goal"><div class="wheel-track">' +
+        GOALS.map(g => '<div class="wi">' + goalWord(g) + "</div>").join("") + "</div></div></div>" +
+        '<div class="goal-note fx"></div>');
+      const wheel = $(".wheel", v), track = $(".wheel-track", v), items = [...v.querySelectorAll(".wi")], note = $(".goal-note", v), conn = $(".conn-goal", v);
+      const ROW = 44, CENTER = 216 / 2 - ROW / 2;
+      let idx = Math.max(0, GOALS.indexOf(draft.goal)), pos = idx * ROW, anim = null;
+
+      function paint() {
+        track.style.transform = "translateY(" + (CENTER - pos) + "px)";
+        items.forEach((el, i) => {
+          const d = Math.abs(i * ROW - pos) / ROW;
+          const c = Math.min(d, 2.4);
+          el.style.color = d < 0.5 ? "#1a1a1a" : "#c4c2c4";
+          el.style.opacity = String(Math.max(0, 1 - c * 0.28));
+          el.style.transform = "scale(" + (1 - Math.min(d, 2) * 0.06) + ")";
+          el.style.filter = c > 0.6 ? "blur(" + ((c - 0.6) * 0.9).toFixed(2) + "px)" : "none";
+        });
+        const i = Math.round(pos / ROW);
+        if (i !== idx && i >= 0 && i < GOALS.length) { idx = i; haptic(3); setGoal(GOALS[i]); }
+      }
+      function setGoal(g) {
+        const before = draft.goal; draft.goal = g;
+        if (!!before !== !!g) swapText(conn, g ? "Aiming for" : "With");
+        writeNote();
+      }
+      function writeNote() {
+        const g = draft.goal;
+        let html;
+        if (!g) html = "Just counting, no finish line.";
+        else {
+          const at = new Date(draft.start.getTime() + g * DAY);
+          html = at <= new Date() ? "You're already past this one." : "You'd get there on <b>" + fmtLong(at) + "</b>";
+        }
+        if (note.innerHTML !== html) {
+          note.innerHTML = html;
+          note.getAnimations().forEach(a => a.cancel());
+          note.animate([{ opacity: 0.2, filter: "blur(3px)" }, { opacity: 1, filter: "blur(0)" }], { duration: 220 * SLOW, easing: EASE_OUT });
+        }
+      }
+      function settle(toIdx, velocity = 0) {
+        toIdx = Math.max(0, Math.min(GOALS.length - 1, toIdx));
+        const from = pos, to = toIdx * ROW;
+        const spr = spring(0.38, 0.86), t0 = performance.now();
+        cancelAnimationFrame(anim);
+        const w0 = 2 * Math.PI / 0.38, z = 0.86, wd = w0 * Math.sqrt(1 - z * z);
+        const step = now => {
+          const t = (now - t0) / 1000 / SLOW;
+          const e = 1 - Math.exp(-z * w0 * t) * (Math.cos(wd * t) + (z * w0 / wd) * Math.sin(wd * t));
+          pos = from + (to - from) * e; paint();
+          if (t < spr.duration / 1000 / SLOW) anim = requestAnimationFrame(step); else { pos = to; paint(); }
+        };
+        anim = requestAnimationFrame(step);
+      }
+      let drag = null;
+      wheel.addEventListener("pointerdown", e => {
+        cancelAnimationFrame(anim); wheel.setPointerCapture(e.pointerId);
+        drag = { y: e.clientY, pos, t: performance.now(), v: 0, moved: false, startY: e.clientY };
+      });
+      wheel.addEventListener("pointermove", e => {
+        if (!drag) return;
+        const k = scale(), dy = (e.clientY - drag.y) / k, now = performance.now();
+        if (Math.abs(e.clientY - drag.startY) > 3) drag.moved = true;
+        drag.v = 0.8 * drag.v + 0.2 * (-dy / Math.max(1, now - drag.t));
+        drag.y = e.clientY; drag.t = now;
+        let p = pos - dy; const max = (GOALS.length - 1) * ROW;
+        if (p < 0) p = p * 0.4 + pos * 0 ; if (p > max) p = max + (p - max) * 0.4;
+        pos = Math.max(-ROW, Math.min(max + ROW, p)); paint();
+      });
+      const end = e => {
+        if (!drag) return;
+        const d = drag; drag = null;
+        if (!d.moved) {
+          // Tap a row to jump to it
+          const r = wheel.getBoundingClientRect(), k = scale();
+          const y = (e.clientY - r.top) / k - CENTER - ROW / 2;
+          settle(Math.round((pos + y) / ROW));
+          return;
+        }
+        settle(Math.round((pos + d.v * 140) / ROW), d.v);
+      };
+      wheel.addEventListener("pointerup", end); wheel.addEventListener("pointercancel", end);
+      let wheelTimer;
+      wheel.addEventListener("wheel", e => {
+        e.preventDefault(); cancelAnimationFrame(anim);
+        const max = (GOALS.length - 1) * ROW;
+        pos = Math.max(0, Math.min(max, pos + e.deltaY * 0.5)); paint();
+        clearTimeout(wheelTimer); wheelTimer = setTimeout(() => settle(Math.round(pos / ROW)), 90);
+      }, { passive: false });
+      paint(); writeNote();
+      return v;
+    },
+
+    theme() {
+      const v = viewEl("v-theme",
+        '<div class="theme-row"><span class="conn fx">On</span>' + tokTheme() + "</div>" +
+        '<div class="preview fx">' + cardHTML(draft.theme, daysSince(draft.start), draft.name || "Something") + "</div>" +
+        '<div class="tiles">' + THEMES.map(t => '<button class="tile fx' + (t === draft.theme ? " on" : "") + '" data-t="' + t + '" aria-label="' + t + '" style="background-image:url(' + P + t + '.svg)"></button>').join("") + "</div>");
+      $('[data-key="theme"]', v).style.pointerEvents = "none";
+      v.querySelectorAll(".tile").forEach(tile => tile.addEventListener("click", () => {
+        if (tile.dataset.t === draft.theme) return;
+        haptic(); draft.theme = tile.dataset.t;
+        v.querySelectorAll(".tile").forEach(x => x.classList.toggle("on", x === tile));
+        const tok = $('[data-key="theme"]', v);
+        swapText($(".tv", tok), draft.theme);
+        $(".sw", tok).style.backgroundImage = "url(" + P + draft.theme + ".svg)";
+        const pv = $(".preview", v), old = pv.lastElementChild;
+        pv.insertAdjacentHTML("beforeend", cardHTML(draft.theme, daysSince(draft.start), draft.name || "Something"));
+        const nu = pv.lastElementChild;
+        const s = spring(0.4, 0.7);
+        nu.animate([{ opacity: 0, transform: "scale(.86) rotate(-4deg)" }, { opacity: 1, transform: "none" }], { duration: s.duration, easing: s.easing });
+        old.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(1.04)" }], { duration: 220 * SLOW, easing: "ease-in", fill: "forwards" }).finished.then(() => old.remove());
+      }));
+      return v;
+    },
+  };
+
+  // Text that blurs out and back in when it changes
+  function swapText(el, text) {
+    if (!el || el.textContent === text) return;
+    el.getAnimations().forEach(a => a.cancel());
+    el.animate([{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(4px)" }], { duration: 90 * SLOW, easing: "ease-in" }).finished.then(() => {
+      el.textContent = text;
+      el.animate([{ opacity: 0, filter: "blur(4px)", transform: "translateY(3px)" }, { opacity: 1, filter: "blur(0)", transform: "none" }], { duration: 200 * SLOW, easing: EASE_OUT });
+    }).catch(() => { el.textContent = text; });
+  }
+
+  // ---------- Moving between views ----------
+  let current = null, state = "closed";
+  function go(name, anchorKey) {
+    const old = current;
+    const srcEl = anchorKey && old && old.querySelector('[data-key="' + anchorKey + '"]');
+    const src = srcEl && rel(srcEl);
+
+    const v = BUILD[name]();
+    views.appendChild(v);
+    setKeyboard(name === "name");
+    const to = target(v.offsetHeight, name === "name");
+    const spr = S_MORPH();
+    animateRect(to, spr);
+
+    if (old) {
+      old.style.pointerEvents = "none";
+      if (srcEl) srcEl.style.visibility = "hidden";
+      old.animate([{ opacity: 1, filter: "blur(0)", transform: "none" }, { opacity: 0, filter: "blur(6px)", transform: "scale(.97)" }],
+        { duration: 170 * SLOW, easing: "ease-in", fill: "forwards" }).finished.then(() => old.remove());
+    }
+
+    const anchor = anchorKey && v.querySelector('[data-key="' + anchorKey + '"]');
+    if (anchor && src) {
+      const a0 = rel(anchor);
+      const dx = src.left - a0.left, dy = src.top - a0.top + (src.height - a0.height) / 2 * (anchor.classList.contains("wheel") ? 1 : 0);
+      anchor.animate([{ transform: "translate(" + dx + "px," + dy + "px)" }, { transform: "none" }], { duration: spr.duration, easing: spr.easing });
+      if (anchor.classList.contains("wheel")) {
+        anchor.querySelectorAll(".wi").forEach((w, i) => {
+          if (i === GOALS.indexOf(draft.goal)) return;
+          w.animate([{ opacity: 0 }, { opacity: getComputedStyle(w).opacity }], { duration: 300 * SLOW, delay: 120 * SLOW, easing: EASE_OUT, fill: "backwards" });
+        });
+      }
+    }
+    enter(v, anchor, old ? 70 : 90);
+    current = v; state = name; watch(v);
+    setCTA(name === "sentence" ? "Save" : "Done");
+  }
+
+  // If the content changes height (a long name wraps, fonts arrive), the card follows it
+  const ro = new ResizeObserver(entries => {
+    const v = entries[0].target;
+    if (v !== current || !BUILD[state]) return;
+    const to = target(v.offsetHeight, state === "name");
+    if (Math.abs(to.height - parseFloat(sheet.style.height)) < 1) return;
+    animateRect(to, spring(0.36, 0.9));
+  });
+  function watch(v) { ro.disconnect(); ro.observe(v); }
+
+  function enter(v, anchor, base) {
+    const fxs = [...v.querySelectorAll(".fx")].filter(e => !anchor || !(e === anchor || e.contains(anchor)));
+    fxs.forEach((e, i) => e.animate(
+      [{ opacity: 0, filter: "blur(6px)", transform: "translateY(8px) scale(.98)" }, { opacity: 1, filter: "blur(0)", transform: "none" }],
+      { duration: 340 * SLOW, delay: (base + Math.min(i * 18, 260)) * SLOW, easing: EASE_OUT, fill: "backwards" }));
+  }
+
+  // Button label that blurs between words, or draws a tick
+  let ctaWord = "";
+  function setCTA(word, tick) {
+    const enabled = tick || state !== "sentence" || draft.name.trim().length > 0;
+    cta.classList.toggle("off", !enabled);
+    if (word === ctaWord && !tick) return;
+    ctaWord = word;
+    const old = cta.querySelector(".lbl");
+    const lbl = document.createElement("span"); lbl.className = "lbl";
+    lbl.innerHTML = tick ? '<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>' : word;
+    cta.appendChild(lbl);
+    if (old) old.animate([{ opacity: 1, filter: "blur(0)", transform: "none" }, { opacity: 0, filter: "blur(5px)", transform: "translateY(-6px)" }], { duration: 160 * SLOW, easing: "ease-in", fill: "forwards" }).finished.then(() => old.remove());
+    lbl.animate([{ opacity: 0, filter: "blur(5px)", transform: "translateY(6px)" }, { opacity: 1, filter: "blur(0)", transform: "none" }], { duration: 260 * SLOW, delay: 60 * SLOW, easing: EASE_OUT, fill: "backwards" });
+    if (tick) lbl.querySelector("path").animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 320 * SLOW, delay: 120 * SLOW, easing: EASE_OUT, fill: "forwards" });
+  }
+
+  function finishName() {
+    if (state !== "name") return;
+    draft.name = ($(".name-input") || { value: draft.name }).value.trim();
+    go("sentence", "name");
+  }
+
+  // ---------- Open, close, save ----------
+  const addBtn = () => grid.querySelector(".add");
+  function open() {
+    if (state !== "closed") return;
+    haptic();
+    draft = newDraft(); ctaWord = "";
+    const from = Object.assign(rel(addBtn()), { radius: 22 });
+    sheet.style.display = "block"; sheet.style.transform = "";
+    face.className = "face plus"; face.innerHTML = I.plus;
+    addBtn().style.visibility = "hidden";
+    current = null; views.innerHTML = "";
+    const v = BUILD.sentence(); views.appendChild(v);
+    const to = target(v.offsetHeight, false), spr = S_OPEN();
+    animateRect(to, spr, from);
+    face.getAnimations().forEach(a => a.cancel());
+    face.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160 * SLOW, easing: "ease-out", fill: "forwards" });
+    foot.animate([{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { duration: 360 * SLOW, delay: 140 * SLOW, easing: EASE_OUT, fill: "backwards" });
+    enter(v, null, 90);
+    current = v; state = "sentence"; watch(v);
+    setCTA("Save");
+    fadeScrim(true);
+  }
+
+  function close() {
+    if (state === "closed" || state === "saving") return;
+    const last = state; state = "closing";
+    setKeyboard(false);
+    const from = currentRect();
+    // Fold any drag offset into the rect, so closing starts where the finger left it
+    const ty = dragOffset(); sheet.style.transform = ""; from.top += ty;
+    const btn = addBtn();
+    const to = Object.assign(rel(btn), { radius: 22 }), spr = S_CLOSE();
+    views.animate([{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(4px)" }], { duration: 140 * SLOW, easing: "ease-in", fill: "forwards" });
+    foot.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120 * SLOW, easing: "ease-in", fill: "forwards" });
+    face.className = "face plus"; face.innerHTML = I.plus;
+    face.getAnimations().forEach(a => a.cancel());
+    face.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 * SLOW, delay: spr.duration * 0.35, easing: "ease-out", fill: "both" });
+    fadeScrim(false);
+    animateRect(to, spr, from).finished.then(() => {
+      if (state !== "closing") return;
+      btn.style.visibility = "";
+      teardown();
+    });
+  }
+
+  function teardown() {
+    sheet.style.display = "none"; views.innerHTML = ""; current = null; state = "closed";
+    [views, foot, face].forEach(el => el.getAnimations().forEach(a => a.cancel()));
+    face.style.opacity = 0;
+  }
+
+  function save() {
+    if (state !== "sentence") return;
+    if (!draft.name.trim()) {
+      haptic(20);
+      const tok = current.querySelector('[data-key="name"]');
+      tok.animate([{ transform: "translateX(0)" }, { transform: "translateX(-7px)" }, { transform: "translateX(6px)" }, { transform: "translateX(-4px)" }, { transform: "translateX(2px)" }, { transform: "none" }],
+        { duration: 360 * SLOW, easing: "ease-out" });
+      setTimeout(() => state === "sentence" && go("name", "name"), 380 * SLOW);
+      return;
+    }
+    state = "saving";
+    haptic(12);
+    setCTA("", true);
+    setTimeout(() => {
+      const btn = addBtn();
+      const slot = Object.assign(rel(btn), { radius: 22 });
+      const days = daysSince(draft.start);
+      face.className = "face cardface";
+      face.style.backgroundImage = "url(" + P + draft.theme + ".svg)";
+      face.innerHTML = "<b>" + days.toLocaleString("en-GB") + " " + (days === 1 ? "DAY" : "DAYS") + "</b><span>Since " + esc(draft.name) + "</span>";
+      face.getAnimations().forEach(a => a.cancel());
+      face.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220 * SLOW, easing: "ease-out", fill: "forwards" });
+      views.animate([{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(6px)" }], { duration: 160 * SLOW, easing: "ease-in", fill: "forwards" });
+      foot.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.9)" }], { duration: 160 * SLOW, easing: "ease-in", fill: "forwards" });
+      fadeScrim(false);
+      animateRect(slot, spring(0.55, 0.8)).finished.then(() => {
+        const card = document.createElement("div");
+        card.className = "card"; card.style.backgroundImage = "url(" + P + draft.theme + ".svg)";
+        card.innerHTML = "<b></b><span>Since " + esc(draft.name) + "</span>";
+        grid.insertBefore(card, btn);
+        countUp(card.querySelector("b"), days);
+        teardown();
+        // The + tile springs into its new place
+        btn.style.visibility = "";
+        const s = spring(0.5, 0.7);
+        btn.animate([{ opacity: 0, transform: "scale(.6)" }, { opacity: 1, transform: "none" }], { duration: s.duration, easing: s.easing, delay: 80 * SLOW, fill: "backwards" });
+        card.animate([{ transform: "scale(1)" }, { transform: "scale(1.03)" }, { transform: "scale(1)" }], { duration: 380 * SLOW, easing: EASE_OUT });
+        haptic(10);
+      });
+    }, 420 * SLOW);
+  }
+
+  function countUp(el, n) {
+    const word = v => v.toLocaleString("en-GB") + " " + (v === 1 ? "DAY" : "DAYS");
+    if (n <= 0) { el.textContent = word(0); return; }
+    const t0 = performance.now(), dur = Math.min(900, 300 + n * 8) * SLOW;
+    let last = -1;
+    const step = now => {
+      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3), v = Math.round(n * e);
+      if (v !== last) { el.textContent = word(v); last = v; }
+      if (p < 1) requestAnimationFrame(step);
+    };
+    el.textContent = word(0); requestAnimationFrame(step);
+  }
+
+  function fadeScrim(on) {
+    const from = getComputedStyle(scrim).opacity;
+    scrim.getAnimations().forEach(a => a.cancel());
+    scrim.style.opacity = on ? 1 : 0; scrim.classList.toggle("on", on);
+    scrim.animate([{ opacity: from }, { opacity: on ? 1 : 0 }], { duration: (on ? 320 : 260) * SLOW, easing: on ? EASE_OUT : "ease-in" });
+  }
+
+  // ---------- Drag down to dismiss ----------
+  let drag = null;
+  function dragOffset() { const m = /translateY\((-?[\d.]+)px\)/.exec(sheet.style.transform); return m ? +m[1] : 0; }
+  sheet.addEventListener("pointerdown", e => {
+    if (state === "saving" || state === "closing") return;
+    if (e.target.closest(".tok, button, input, .wheel, .chip, .tile")) return;
+    sheet.getAnimations().filter(a => a.effect.getKeyframes().some(k => k.transform)).forEach(a => a.cancel());
+    drag = { y0: e.clientY, last: e.clientY, t: performance.now(), v: 0, base: dragOffset() };
+    sheet.setPointerCapture(e.pointerId);
+  });
+  sheet.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const k = scale(), now = performance.now();
+    let dy = drag.base + (e.clientY - drag.y0) / k;
+    drag.v = 0.7 * drag.v + 0.3 * ((e.clientY - drag.last) / k / Math.max(1, now - drag.t));
+    drag.last = e.clientY; drag.t = now;
+    if (dy < 0) dy = -Math.pow(-dy, 0.7);   // rubber band upward
+    sheet.style.transform = "translateY(" + dy + "px)";
+    scrim.style.opacity = String(Math.max(0.2, 1 - Math.max(0, dy) / 400));
+  });
+  const endDrag = () => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    const dy = dragOffset();
+    if (dy > 110 || (d.v > 0.6 && dy > 20)) { close(); return; }
+    const s = spring(0.4, 0.75);
+    sheet.style.transform = "";
+    sheet.animate([{ transform: "translateY(" + dy + "px)" }, { transform: "none" }], { duration: s.duration, easing: s.easing });
+    scrim.style.opacity = 1;
+  };
+  sheet.addEventListener("pointerup", endDrag);
+  sheet.addEventListener("pointercancel", endDrag);
+
+  // ---------- Wiring ----------
+  views.addEventListener("click", e => {
+    const t = e.target.closest("[data-go]");
+    if (!t || state !== "sentence") return;
+    haptic(4);
+    go(t.dataset.go, t.dataset.key);
+  });
+  cta.addEventListener("click", () => {
+    if (state === "sentence") save();
+    else if (state === "name") finishName();
+    else if (BUILD[state]) go("sentence", state);
+  });
+  scrim.addEventListener("click", () => {
+    if (state === "name") finishName();
+    else if (state !== "sentence" && BUILD[state]) go("sentence", state);
+    else close();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (state === "sentence") close();
+    else if (state === "name") finishName();
+    else if (BUILD[state]) go("sentence", state);
+  });
+
+  function cardHTML(theme, days, title) {
+    return '<div class="card" style="background-image:url(' + P + theme + '.svg)"><b>' + days.toLocaleString("en-GB") + " " + (days === 1 ? "DAY" : "DAYS") + "</b><span>Since " + esc(title) + "</span></div>";
+  }
+  function renderHome() {
+    grid.innerHTML = START_CARDS.map(c => cardHTML(c.theme, c.days, c.title)).join("") + '<button class="add" aria-label="Add an event">' + I.plus + "</button>";
+    addBtn().addEventListener("click", open);
+  }
+
+  // Fit the phone frame to short windows
+  function fit() {
+    const dev = $("#device"), wrap = $("#wrap");
+    if (matchMedia("(max-width:560px)").matches) { dev.style.transform = ""; return; }
+    const k = Math.min(1, (innerHeight - 48) / 876);
+    dev.style.transform = k < 1 ? "scale(" + k + ")" : "";
+    wrap.style.height = 876 * k + "px"; wrap.style.width = 417 * k + "px";
+  }
+  addEventListener("resize", fit);
+
+  $("#slow").addEventListener("change", e => { SLOW = e.target.checked ? 4 : 1; });
+  $("#resetDemo").addEventListener("click", () => { if (state === "closed") renderHome(); });
+
+  buildKeyboard(); renderHome(); fit();
+  document.fonts && document.fonts.load("600 26px Allo");
+})();
+</script>
+</body>
+</html>

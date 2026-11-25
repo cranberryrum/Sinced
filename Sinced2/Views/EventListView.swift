@@ -12,10 +12,10 @@ import UniformTypeIdentifiers
 struct EventListView: View {
     @EnvironmentObject var viewModel: EventViewModel
     @State private var selectedEvent: SinceEvent?
-    @State private var showingCreateEvent = false
+    /// The add card, which grows out of the + tile above the tab bar
+    @ObservedObject private var addFlow = AddFlow.shared
     @State private var draggingEvent: SinceEvent?
     @State private var eventPendingDelete: SinceEvent?
-    @State private var eventBeingEdited: SinceEvent?
     @State private var showingWidgetGuide = false
     @ObservedObject private var widgetStatus = WidgetStatus.shared
     @ObservedObject private var guideRouter = WidgetGuideRouter.shared
@@ -24,8 +24,6 @@ struct EventListView: View {
     @AppStorage("firstRun.addSheetOffered") private var addSheetOffered = false
     /// The card currently showing its "look here" ring
     @State private var ringedEventID: UUID?
-    /// The edit sheet opens with the goal dial out ("Set the next goal")
-    @State private var editOpensGoal = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Only once iOS has confirmed there's no widget, so it never flashes for people who have one
@@ -57,9 +55,12 @@ struct EventListView: View {
                         
                         Button("Add event") {
                             HapticManager.shared.medium()
-                            showingCreateEvent = true
+                            addFlow.present()
                         }
                         .buttonStyle(PrimaryButtonStyle())
+                        // The add card grows out of this button when there's no + tile yet
+                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { addFlow.sourceFrame = $0 }
+                        .opacity(addFlow.hidesSource ? 0 : 1)
                         .padding(.horizontal, 24)
                         .padding(.top, 24)
                         
@@ -96,8 +97,14 @@ struct EventListView: View {
                                         .frame(height: cardHeight)
                                         // A soft lift off the page, part of the hairline look
                                         .shadow(color: .black.opacity(0.10), radius: 9, y: 8)
-                                        // Lands as the add sheet clears; leaves the same way
-                                        .transition(cardTransition)
+                                        // Lands as the add sheet clears; leaves the same way. A card
+                                        // the add card is about to land on appears under it instead.
+                                        .transition(addFlow.hiddenEventID == event.id ? .identity : cardTransition)
+                                        // Hidden while the floating card is it: being edited, or about to be landed on
+                                        .opacity(addFlow.hiddenEventID == event.id ? 0 : 1)
+                                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                                            addFlow.cardFrames[event.id] = frame
+                                        }
                                         // Where to look, after a widget tap
                                         .overlay {
                                             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -135,8 +142,12 @@ struct EventListView: View {
                                         )
                                         .contextMenu {
                                             Button {
-                                                editOpensGoal = false
-                                                eventBeingEdited = event
+                                                // The long press can leave the card in its lifted drag size
+                                                draggingEvent = nil
+                                                // After the menu has let go of the card, so the edit card grows out of it
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                                    addFlow.presentEdit(event)
+                                                }
                                             } label: {
                                                 Label("Edit", systemImage: "pencil")
                                             }
@@ -157,12 +168,17 @@ struct EventListView: View {
                             
                                 Button {
                                     HapticManager.shared.medium()
-                                    showingCreateEvent = true
+                                    addFlow.present()
                                 } label: {
                                     AddEventPlaceholderCard()
                                         .frame(height: cardHeight)
                                 }
                                 .buttonStyle(AddPlaceholderButtonStyle())
+                                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { addFlow.sourceFrame = $0 }
+                                // The add card is this tile while it's out
+                                .opacity(addFlow.hidesSource ? 0 : 1)
+                                .scaleEffect(addFlow.hidesSource ? 0.9 : 1)
+                                .accessibilityLabel("Add an event")
                             }
                             .animation(cardCountAnimation, value: viewModel.events.count)
                         }
@@ -220,7 +236,7 @@ struct EventListView: View {
             }
             // Opened from a notification or widget tap
             .onReceive(viewModel.$eventToOpen.compactMap { $0 }) { event in
-                showingCreateEvent = false
+                addFlow.dismissImmediately()
                 selectedEvent = event
                 viewModel.eventToOpen = nil
             }
@@ -233,26 +249,15 @@ struct EventListView: View {
                     }
                 )
             }
-            .sheet(item: $eventBeingEdited) { event in
-                AddEventBottomSheet(
-                    viewModel: viewModel,
-                    isPresented: Binding(
-                        get: { eventBeingEdited != nil },
-                        set: { if !$0 { eventBeingEdited = nil } }
-                    ),
-                    editingEvent: event,
-                    openGoal: editOpensGoal
-                )
-            }
             .onChange(of: viewModel.goalEditRequest) { _, id in
                 guard let id, let event = viewModel.events.first(where: { $0.id == id }) else { return }
                 viewModel.goalEditRequest = nil
+                // An open event page has to slide away first, since the card sits under it
+                let wait = selectedEvent == nil ? 0 : 0.5
                 selectedEvent = nil
-                editOpensGoal = true
-                eventBeingEdited = event
-            }
-            .sheet(isPresented: $showingCreateEvent, onDismiss: offerGuideAfterFirstEvent) {
-                AddEventBottomSheet(viewModel: viewModel, isPresented: $showingCreateEvent)
+                DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+                    addFlow.presentEdit(event, openGoal: true)
+                }
             }
             .sheet(isPresented: $showingWidgetGuide) {
                 WidgetGuideView(event: viewModel.events.first)
@@ -260,7 +265,10 @@ struct EventListView: View {
                     .presentationDragIndicator(.visible)
             }
             .animation(.spring(duration: 0.4, bounce: 0), value: showsGuideCard)
-            .onAppear(perform: openRequestedGuide)
+            .onAppear {
+                addFlow.onFinish = offerGuideAfterFirstEvent
+                openRequestedGuide()
+            }
             // A widget tap landed here: ring the card once, then let the
             // screen lift to ask about the reset
             .task(id: viewModel.focusedEventID) {
@@ -280,7 +288,7 @@ struct EventListView: View {
                 // Let the home screen settle in first, so the sheet reads as
                 // the next step rather than a pop-up
                 try? await Task.sleep(for: .seconds(0.45))
-                showingCreateEvent = true
+                addFlow.present()
             }
             .onChange(of: guideRouter.isRequested) { openRequestedGuide() }
         }
@@ -315,10 +323,9 @@ struct EventListView: View {
     private func openRequestedGuide() {
         guard guideRouter.isRequested else { return }
         guideRouter.isRequested = false
-        let wasShowingSomething = selectedEvent != nil || eventBeingEdited != nil || showingCreateEvent
+        let wasShowingSomething = selectedEvent != nil || addFlow.isPresented
         selectedEvent = nil
-        eventBeingEdited = nil
-        showingCreateEvent = false
+        addFlow.dismissImmediately()
         guard !showingWidgetGuide else { return }
         // A sheet can't open while another is still closing
         DispatchQueue.main.asyncAfter(deadline: .now() + (wasShowingSomething ? 0.5 : 0)) {

@@ -17,14 +17,15 @@ struct EventDetailView: View {
     @State private var showingResetSheet = false
     @State private var showingShareSheet = false
     @State private var showingDeleteSheet = false
-    @State private var showingEditSheet = false
+    /// Editing happens in the floating card, which lives on this page since it's a sheet of its own
+    @StateObject private var editFlow = AddFlow()
+    @State private var editButtonFrame: CGRect = .zero
+    @State private var goalLineFrame: CGRect = .zero
     @State private var currentTime = Date()
     @State private var localEvent: SinceEvent
     /// Shown for a moment after a reset from here, with an undo button
     @State private var showingAllRuns = false
     @State private var showingUndoConfirm = false
-    /// Edit opens with the goal dial already open ("set the next")
-    @State private var editOpensGoal = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The latest reset, while it can still be put back
@@ -226,10 +227,12 @@ struct EventDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Edit") {
+                    Button {
                         HapticManager.shared.light()
-                        editOpensGoal = false
-                        showingEditSheet = true
+                        editFlow.presentEdit(localEvent, from: editButtonFrame)
+                    } label: {
+                        Text("Edit")
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { editButtonFrame = $0 }
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -257,14 +260,6 @@ struct EventDetailView: View {
                     showResetToast()
                 }
             }
-            .sheet(isPresented: $showingEditSheet) {
-                AddEventBottomSheet(
-                    viewModel: viewModel,
-                    isPresented: $showingEditSheet,
-                    editingEvent: localEvent,
-                    openGoal: editOpensGoal
-                )
-            }
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheetView(event: localEvent)
             }
@@ -276,6 +271,12 @@ struct EventDetailView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: undoableReset?.id)
+        // Over the whole page, toolbar included
+        .overlay {
+            if editFlow.isPresented {
+                AddEventOverlay(viewModel: viewModel, flow: editFlow)
+            }
+        }
         .onReceive(timer) { _ in
             currentTime = Date()
         }
@@ -308,11 +309,11 @@ struct EventDetailView: View {
         if case .goalReached = line {
             Button {
                 HapticManager.shared.light()
-                editOpensGoal = true
-                showingEditSheet = true
+                editFlow.presentEdit(localEvent, openGoal: true, from: goalLineFrame)
             } label: {
                 content.contentShape(Rectangle())
             }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { goalLineFrame = $0 }
             .buttonStyle(PressableButtonStyle())
             .accessibilityHint("Opens the goal picker")
         } else {
