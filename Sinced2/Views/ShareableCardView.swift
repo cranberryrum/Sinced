@@ -107,8 +107,6 @@ struct ShareCard: View {
 
     // MARK: Month
 
-    private var stripHeight: CGFloat { story ? 200 : 12 }
-
     private var month: some View {
         let cal = Calendar.current
         let resets = event.history.filter { cal.isDate($0.at, equalTo: now, toGranularity: .month) }.count
@@ -147,17 +145,9 @@ struct ShareCard: View {
             }
         }
         .padding(.horizontal, story ? 24 : 20)
-        .padding(.top, (story ? 28 : 22) + stripHeight)
+        .padding(.top, story ? 28 : 22)
         .padding(.bottom, story ? 28 : 22)
         .background(Color.white)
-        // A band of the theme across the top
-        .overlay(alignment: .top) {
-            Color.clear
-                .frame(maxWidth: .infinity)
-                .frame(height: stripHeight)
-                .overlay { EventThemeBackground(event: event) }
-                .clipped()
-        }
     }
 
     // MARK: Sentence

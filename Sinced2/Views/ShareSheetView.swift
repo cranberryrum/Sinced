@@ -2,8 +2,8 @@
 //  ShareSheetView.swift
 //  Sinced2
 //
-//  Share the card: the counter in one of three designs (Stamp, Month,
-//  Sentence), square or story, always in its own theme. Save or share.
+//  Share the card: the counter in one of three square designs (Stamp,
+//  Month, Sentence), always in its own theme. Save or share.
 //
 
 import SwiftUI
@@ -14,14 +14,12 @@ struct ShareSheetView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("share.design") private var designRaw = ShareDesign.stamp.rawValue
-    @AppStorage("share.format") private var formatRaw = ShareFormat.square.rawValue
     @State private var isSharing = false
     @State private var showingSaveSuccess = false
     @State private var renderedImage: UIImage?
     @State private var optimizedImageData: Data?
     @State private var saveError: SaveError?
     @State private var didShareOrSave = false
-    @Namespace private var knob
 
     private enum SaveError: Identifiable {
         case permissionDenied, failed
@@ -37,13 +35,13 @@ struct ShareSheetView: View {
     }
 
     private var design: ShareDesign { ShareDesign(rawValue: designRaw) ?? .stamp }
-    private var format: ShareFormat { ShareFormat(rawValue: formatRaw) ?? .square }
+    /// Square only: it works in chats, posts and stories alike
+    private let format = ShareFormat.square
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
             preview
-            formatSwitch.padding(.top, 4)
             designPicker.padding(.top, 18)
             actions.padding(.top, 20)
         }
@@ -54,7 +52,6 @@ struct ShareSheetView: View {
         .presentationDragIndicator(.hidden)
         .task { await renderImage() }
         .onChange(of: designRaw) { _, _ in Task { await renderImage() } }
-        .onChange(of: formatRaw) { _, _ in Task { await renderImage() } }
         .onDisappear {
             // Asked once this sheet is gone, so the two never stack
             if didShareOrSave {
@@ -119,43 +116,13 @@ struct ShareSheetView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 28 * k, style: .continuous))
                 .shadow(color: .black.opacity(0.28), radius: 24, y: 18)
                 .scaleEffect(isSharing ? 0.97 : 1)
-                .id("\(designRaw)-\(formatRaw)")
+                .id(designRaw)
                 .transition(reduceMotion ? AnyTransition.opacity : AnyTransition(.blurReplace).combined(with: .scale(scale: 0.97)))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(design.name) card, \(format.name.lowercased())")
+                .accessibilityLabel("\(design.name) card")
         }
         .frame(maxHeight: .infinity)
-    }
-
-    private var formatSwitch: some View {
-        HStack(spacing: 0) {
-            ForEach(ShareFormat.allCases) { f in
-                let on = f == format
-                Button {
-                    guard !on else { return }
-                    HapticManager.shared.selection()
-                    withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.3)) { formatRaw = f.rawValue }
-                } label: {
-                    Text(f.name)
-                        .font(.allo(14, weight: .semibold))
-                        .foregroundStyle(on ? CardText.word : CardText.label)
-                        .padding(.horizontal, 16)
-                        .frame(height: 32)
-                        .background {
-                            if on {
-                                Capsule().fill(Color.white)
-                                    .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-                                    .matchedGeometryEffect(id: "knob", in: knob)
-                            }
-                        }
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(on ? .isSelected : [])
-            }
-        }
-        .padding(3)
-        .background(Capsule().fill(Color.black.opacity(0.05)))
     }
 
     private var designPicker: some View {
