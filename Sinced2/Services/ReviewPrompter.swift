@@ -27,6 +27,9 @@ enum ReviewPrompter {
 
     private static var defaults: UserDefaults { .standard }
 
+    static var launchCount: Int { defaults.integer(forKey: launchCountKey) }
+    static var lastPromptAt: Date? { defaults.object(forKey: lastPromptKey) as? Date }
+
     /// Call once per cold launch
     static func noteLaunch() {
         defaults.set(defaults.integer(forKey: launchCountKey) + 1, forKey: launchCountKey)

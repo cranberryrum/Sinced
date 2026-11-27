@@ -21,10 +21,14 @@ struct EventListView: View {
     @ObservedObject private var guideRouter = WidgetGuideRouter.shared
     @AppStorage("widgetGuide.cardDismissed") private var guideCardDismissed = false
     /// The add sheet opens by itself once, straight after onboarding
-    @AppStorage("firstRun.addSheetOffered") private var addSheetOffered = false
     /// The card currently showing its "look here" ring
     @State private var ringedEventID: UUID?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    /// The card zooms into its event page
+    @Namespace private var cardZoom
+    /// A hello for this visit: shows as the app opens, then tucks away
+    @State private var homeVisible = false
 
     /// Only once iOS has confirmed there's no widget, so it never flashes for people who have one
     private var showsGuideCard: Bool {
@@ -45,27 +49,7 @@ struct EventListView: View {
                 GrainBackground()
                 
                 if isEmptyState {
-                    VStack {
-                        Spacer()
-                        
-                        EmptyEventsView(
-                            title: "no events yet",
-                            subtitle: "track your days since events"
-                        )
-                        
-                        Button("Add event") {
-                            HapticManager.shared.medium()
-                            addFlow.present()
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
-                        // The add card grows out of this button when there's no + tile yet
-                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { addFlow.sourceFrame = $0 }
-                        .opacity(addFlow.hidesSource ? 0 : 1)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 24)
-                        
-                        Spacer()
-                    }
+                    EmptyHomeView(addFlow: addFlow)
                 } else {
                     // Large Cards with Vertical Scroll
                     ScrollView(.vertical, showsIndicators: false) {
@@ -95,13 +79,28 @@ struct EventListView: View {
                                 ForEach(viewModel.events) { event in
                                     HomeEventCardView(event: event)
                                         .frame(height: cardHeight)
+                                        .overlay(alignment: .topTrailing) {
+                                            if event.isOnBestRun() {
+                                                Text("★ Best")
+                                                    .font(.allo(11, weight: .semibold))
+                                                    .foregroundStyle(.white)
+                                                    .padding(.horizontal, 8)
+                                                    .frame(height: 22)
+                                                    .background(Capsule().fill(Color.black.opacity(0.28)))
+                                                    .padding(10)
+                                                    .accessibilityLabel("Longest run yet")
+                                            }
+                                        }
+                                        .matchedTransitionSource(id: event.id, in: cardZoom) { source in
+                                            source.clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                                        }
                                         // A soft lift off the page, part of the hairline look
                                         .shadow(color: .black.opacity(0.10), radius: 9, y: 8)
                                         // Lands as the add sheet clears; leaves the same way. A card
                                         // the add card is about to land on appears under it instead.
                                         .transition(addFlow.hiddenEventID == event.id ? .identity : cardTransition)
                                         // Hidden while the floating card is it: being edited, or about to be landed on
-                                        .opacity(addFlow.hiddenEventID == event.id ? 0 : 1)
+                                        .opacity(addFlow.hiddenEventID == event.id || (viewModel.spotlightShowing && viewModel.celebration?.eventID == event.id) ? 0 : 1)
                                         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
                                             addFlow.cardFrames[event.id] = frame
                                         }
@@ -240,14 +239,15 @@ struct EventListView: View {
                 selectedEvent = event
                 viewModel.eventToOpen = nil
             }
-            .sheet(item: $selectedEvent) { event in
-                EventDetailView(
+            .fullScreenCover(item: $selectedEvent) { event in
+                EventPageView(
                     event: event,
                     viewModel: viewModel,
                     onDeleteSuccess: { title in
                         showSuccessToast(title: title)
                     }
                 )
+                .navigationTransition(.zoom(sourceID: event.id, in: cardZoom))
             }
             .onChange(of: viewModel.goalEditRequest) { _, id in
                 guard let id, let event = viewModel.events.first(where: { $0.id == id }) else { return }
@@ -262,6 +262,7 @@ struct EventListView: View {
             .sheet(isPresented: $showingWidgetGuide) {
                 WidgetGuideView(event: viewModel.events.first)
                     .presentationDetents([.large])
+                    .deviceCornerSheet()
                     .presentationDragIndicator(.visible)
             }
             .animation(.spring(duration: 0.4, bounce: 0), value: showsGuideCard)
@@ -280,20 +281,30 @@ struct EventListView: View {
                 withAnimation(.easeOut(duration: 0.24)) { ringedEventID = nil }
                 viewModel.focusedEventID = nil
             }
-            .task {
-                // Someone who's just finished onboarding has nothing to look
-                // at yet, so go straight to adding their first event
-                guard !addSheetOffered, viewModel.events.isEmpty else { return }
-                addSheetOffered = true
-                // Let the home screen settle in first, so the sheet reads as
-                // the next step rather than a pop-up
-                try? await Task.sleep(for: .seconds(0.45))
-                addFlow.present()
-            }
             .onChange(of: guideRouter.isRequested) { openRequestedGuide() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { trySpotlight() }
+            }
+            .onAppear { homeVisible = true; trySpotlight() }
+            .onDisappear { homeVisible = false }
+            .onChange(of: viewModel.celebration) { trySpotlight() }
+            .onChange(of: selectedEvent) { _, open in if open == nil { trySpotlight() } }
+            .onChange(of: addFlow.isPresented) { _, open in if !open { trySpotlight() } }
         }
     }
     
+    /// Greets, holds for a moment, then tucks away so the grid rises into its place
+    /// A milestone waiting to be celebrated plays on home, once home is
+    /// actually what's on screen: not under an event page or the add card
+    private func trySpotlight() {
+        guard homeVisible, selectedEvent == nil, !addFlow.isPresented,
+              viewModel.celebration != nil, !viewModel.spotlightShowing else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            guard homeVisible, selectedEvent == nil, !addFlow.isPresented, viewModel.celebration != nil else { return }
+            viewModel.spotlightShowing = true
+        }
+    }
+
     /// Nothing appears from nothing: just under full size, and faded
     private var cardTransition: AnyTransition {
         reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95))
@@ -406,6 +417,10 @@ private struct EventReorderDropDelegate: DropDelegate {
 /// Square home card built with the SVG themes from Assets
 struct HomeEventCardView: View {
     let event: SinceEvent
+    /// Days to show instead of the live count, while a milestone counts up
+    var countOverride: Int? = nil
+    /// Words to show instead of "Since …"
+    var subtitleOverride: String? = nil
     @State private var currentTime = Date()
     
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -509,23 +524,36 @@ struct HomeEventCardView: View {
         }
     }
 
+    /// "23" and "d": a big number with a small unit after it
+    private func countParts(for date: Date) -> (value: Int, unit: String) {
+        let elapsed = max(0, date.timeIntervalSince(event.startedAt))
+        switch event.widgetTimeUnit {
+        case .hours: return (Int(elapsed / 3600), "h")
+        case .days: return (Int(elapsed / 86400), "d")
+        case .months: return (Int(elapsed / (86400 * 30)), "mo")
+        case .years: return (Int(elapsed / (86400 * 365)), "y")
+        }
+    }
+
     private var timeLabel: some View {
-        Text(widgetTimeValue(for: currentTime).uppercased())
-            .font(.allo(20, weight: .medium).monospacedDigit())
+        let parts = countOverride.map { (value: $0, unit: "d") } ?? countParts(for: currentTime)
+        let big: CGFloat = isImageCard ? 40 : 52
+        return (Text(parts.value.formatted()).font(.allo(big, weight: .semibold).monospacedDigit())
+                + Text(parts.unit).font(.allo(big * 0.42, weight: .semibold)))
+            .tracking(-1.5)
             // Digits roll when the count changes, e.g. after an undo
-            .contentTransition(.numericText())
+            .contentTransition(.numericText(value: Double(parts.value)))
             .foregroundColor(.white)
-            .tracking(-0.6)
             .lineLimit(1)
-            .minimumScaleFactor(0.65)
-            .fixedSize(horizontal: true, vertical: false)
-            .padding(.horizontal, 3)
+            .minimumScaleFactor(0.5)
+            .accessibilityLabel(widgetTimeValue(for: currentTime))
     }
 
     private func subtitleLabel(multilineAlignment: TextAlignment) -> some View {
-        Text("Since \(event.title)")
-            .font(.allo(14, weight: .medium))
-            .foregroundColor(Color.white.opacity(0.6))
+        Text(subtitleOverride ?? "Since \(event.title)")
+            .font(.allo(13, weight: .medium))
+            .contentTransition(.opacity)
+            .foregroundColor(Color.white.opacity(0.78))
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .multilineTextAlignment(multilineAlignment)
@@ -536,3 +564,5 @@ struct HomeEventCardView: View {
     EventListView()
         .environmentObject(EventViewModel())
 }
+
+

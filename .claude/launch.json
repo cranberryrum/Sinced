@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "event-detail-explorations",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4179", "--directory", "/Users/apple/Sinced"],
+      "port": 4179
+    }
+  ]
+}

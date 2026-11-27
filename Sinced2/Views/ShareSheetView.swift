@@ -139,6 +139,7 @@ struct ShareSheetView: View {
             }
         }
         .presentationDetents([.large])
+        .deviceCornerSheet()
         .presentationDragIndicator(.visible)
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
         .onAppear {
@@ -151,6 +152,7 @@ struct ShareSheetView: View {
             // Asked once this sheet is gone, so the two never stack
             if didShareOrSave {
                 ReviewPrompter.considerAfterShare(events: [event])
+                SupportPrompter.shared.noteShare(title: event.title)
             }
         }
         .onChange(of: selectedPhotoItem) { _, newItem in

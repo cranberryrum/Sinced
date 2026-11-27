@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Event Page · The Card</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .page { padding: 0 0 48px; }
+  /* Hero: the event's own card, grown up */
+  .hero { position: relative; margin: 8px 8px 0; height: 470px; border-radius: 44px; overflow: hidden; color: #fff;
+    background: var(--t-bg) var(--t-pattern) center / cover; transform-style: preserve-3d; will-change: transform; }
+  .hero::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); pointer-events: none; }
+  .hero-top { position: absolute; top: 52px; left: 16px; right: 16px; display: flex; justify-content: space-between; z-index: 2; }
+  .glass { height: 38px; padding: 0 16px; border-radius: 38px; background: rgba(255,255,255,.22); color: #fff; font: 500 16px var(--allo);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: transform .16s var(--ease-out), background-color .2s; }
+  .glass:active { transform: scale(.95); background: rgba(255,255,255,.32); }
+  .count { position: absolute; left: 0; right: 0; top: 128px; display: flex; flex-direction: column; align-items: center; cursor: pointer; text-shadow: 0 2px 18px rgba(0,0,0,.16); }
+  .count .num { font-size: 132px; line-height: .95; font-weight: 500; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .count .unit { font-size: 24px; font-weight: 500; margin-top: 6px; letter-spacing: .01em; }
+  .count .since { font-size: 17px; font-weight: 500; opacity: .72; margin-top: 4px; }
+  .dots { display: flex; gap: 6px; margin-top: 16px; }
+  .dots i { width: 6px; height: 6px; border-radius: 6px; background: rgba(255,255,255,.4); transition: width .3s var(--ease-out), background-color .3s; }
+  .dots i.on { width: 18px; background: #fff; }
+  .goal { position: absolute; left: 22px; right: 22px; bottom: 22px; padding: 14px 16px 16px; border-radius: 24px; background: rgba(0,0,0,.18);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); cursor: pointer; transition: transform .16s var(--ease-out); }
+  .goal:active { transform: scale(.98); }
+  .goal-line { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; font-weight: 500; }
+  #goalDate { opacity: .7; font-size: 13px; flex: none; }
+  .track { height: 6px; border-radius: 6px; background: rgba(255,255,255,.24); margin-top: 10px; overflow: hidden; }
+  .track i { display: block; height: 100%; border-radius: inherit; background: #fff; transform-origin: left; }
+
+  .body { padding: 22px 26px 0; }
+  .facts { font-size: 22px; line-height: 32px; font-weight: 500; letter-spacing: -.01em; }
+  .facts .line26 { font-size: 22px; line-height: 32px; }
+  .best { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 26px; background: color-mix(in srgb, var(--t-bg) 14%, white);
+    color: color-mix(in srgb, var(--t-bg) 80%, black); font-size: 13px; font-weight: 600; vertical-align: 3px; }
+
+  .hold { margin: 22px 16px 0; width: calc(100% - 32px); height: 60px; border-radius: 60px; background: #fff; color: var(--word); font: 600 17px var(--allo); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 0 rgba(0,0,0,.03), 0 10px 26px -14px rgba(0,0,0,.22); cursor: pointer; }
+  .hold .fill { background: var(--t-bg); color: #fff; border-radius: inherit; }
+  .hold svg { width: 19px; height: 19px; }
+  .undo { margin: 10px auto 0; display: flex; justify-content: center; gap: 6px; font: 500 14px var(--allo); color: var(--label); height: 0; overflow: hidden; }
+  .undo b { color: var(--word); font-weight: 600; }
+
+  .section { margin: 30px 16px 0; padding: 18px 18px 16px; border-radius: 30px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.03); }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .sec-head h3 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--label); }
+  .scrub-label { margin-top: 6px; font-size: 20px; font-weight: 600; min-height: 30px; }
+  .scrub-note { font-size: 14px; color: var(--label); min-height: 21px; }
+  .strip { position: relative; display: flex; align-items: flex-end; gap: 6px; height: 120px; margin-top: 14px; touch-action: none; cursor: ew-resize; }
+  .bar { flex: 1; border-radius: 10px; background: #E7E5E0; transform-origin: bottom; transition: background-color .2s, transform .2s var(--ease-out); }
+  .bar.cur { background: var(--t-bg); }
+  .bar.on { transform: scaleY(1.04); background: #CFCCC5; }
+  .bar.cur.on { background: color-mix(in srgb, var(--t-bg) 85%, black); }
+  .best-line { position: absolute; left: 0; right: 0; border-top: 1.5px dashed rgba(0,0,0,.18); pointer-events: none; }
+  .best-line span { position: absolute; left: 0; top: -18px; font-size: 11px; color: var(--label); font-weight: 600; letter-spacing: .04em; }
+  .axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--label); margin-top: 8px; }
+
+  .rows { margin: 14px 16px 0; border-radius: 30px; background: #fff; overflow: hidden; }
+  .row { width: 100%; display: flex; align-items: center; gap: 14px; padding: 0 18px; height: 60px; font: 500 17px var(--allo); color: var(--word); text-align: left; transition: background-color .14s; }
+  .row + .row { border-top: 1px solid rgba(0,0,0,.05); }
+  .row:active { background: var(--fill); }
+  .row .ico { width: 34px; height: 34px; border-radius: 12px; background: var(--fill); display: grid; place-items: center; flex: none; }
+  .row .ico svg { width: 18px; height: 18px; }
+  .row .val { margin-left: auto; color: var(--label); font-weight: 500; font-size: 15px; }
+  .row.red { color: var(--red); }
+  .row.red .ico { background: #fbe9e7; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip { height: 34px; padding: 0 14px; border-radius: 34px; font: 500 14px var(--allo); background: var(--fill); color: #3a383a; transition: background-color .18s, color .18s, transform .14s var(--ease-out); }
+  .chip:active { transform: scale(.95); }
+  .chip.on { background: var(--word); color: #fff; }
+  .lbl { font-size: 13px; color: var(--label); margin-top: 18px; }
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div class="stage">
+  <div class="device-wrap"><div class="device"><div class="screen" id="screen">
+    <div class="scroll"><div class="page">
+      <section class="hero" id="hero">
+        <div class="hero-top"><button class="glass" id="edit">Edit</button><button class="glass">Done</button></div>
+        <div class="count" id="count" role="button" aria-label="Change unit">
+          <div class="num" id="num"></div>
+          <div class="unit" id="unit"></div>
+          <div class="since" id="since"></div>
+          <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="goal" id="goal">
+          <div class="goal-line"><span id="goalText"></span><span id="goalDate"></span></div>
+          <div class="track"><i id="goalBar"></i></div>
+        </div>
+      </section>
+
+      <div class="body">
+        <div class="facts" id="facts"></div>
+      </div>
+
+      <button class="hold" id="hold" aria-label="Hold to reset">
+        <span class="hold-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Hold to reset</span>
+        <span class="fill"><span class="hold-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Keep holding</span></span>
+      </button>
+      <div class="undo" id="undo"></div>
+
+      <section class="section">
+        <div class="sec-head"><h3>Every run</h3><span class="scrub-note" style="font-size:12px">drag across</span></div>
+        <div class="scrub-label" id="scrubLabel"></div>
+        <div class="scrub-note" id="scrubNote"></div>
+        <div class="strip" id="strip"></div>
+        <div class="axis" id="axis"></div>
+      </section>
+
+      <div class="rows">
+        <button class="row" id="remind"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span>Remind me<span class="val" id="remindVal"></span></button>
+        <button class="row" id="share"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></span>Share the card</button>
+        <button class="row red" id="delete"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>Delete</button>
+      </div>
+    </div></div>
+  </div></div></div>
+
+  <aside class="notes">
+    <p class="eyebrow">Direction A</p>
+    <h1>The card is the page</h1>
+    <p>The event's own card, the one on the home grid and the widget, grows up into the whole top of the page. Everything else sits quietly below it on white cards.</p>
+    <h2>Try</h2>
+    <ul>
+      <li><b>Tap the number</b> to cycle days, hours, months and years. It morphs like Torph, and the unit you land on is what the widget shows.</li>
+      <li><b>Hold to reset</b>: a filled copy wipes across under your finger, with buzzes that get stronger as you hold. Let go early and it snaps back. Accidental resets are off the table.</li>
+      <li><b>Drag across "Every run"</b>: each bar is a run, ticking as you pass it, with its note.</li>
+      <li><b>Remind me</b>, <b>Delete</b> and <b>Edit</b> open the add card's floating sheet.</li>
+      <li>Swap themes at the top. The whole page takes on the card's colour.</li>
+    </ul>
+    <h2>Why</h2>
+    <ul>
+      <li>It's continuous with home: the card you tapped is the card you land on.</li>
+      <li>One big number, one goal, one action, then the history.</li>
+    </ul>
+  </aside>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+  Kit.mount("a-card.html");
+  const { event: ev } = Kit;
+  const $ = (s) => document.querySelector(s);
+  const card = new Kit.FloatingCard();
+  let unitIdx = Kit.UNITS.indexOf(ev.unit);
+
+  // ---------- Hero ----------
+  function renderCount() {
+    const u = Kit.unitValue(Kit.UNITS[unitIdx]);
+    Kit.morph($("#num"), u.v.toLocaleString("en-GB"));
+    Kit.morph($("#unit"), u.word);
+    $("#dots").querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", i === unitIdx));
+  }
+  $("#count").addEventListener("click", () => {
+    unitIdx = (unitIdx + 1) % Kit.UNITS.length;
+    ev.unit = Kit.UNITS[unitIdx];
+    Kit.haptic(); renderCount();
+  });
+  function renderGoal(animate) {
+    const t = Kit.target();
+    const text = t.kind === "goal" ? t.left + (t.left === 1 ? " day" : " days") + " to your " + t.days + "-day goal"
+      : t.kind === "reached" ? "Goal reached · next stop " + t.days + " days" : t.left + " days to " + t.days + " days";
+    Kit.morph($("#goalText"), text, { noWidth: true });
+    $("#goalDate").textContent = Kit.fmt(t.date);
+    const bar = $("#goalBar"), to = Math.max(0.02, Math.min(1, t.progress));
+    const from = animate ? 0 : parseFloat(bar.dataset.p || 0);
+    bar.dataset.p = to;
+    const s = Kit.spring(0.9, 0.8);
+    bar.style.transform = "scaleX(" + to + ")";
+    bar.animate([{ transform: "scaleX(" + from + ")" }, { transform: "scaleX(" + to + ")" }], { duration: s.duration, easing: s.easing, delay: animate ? Kit.ms(250) : 0 });
+  }
+  // A gentle tilt under the pointer on a desktop; nothing on touch
+  if (matchMedia("(hover: hover) and (pointer: fine)").matches && !Kit.reduced()) {
+    const hero = $("#hero");
+    hero.addEventListener("pointermove", (e) => {
+      const r = hero.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      hero.style.transform = "perspective(900px) rotateX(" + (-y * 4) + "deg) rotateY(" + (x * 5) + "deg)";
+    });
+    hero.addEventListener("pointerleave", () => {
+      hero.animate([{ transform: hero.style.transform }, { transform: "none" }], { duration: Kit.ms(500), easing: Kit.EASE_OUT });
+      hero.style.transform = "";
+    });
+  }
+
+  // ---------- Facts ----------
+  function renderFacts() {
+    const s = Kit.stats();
+    const best = s.isBest ? ' <span class="best">★ Longest yet</span>' : "";
+    $("#facts").innerHTML =
+      '<div class="line26 fx"><span class="conn">Run</span><span class="word">' + s.runNo + "</span>" + best + "</div>" +
+      '<div class="line26 fx"><span class="conn">started</span><span class="word">' + Kit.fmt(ev.startedAt) + '</span><span class="conn">· first</span><span class="word">' + Kit.fmt(ev.firstStartedAt, true) + "</span></div>";
+  }
+
+  // ---------- Runs strip ----------
+  let runList = [], activeBar = -1;
+  function renderStrip() {
+    const now = Date.now();
+    runList = [...ev.runs].reverse().map((r) => ({ ...r, len: r.end - r.start })).concat([{ start: ev.startedAt, end: now, len: now - ev.startedAt, cur: true, note: null }]);
+    const max = Math.max(...runList.map((r) => r.len));
+    const strip = $("#strip");
+    strip.innerHTML = runList.map((r, i) => '<div class="bar' + (r.cur ? " cur" : "") + '" data-i="' + i + '" style="height:' + Math.max(6, (r.len / max) * 100) + '%"></div>').join("");
+    const bestPast = Math.max(0, ...runList.filter((r) => !r.cur).map((r) => r.len));
+    if (bestPast > 0) {
+      const line = document.createElement("div"); line.className = "best-line";
+      line.style.bottom = (bestPast / max) * 100 + "%"; line.innerHTML = "<span>BEST BEFORE</span>";
+      strip.appendChild(line);
+    }
+    $("#axis").innerHTML = "<span>" + Kit.monthShort(runList[0].start) + "</span><span>now</span>";
+    setBar(runList.length - 1, true);
+  }
+  function setBar(i, quiet) {
+    if (i === activeBar && !quiet) return;
+    activeBar = i;
+    const r = runList[i];
+    $("#strip").querySelectorAll(".bar").forEach((b, j) => b.classList.toggle("on", j === i));
+    const label = (r.cur ? "This run · " : "Run " + (i + 1) + " · ") + Kit.daysText(r.len);
+    Kit.morph($("#scrubLabel"), label, { noWidth: true });
+    Kit.blurSwap($("#scrubNote"), r.cur ? "since " + Kit.fmt(r.start) + ", still going" : Kit.fmt(r.start) + " – " + Kit.fmt(r.end) + (r.note ? " · “" + r.note + "”" : ""));
+    if (!quiet) Kit.haptic(3);
+  }
+  const strip = $("#strip");
+  const pick = (e) => {
+    const bars = [...strip.querySelectorAll(".bar")];
+    let best = 0, dist = Infinity;
+    bars.forEach((b, i) => { const r = b.getBoundingClientRect(), d = Math.abs(e.clientX - (r.left + r.width / 2)); if (d < dist) { dist = d; best = i; } });
+    setBar(best);
+  };
+  strip.addEventListener("pointerdown", (e) => { strip.setPointerCapture(e.pointerId); strip._down = true; pick(e); });
+  strip.addEventListener("pointermove", (e) => { if (strip._down) pick(e); });
+  const up = () => { strip._down = false; setTimeout(() => !strip._down && setBar(runList.length - 1), Kit.ms(1400)); };
+  strip.addEventListener("pointerup", up); strip.addEventListener("pointercancel", up);
+
+  // ---------- Hold to reset ----------
+  Kit.holdButton($("#hold"), {
+    duration: 1400,
+    onComplete: () => {
+      const len = Kit.elapsed();
+      Kit.reset(null);
+      Kit.toast("Saved your " + Kit.daysText(len) + " run", "Undo", () => Kit.undoReset());
+      showUndo(len);
+    },
+  });
+  function showUndo(len) {
+    const u = $("#undo");
+    u.innerHTML = "Reset by mistake? <b>Undo</b> brings back " + Kit.daysText(len);
+    u.onclick = () => { Kit.undoReset(); };
+    u.animate([{ height: "0px", opacity: 0 }, { height: "22px", opacity: 1 }], { duration: Kit.ms(320), easing: Kit.EASE_OUT, fill: "forwards" });
+  }
+  function hideUndo() {
+    const u = $("#undo");
+    if (u.offsetHeight) u.animate([{ height: "22px", opacity: 1 }, { height: "0px", opacity: 0 }], { duration: Kit.ms(200), easing: "ease-out", fill: "forwards" });
+  }
+
+  // ---------- Rows ----------
+  function remindText() { return ev.reminder.on ? (ev.reminder.every === "day" ? "daily" : ev.reminder.every) + " at " + ev.reminder.time : "off"; }
+  function renderRemind() { Kit.morph($("#remindVal"), remindText()); }
+  $("#remind").addEventListener("click", () => {
+    const freq = [["off", "Off"], ["day", "Every day"], ["weekdays", "Weekdays"], ["Monday", "Mondays"]];
+    const times = ["8:00 am", "9:00 am", "12:30 pm", "6:00 pm", "9:00 pm"];
+    card.open($("#remind"), (b) => {
+      b.innerHTML =
+        '<div class="line26 fx"><span class="conn">Remind me</span><span class="word" id="rs"></span></div>' +
+        '<div class="lbl fx">How often</div><div class="chips fx" id="rf">' + freq.map(([k, l]) => '<button class="chip" data-k="' + k + '">' + l + "</button>").join("") + "</div>" +
+        '<div class="lbl fx">When</div><div class="chips fx" id="rt">' + times.map((t) => '<button class="chip" data-t="' + t + '">' + t + "</button>").join("") + "</div>";
+      const sync = () => {
+        Kit.morph(b.querySelector("#rs"), remindText());
+        b.querySelectorAll("#rf .chip").forEach((c) => c.classList.toggle("on", ev.reminder.on ? c.dataset.k === ev.reminder.every : c.dataset.k === "off"));
+        b.querySelectorAll("#rt .chip").forEach((c) => c.classList.toggle("on", c.dataset.t === ev.reminder.time && ev.reminder.on));
+      };
+      b.querySelectorAll("#rf .chip").forEach((c) => c.onclick = () => { Kit.haptic(3); ev.reminder.on = c.dataset.k !== "off"; if (ev.reminder.on) ev.reminder.every = c.dataset.k; sync(); renderRemind(); });
+      b.querySelectorAll("#rt .chip").forEach((c) => c.onclick = () => { Kit.haptic(3); ev.reminder.on = true; ev.reminder.time = c.dataset.t; sync(); renderRemind(); });
+      sync();
+    }, [{ label: "Done", onClick: () => card.close() }], { sourceRadius: 0, fadeIn: true });
+  });
+  $("#delete").addEventListener("click", () => {
+    card.open($("#delete"), (b) => {
+      b.innerHTML = '<div class="line26 fx"><span class="conn">Delete</span><span class="word">' + ev.title + '?</span></div>' +
+        '<p class="fx" style="margin:8px 0 0;font-size:15px;color:var(--label);line-height:1.45">Its ' + (ev.runs.length + 1) + " runs and every note go with it. Archive keeps them out of sight instead.</p>";
+    }, [{ label: "Cancel", kind: "ghost", onClick: () => card.close() }, { label: "Delete", kind: "danger", onClick: () => card.close(false) }], { sourceRadius: 0, fadeIn: true });
+  });
+  $("#share").addEventListener("click", () => Kit.toast("Share sheet opens here"));
+  $("#edit").addEventListener("click", () => {
+    card.open($("#edit"), (b) => {
+      b.innerHTML = ["Since|" + ev.title, "started|" + Kit.fmt(ev.startedAt), "goal|" + ev.goal + " days", "on|" + ev.theme]
+        .map((l) => { const [c, w] = l.split("|"); return '<div class="line26 fx"><span class="conn">' + c + '</span><span class="tok">' + w + "</span></div>"; }).join("");
+    }, [{ label: "Save", onClick: () => card.close() }], { sourceRadius: 19, fadeIn: true });
+  });
+
+  function renderAll(first) {
+    $("#since").textContent = "since " + ev.title;
+    renderCount(); renderGoal(first); renderFacts(); renderStrip(); renderRemind();
+    if (!ev.lastReset) hideUndo();
+  }
+  Kit.onChange(() => renderAll(false));
+  renderAll(true);
+  Kit.enter([$("#count"), $("#goal"), ...document.querySelectorAll("#facts .fx"), $("#hold"), document.querySelector(".section"), document.querySelector(".rows")], 80, 50);
+  Kit.tick(() => renderCount());
+})();
+</script>
+</body>
+</html>

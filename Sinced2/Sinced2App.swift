@@ -22,6 +22,9 @@ struct Sinced2App: App {
         
         ReviewPrompter.noteLaunch()
 
+        // Finishes tips that complete while the app wasn't showing the payment sheet
+        TipJar.shared.start()
+
         Self.applyAlloToNavigationBars()
         
         // Widget, Control Center and Siri resets can happen while the app is open
@@ -64,9 +67,9 @@ struct Sinced2App: App {
                     .environmentObject(viewModel)
                     // Allo for any text that doesn't set its own font
                     .font(.roundedBody)
-                    // Light text in the status bar over a dark milestone moment
-                    .preferredColorScheme(viewModel.celebrationIsDark ? .dark : .light)
+                    .preferredColorScheme(.light)
                     .onReceive(NotificationCenter.default.publisher(for: .didTapEventNotification)) { notification in
+                        SupportPrompter.shared.noteArrivedWithPurpose()
                         if let eventId = notification.userInfo?["eventId"] as? UUID {
                             viewModel.openEvent(id: eventId)
                         }
@@ -80,6 +83,7 @@ struct Sinced2App: App {
                     // Widget taps open sinced://event/<id>; sinced://widget-guide opens the guide
                     .onOpenURL { url in
                         guard url.scheme == "sinced" else { return }
+                        SupportPrompter.shared.noteArrivedWithPurpose()
                         if url.host == "widget-guide" {
                             WidgetGuideRouter.shared.isRequested = true
                             return
@@ -113,7 +117,11 @@ struct Sinced2App: App {
                 // Someone a week or more into a run may be happy to rate the app
                 if viewModel.hasCompletedOnboarding {
                     ReviewPrompter.considerOnForeground(events: viewModel.events)
+                    // Now and then, after a milestone or a share, a gentle ask for a tip
+                    SupportPrompter.shared.consider(viewModel: viewModel)
                 }
+            } else if newPhase == .background {
+                SupportPrompter.shared.noteBackground()
             }
         }
     }

@@ -1,0 +1,63 @@
+{
+  "identifier": "87F38FC3-6AE7-4E21-8CD5-7282F4E4E9BE",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "1.99",
+      "familyShareable": false,
+      "internalID": "2504513112",
+      "localizations": [
+        {
+          "description": "A small tip to support Sinced",
+          "displayName": "Tip: Coffee",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.kolteaditya.Sinced2.tip.small",
+      "referenceName": "Tip Coffee",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "4884615310",
+      "localizations": [
+        {
+          "description": "A medium tip to support Sinced",
+          "displayName": "Tip: Lunch",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.kolteaditya.Sinced2.tip.medium",
+      "referenceName": "Tip Lunch",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "9.99",
+      "familyShareable": false,
+      "internalID": "1970303953",
+      "localizations": [
+        {
+          "description": "A big tip to support Sinced",
+          "displayName": "Tip: Dinner",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.kolteaditya.Sinced2.tip.large",
+      "referenceName": "Tip Dinner",
+      "type": "Consumable"
+    }
+  ],
+  "settings": {
+    "_applicationInternalID": "6799975298",
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}
