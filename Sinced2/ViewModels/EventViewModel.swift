@@ -64,8 +64,56 @@ class EventViewModel: ObservableObject {
             events[0].startedAt = current
             events[0].history = history
         }
+        // Launch with -SincedScreenshots for App Store screenshots: a full,
+        // believable home in memory only (nothing is saved over real data)
+        if Self.screenshotMode {
+            events = Self.screenshotEvents()
+            archivedEvents = []
+            hasCompletedOnboarding = true
+            if userName.isEmpty { userName = "Maya" }
+        }
         #endif
     }
+
+    #if DEBUG
+    static var screenshotMode: Bool { ProcessInfo.processInfo.arguments.contains("-SincedScreenshots") }
+
+    private static func screenshotEvents() -> [SinceEvent] {
+        let day: TimeInterval = 86400
+        let now = Date()
+        func ago(_ days: Double) -> Date { now.addingTimeInterval(-days * day - 3 * 3600) }
+
+        // The first counter carries a few months of runs, with notes, for its page
+        var cursor = ago(23)
+        let caffeineStart = cursor
+        let notes = [0: "Friday drinks with the team", 1: "Deadline week", 3: "Flight at 6 am", 4: "Visiting home"]
+        var history: [Reset] = []
+        for (i, length) in [3, 11, 6, 18, 9, 14].enumerated() {
+            let start = cursor.addingTimeInterval(-Double(length) * day)
+            history.append(Reset(at: cursor, note: notes[i], previousStart: start))
+            cursor = start
+        }
+
+        var gymReset = [Reset(at: ago(112), note: "Knee was acting up", previousStart: ago(152))]
+        gymReset.append(Reset(at: ago(152), note: nil, previousStart: ago(161)))
+
+        return [
+            SinceEvent(title: "No caffeine", startedAt: caffeineStart, goalDays: 30, history: history,
+                       reminderSettings: ReminderSettings(isEnabled: true, reminderType: .daily),
+                       cardTheme: .waves, cardStyle: .classic),
+            SinceEvent(title: "Started the gym", startedAt: ago(112), goalDays: 180, history: gymReset,
+                       cardTheme: .mosaic, cardStyle: .ring),
+            SinceEvent(title: "Moved to Berlin", startedAt: ago(383), cardTheme: .clouds, cardStyle: .bigNumber),
+            SinceEvent(title: "Reading before bed", startedAt: ago(47), cardTheme: .puffs, cardStyle: .sentence),
+            SinceEvent(title: "Changed the bedsheets", startedAt: ago(9),
+                       history: [Reset(at: ago(9), note: nil, previousStart: ago(21))],
+                       cardTheme: .eyes, cardStyle: .classic),
+            SinceEvent(title: "No doomscrolling", startedAt: ago(4),
+                       history: [Reset(at: ago(4), note: "Election night", previousStart: ago(11))],
+                       cardTheme: .blooms, cardStyle: .classic),
+        ]
+    }
+    #endif
 
     /// Add a new event. Returns false if it couldn't be saved.
     @discardableResult
@@ -285,9 +333,13 @@ class EventViewModel: ObservableObject {
         // Launch with -SincedDemoMilestone to see the celebration on the first counter
         if ProcessInfo.processInfo.arguments.contains("-SincedDemoMilestone"), !demoMilestoneShown, let first = events.first {
             demoMilestoneShown = true
-            celebration = MilestoneCelebration(eventID: first.id, title: first.title, theme: first.cardTheme, days: 30, isGoal: false, isComeback: false)
+            // The last milestone this counter really passed, so the count lands on the truth
+            let reached = max(1, Milestones.previous(before: first.daysElapsed() + 1))
+            celebration = MilestoneCelebration(eventID: first.id, title: first.title, theme: first.cardTheme, days: reached, isGoal: false, isComeback: false)
             return
         }
+        // Screenshots stay still unless a milestone is asked for
+        if Self.screenshotMode { return }
         #endif
         guard let found = MilestoneLedger.nextCelebration(in: events) else { return }
         withAnimation(.easeOut(duration: 0.35)) { celebration = found }
