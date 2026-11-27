@@ -18,7 +18,10 @@ struct SelectEventIntent: WidgetConfigurationIntent {
     
     @Parameter(title: "Event")
     var selectedEvent: EventEntity?
-    
+
+    @Parameter(title: "Style", default: .classic)
+    var style: WidgetStyle
+
     @Parameter(title: "Reset button", default: true)
     var showsResetButton: Bool
     
@@ -27,6 +30,24 @@ struct SelectEventIntent: WidgetConfigurationIntent {
     init(selectedEvent: EventEntity?) {
         self.selectedEvent = selectedEvent
     }
+}
+
+// MARK: - Widget Style
+/// How a widget lays out its count. Independent of the event's theme, so
+/// every theme works in every style.
+enum WidgetStyle: String, AppEnum {
+    case classic
+    case bigNumber
+    case sentence
+    case ring
+
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Style"
+    static var caseDisplayRepresentations: [WidgetStyle: DisplayRepresentation] = [
+        .classic: "Classic",
+        .bigNumber: "Big number",
+        .sentence: "Sentence",
+        .ring: "Milestone ring"
+    ]
 }
 
 // MARK: - Second Event Entity (pair widget)
@@ -74,6 +95,9 @@ struct SelectEventPairIntent: WidgetConfigurationIntent {
     
     @Parameter(title: "Second event")
     var secondEvent: SecondEventEntity?
-    
+
+    @Parameter(title: "Style", default: .classic)
+    var style: WidgetStyle
+
     init() {}
 }
