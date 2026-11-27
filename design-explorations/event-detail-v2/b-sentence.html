@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Event Page · The Sentence</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .page { padding: 108px 0 140px; }
+  .top { position: absolute; top: 54px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 5; }
+  .thumb { width: 46px; height: 46px; border-radius: 14px; background: var(--t-bg) var(--t-pattern) center / cover; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06), 0 6px 16px -8px rgba(0,0,0,.3);
+    transition: transform .16s var(--ease-out); }
+  .thumb:active { transform: scale(.94); }
+
+  .para { padding: 0 26px; font-size: 31px; line-height: 41px; font-weight: 500; letter-spacing: -.02em; color: var(--conn); }
+  .para p { margin: 0 0 14px; text-wrap: pretty; }
+  .para b { color: var(--word); font-weight: 600; }
+  .para .tok { font-size: inherit; }
+  .para .big { font-variant-numeric: tabular-nums; }
+  .para .accent { color: var(--word); box-shadow: inset 0 -0.18em 0 color-mix(in srgb, var(--t-bg) 32%, transparent); border-radius: 2px; }
+
+  .rule { height: 1px; background: rgba(0,0,0,.08); margin: 26px 26px 18px; }
+  .label { padding: 0 26px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--label); }
+  .runs { list-style: none; margin: 10px 0 0; padding: 0 26px; }
+  .run { display: grid; grid-template-columns: 1fr auto; align-items: baseline; padding: 13px 0; border-bottom: 1px solid rgba(0,0,0,.05); }
+  .run b { font-size: 21px; font-weight: 600; color: var(--word); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 8px; }
+  .run .when { font-size: 14px; color: var(--label); }
+  .run .note { grid-column: 1 / -1; font-size: 14px; color: var(--label); margin-top: 3px; }
+  .run .dot { width: 8px; height: 8px; border-radius: 8px; background: var(--t-bg); box-shadow: 0 0 0 4px color-mix(in srgb, var(--t-bg) 18%, transparent); }
+  .run .bar { grid-column: 1 / -1; height: 4px; border-radius: 4px; background: #E7E5E0; margin-top: 9px; overflow: hidden; }
+  .run .bar i { display: block; height: 100%; background: #CFCCC5; border-radius: inherit; transform-origin: left; }
+  .run.cur .bar i { background: var(--t-bg); }
+  .stats { padding: 18px 26px 0; font-size: 21px; line-height: 30px; font-weight: 500; color: var(--conn); letter-spacing: -.01em; }
+  .stats b { color: var(--word); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .dock { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 40; display: flex; gap: 8px; padding: 8px; border-radius: 44px; background: rgba(255,255,255,.9);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 18px 40px -18px rgba(0,0,0,.3); }
+  .dock .reset { flex: 1; height: 56px; border-radius: 36px; background: var(--green); color: #fff; font: 600 17px var(--allo); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .dock .round { width: 56px; height: 56px; border-radius: 56px; background: var(--fill); display: grid; place-items: center; color: var(--word); flex: none; }
+  .dock svg { width: 20px; height: 20px; }
+  .dock button { transition: transform .16s var(--ease-out); }
+  .dock button:active { transform: scale(.95); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip { height: 34px; padding: 0 14px; border-radius: 34px; font: 500 14px var(--allo); background: var(--fill); color: #3a383a; transition: background-color .18s, color .18s, transform .14s var(--ease-out); }
+  .chip:active { transform: scale(.95); }
+  .chip.on { background: var(--word); color: #fff; }
+  .hint { font-size: 14px; color: var(--label); line-height: 1.45; margin-top: 12px; }
+  .name-in { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: 600 26px/38px var(--allo); color: var(--word); caret-color: var(--green); letter-spacing: -.012em; padding: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+  .tile { aspect-ratio: 1; border-radius: 16px; background-size: cover; position: relative; transition: transform .2s cubic-bezier(.3,1.4,.5,1); }
+  .tile:active { transform: scale(.92); }
+  .tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; transition: box-shadow .25s cubic-bezier(.3,1.4,.5,1); }
+  .tile.on::after { box-shadow: inset 0 0 0 3px var(--word), inset 0 0 0 5px #fff; }
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div class="stage">
+  <div class="device-wrap"><div class="device"><div class="screen" id="screen">
+    <div class="top"><button class="thumb" id="thumb" aria-label="Change the card"></button><button class="pill-btn">Done</button></div>
+    <div class="scroll" id="scroll"><div class="page">
+      <div class="para" id="para">
+        <p id="l1"></p><p id="l2"></p><p id="l3"></p><p id="l4"></p>
+      </div>
+      <div class="rule"></div>
+      <div class="label">The story so far</div>
+      <ul class="runs" id="runs"></ul>
+      <div class="stats" id="stats"></div>
+    </div></div>
+    <div class="dock">
+      <button class="reset" id="reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Reset</button>
+      <button class="round" id="share" aria-label="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>
+      <button class="round" id="more" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+    </div>
+  </div></div></div>
+
+  <aside class="notes">
+    <p class="eyebrow">Direction B</p>
+    <h1>The page reads like the add card</h1>
+    <p>The add card is a sentence you fill in. The event page is the same sentence, finished and still editable. There's no Edit mode: every bold word is a button.</p>
+    <h2>Try</h2>
+    <ul>
+      <li><b>"23 days"</b> cycles days, hours, months and years with a morph.</li>
+      <li>Tap <b>the name</b>, <b>the goal</b>, <b>the reminder</b> or the <b>card thumbnail</b>: each opens one small editor in the floating card, grown out of the word you tapped.</li>
+      <li><b>Reset</b> grows the same card out of the button: "Reset no caffeine, from now, with a note". Tap "now" to step back in time. Confirm, and the whole paragraph rewrites itself while the old run drops into the story.</li>
+      <li>The story is every run, with its note and a bar against your best.</li>
+    </ul>
+    <h2>Why</h2>
+    <ul>
+      <li>It's the most "Sinced" of the three: the add card and the event page share one language.</li>
+      <li>Words carry the facts ("5 days past your old best") instead of labels and boxes.</li>
+    </ul>
+  </aside>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+  Kit.mount("b-sentence.html");
+  const { event: ev } = Kit;
+  const $ = (s) => document.querySelector(s);
+  const card = new Kit.FloatingCard();
+  let unitIdx = Kit.UNITS.indexOf(ev.unit);
+  const plural = (n, w) => n.toLocaleString("en-GB") + " " + (n === 1 ? w : w + "s");
+
+  // ---------- The paragraph ----------
+  function line1() {
+    if (!$("#l1").dataset.built) {
+      $("#l1").innerHTML = 'It’s been <span class="tok big" data-go="unit"><span id="cnt"></span></span> since <span class="tok" data-go="name"><span id="nm"></span></span>.';
+      $("#l1").dataset.built = 1;
+    }
+    Kit.morph($("#cnt"), Kit.unitValue(Kit.UNITS[unitIdx]).text);
+    Kit.morph($("#nm"), ev.title.toLowerCase());
+  }
+  function line2() {
+    const s = Kit.stats();
+    if (s.resets === 0) return "Your first run, and already <b>" + Kit.daysText(s.current) + "</b> in.";
+    if (s.isBest) return "That’s your <b class=\"accent\">longest run</b> yet, <b>" + Kit.daysText(s.current - s.bestPast) + "</b> past your old best.";
+    const left = Math.ceil((s.bestPast - s.current) / Kit.DAY);
+    if (s.current < Kit.HOUR * 2) return "Run <b>" + s.runNo + "</b> starts now. Your best is <b>" + Kit.daysText(s.bestPast) + "</b>.";
+    return "Your best is <b>" + Kit.daysText(s.bestPast) + "</b>. <b>" + plural(left, "day") + "</b> to beat it.";
+  }
+  function line3() {
+    const t = Kit.target();
+    if (!ev.goal) return 'No goal yet. <span class="tok" data-go="goal">Set one</span>?';
+    if (t.kind === "goal") return "<b>" + plural(t.left, "day") + "</b> to go to your <span class=\"tok\" data-go=\"goal\">" + ev.goal + "-day goal</span>, on <b>" + Kit.fmt(t.date) + "</b>.";
+    return "You reached your <span class=\"tok\" data-go=\"goal\">" + ev.goal + "-day goal</span>. Set the next?";
+  }
+  function line4() {
+    if (!ev.reminder.on) return 'No reminders. <span class="tok" data-go="remind">Remind me</span>?';
+    const every = ev.reminder.every === "day" ? "every day" : ev.reminder.every === "weekdays" ? "on weekdays" : "every " + ev.reminder.every;
+    return 'Remind me <span class="tok" data-go="remind">' + every + '</span> at <span class="tok" data-go="remind">' + ev.reminder.time + "</span>.";
+  }
+  function renderPara(first) {
+    line1();
+    [["#l2", line2()], ["#l3", line3()], ["#l4", line4()]].forEach(([id, html]) => first ? ($(id).innerHTML = html) : Kit.blurSwap($(id), html));
+  }
+  $("#para").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-go]"); if (!t) return;
+    Kit.haptic(4);
+    ({ unit: cycleUnit, name: editName, goal: editGoal, remind: editRemind })[t.dataset.go](t);
+  });
+  function cycleUnit() { unitIdx = (unitIdx + 1) % Kit.UNITS.length; ev.unit = Kit.UNITS[unitIdx]; line1(); }
+
+  // ---------- The story ----------
+  function renderRuns(fresh) {
+    const now = Date.now(), cur = { start: ev.startedAt, end: now, cur: true };
+    const list = [cur, ...ev.runs];
+    const max = Math.max(...list.map((r) => r.end - r.start));
+    $("#runs").innerHTML = list.map((r) => {
+      const len = r.end - r.start;
+      return '<li class="run' + (r.cur ? " cur" : "") + '">' +
+        "<b>" + (r.cur ? '<i class="dot"></i>' : "") + Kit.daysText(len) + "</b>" +
+        '<span class="when">' + (r.cur ? "since " + Kit.fmt(r.start) : Kit.fmt(r.start) + " – " + Kit.fmt(r.end)) + "</span>" +
+        (r.note ? '<span class="note">“' + r.note + "”</span>" : "") +
+        '<span class="bar"><i style="transform:scaleX(' + Math.max(0.03, len / max) + ')"></i></span></li>';
+    }).join("");
+    if (fresh) Kit.enter($("#runs").children, 120, 45);
+    const s = Kit.stats();
+    $("#stats").innerHTML = "<b>" + plural(s.resets, "reset") + "</b>, about <b>" + Kit.daysText(s.average) + "</b> a run, and <b>" + Kit.daysText(now - ev.firstStartedAt) + "</b> since you first started.";
+  }
+
+  // ---------- Editors, all in the floating card ----------
+  function editName(src) {
+    card.open(src, (b) => {
+      b.innerHTML = '<div class="line26"><span class="conn">Since</span><input class="name-in" maxlength="40" value="' + ev.title + '"></div><div class="hint fx">Renaming keeps every run and note.</div>';
+      const input = b.querySelector("input");
+      setTimeout(() => { input.focus(); input.select(); }, Kit.ms(250));
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") done(); });
+    }, [{ label: "Done", onClick: () => done() }], { sourceRadius: 12, fadeIn: true });
+    function done() { const v = card.body.querySelector("input").value.trim(); if (v) ev.title = v; card.close(true, () => renderPara()); }
+  }
+  function editGoal(src) {
+    const stops = [0, 7, 14, 30, 60, 90, 100, 180, 365];
+    card.open(src, (b) => {
+      b.innerHTML = '<div class="line26"><span class="conn">goal</span><span class="word" id="gw"></span></div>' +
+        '<div class="chips fx">' + stops.map((g) => '<button class="chip" data-g="' + g + '">' + (g ? g + " days" : "No goal") + "</button>").join("") + "</div>" +
+        '<div class="hint fx" id="gn"></div>';
+      const sync = () => {
+        Kit.morph(b.querySelector("#gw"), ev.goal ? ev.goal + " days" : "not set");
+        b.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", +c.dataset.g === ev.goal));
+        const at = ev.startedAt + ev.goal * Kit.DAY;
+        Kit.blurSwap(b.querySelector("#gn"), !ev.goal ? "Just counting, no finish line." : at < Date.now() ? "You’re already past this one." : "You’ll get there on " + Kit.fmt(at, true) + ".");
+      };
+      b.querySelectorAll(".chip").forEach((c) => c.onclick = () => { Kit.haptic(3); ev.goal = +c.dataset.g; sync(); });
+      sync();
+    }, [{ label: "Done", onClick: () => card.close(true, () => renderPara()) }], { sourceRadius: 12, fadeIn: true });
+  }
+  function editRemind(src) {
+    const freq = [["off", "Off"], ["day", "Every day"], ["weekdays", "Weekdays"], ["Monday", "Mondays"]];
+    const times = ["8:00 am", "9:00 am", "12:30 pm", "6:00 pm", "9:00 pm"];
+    card.open(src, (b) => {
+      b.innerHTML = '<div class="line26"><span class="conn">Remind me</span><span class="word" id="rw"></span></div>' +
+        '<div class="chips fx" id="rf">' + freq.map(([k, l]) => '<button class="chip" data-k="' + k + '">' + l + "</button>").join("") + "</div>" +
+        '<div class="chips fx" id="rt">' + times.map((t) => '<button class="chip" data-t="' + t + '">' + t + "</button>").join("") + "</div>";
+      const sync = () => {
+        const r = ev.reminder;
+        Kit.morph(b.querySelector("#rw"), r.on ? (r.every === "day" ? "every day" : r.every === "weekdays" ? "on weekdays" : "every " + r.every) + " at " + r.time : "never");
+        b.querySelectorAll("#rf .chip").forEach((c) => c.classList.toggle("on", r.on ? c.dataset.k === r.every : c.dataset.k === "off"));
+        b.querySelectorAll("#rt .chip").forEach((c) => c.classList.toggle("on", r.on && c.dataset.t === r.time));
+      };
+      b.querySelectorAll("#rf .chip").forEach((c) => c.onclick = () => { Kit.haptic(3); ev.reminder.on = c.dataset.k !== "off"; if (ev.reminder.on) ev.reminder.every = c.dataset.k; sync(); });
+      b.querySelectorAll("#rt .chip").forEach((c) => c.onclick = () => { Kit.haptic(3); ev.reminder.on = true; ev.reminder.time = c.dataset.t; sync(); });
+      sync();
+    }, [{ label: "Done", onClick: () => card.close(true, () => renderPara()) }], { sourceRadius: 12, fadeIn: true });
+  }
+  $("#thumb").addEventListener("click", () => {
+    card.open($("#thumb"), (b) => {
+      b.innerHTML = '<div class="line26"><span class="conn">on</span><span class="word" id="tw"></span></div><div class="tiles">' +
+        Object.keys(Kit.THEMES).map((t) => '<button class="tile fx" data-t="' + t + '" style="background-image:url(' + Kit.pattern(t) + ')"></button>').join("") + "</div>";
+      const sync = () => { Kit.morph(b.querySelector("#tw"), ev.theme); b.querySelectorAll(".tile").forEach((x) => x.classList.toggle("on", x.dataset.t === ev.theme)); };
+      b.querySelectorAll(".tile").forEach((x) => x.onclick = () => { Kit.haptic(3); Kit.setTheme(x.dataset.t); sync(); });
+      sync();
+    }, [{ label: "Done", onClick: () => card.close() }], { sourceRadius: 14, fadeIn: false });
+  });
+
+  // ---------- Reset, in the same card ----------
+  const BACK = [["now", 0], ["an hour ago", Kit.HOUR], ["this morning", null], ["yesterday", Kit.DAY]];
+  $("#reset").addEventListener("click", () => {
+    let back = 0, note = "";
+    const when = () => {
+      const [, offset] = BACK[back];
+      if (offset === null) { const d = new Date(); d.setHours(8, 0, 0, 0); return d.getTime(); }
+      return Date.now() - offset;
+    };
+    card.open($("#reset"), (b) => {
+      b.innerHTML =
+        '<div class="line26"><span class="conn">Reset</span><span class="word">' + ev.title.toLowerCase() + "</span></div>" +
+        '<div class="line26 fx"><span class="conn">from</span><span class="tok" id="from"><span id="fw"></span></span></div>' +
+        '<div class="line26 fx" id="noteLine"><span class="conn">with</span><span class="tok" id="noteTok">a note</span></div>' +
+        '<div class="hint fx" id="kept"></div>';
+      const sync = () => {
+        Kit.morph(b.querySelector("#fw"), BACK[back][0]);
+        Kit.blurSwap(b.querySelector("#kept"), "Your <b style='color:var(--word)'>" + Kit.daysText(when() - ev.startedAt) + "</b> run goes into the story. The first start, " + Kit.fmt(ev.firstStartedAt, true) + ", stays.");
+      };
+      b.querySelector("#from").onclick = () => { Kit.haptic(3); back = (back + 1) % BACK.length; sync(); };
+      b.querySelector("#noteTok").onclick = () => {
+        const line = b.querySelector("#noteLine");
+        line.innerHTML = '<span class="conn">with</span><input class="name-in" placeholder="what happened?" maxlength="80">';
+        const i = line.querySelector("input"); i.focus(); i.oninput = () => note = i.value;
+      };
+      sync();
+    }, [
+      { label: "Cancel", kind: "ghost", onClick: () => card.close() },
+      { label: "Reset", onClick: () => {
+          const len = when() - ev.startedAt;
+          card.close(true, () => {
+            Kit.reset(note.trim(), when());
+            Kit.toast("Saved your " + Kit.daysText(len) + " run", "Undo", () => Kit.undoReset());
+          });
+        } },
+    ], { sourceRadius: 36 });
+  });
+  $("#more").addEventListener("click", () => {
+    card.open($("#more"), (b) => {
+      b.innerHTML = '<div class="line26"><span class="conn">Delete</span><span class="word">' + ev.title.toLowerCase() + '?</span></div><div class="hint fx">Its ' + (ev.runs.length + 1) + " runs and every note go with it. Archive hides it from home but keeps it all.</div>";
+    }, [{ label: "Archive", kind: "ghost", onClick: () => card.close() }, { label: "Delete", kind: "danger", onClick: () => card.close(false) }], { sourceRadius: 28 });
+  });
+  $("#share").addEventListener("click", () => Kit.toast("Share sheet opens here"));
+
+  Kit.onChange(() => { renderPara(); renderRuns(true); });
+  renderPara(true); renderRuns(false);
+  Kit.enter([...document.querySelectorAll("#para p")], 80, 70);
+  Kit.enter([$(".rule"), $(".label"), ...$("#runs").children, $("#stats")], 360, 40);
+  Kit.tick(() => line1());
+})();
+</script>
+</body>
+</html>

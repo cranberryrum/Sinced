@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget Nudge Sentence</title>
+<link rel="stylesheet" href="nudge.css">
+<style>
+  .sent { padding: 20px 0 16px; }
+  .line { font: 500 25px/1.22 var(--allo); letter-spacing: -.012em; color: var(--conn); padding: 0 44px 0 20px; margin: 0 0 16px; }
+  .line b { color: var(--word); font-weight: 600; }
+  .line .w { display: inline-block; opacity: 0; transform: translateY(6px); }
+  .line .w.on { opacity: 1; transform: none; transition: opacity .3s var(--ease-out), transform .4s var(--ease-out); }
+  .row { display: flex; gap: 10px; overflow-x: auto; padding: 4px 20px 6px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .row::-webkit-scrollbar { display: none; }
+  .opt { flex: none; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; transform: translateY(8px); }
+  .opt.on { opacity: 1; transform: none; transition: opacity .3s var(--ease-out), transform .4s var(--ease-out); }
+  .opt .face { height: 108px; border-radius: 26px; display: grid; place-items: center; box-shadow: 0 0 0 2px transparent; transition: box-shadow .2s var(--ease-out), transform .16s var(--ease-out); }
+  .opt:active .face { transform: scale(.97); }
+  .opt.sel .face { box-shadow: 0 0 0 2.5px var(--word); }
+  .opt .face .wsmall { width: 108px; border-radius: 26px; }
+  .opt .face .wmed { width: 230px; height: 108px; border-radius: 26px; }
+  .opt .face.lockf { width: 160px; background: linear-gradient(160deg, #273047, #3d2f3a); color: #fff; font-family: var(--allo); flex-direction: column; display: flex; justify-content: center; align-items: center; gap: 6px; }
+  .lockf .t { font: 600 30px/1 var(--allo); }
+  .lockf .r { padding: 5px 10px; border-radius: 10px; background: rgba(255,255,255,.18); font: 500 11px var(--allo); }
+  .opt .lbl { font: 500 13px var(--allo); color: var(--label); }
+  .opt.sel .lbl { color: var(--word); }
+  .btns { padding: 14px 16px 0; }
+  .how { position: relative; overflow: hidden; }
+  .how span { display: inline-block; }
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div class="stage">
+  <div class="device-wrap"><div class="device"><div class="screen" id="screen"></div></div></div>
+  <div class="notes">
+    <p class="eyebrow">Direction D</p>
+    <h1>Sentence</h1>
+    <p>Speaks the way the rest of Sinced does now, in one big sentence with the counter's name in bold, like the Settings header and the add card. Then the three widgets to choose from, side by side.</p>
+    <h2>What changes</h2>
+    <ul>
+      <li><b>Same voice as the app.</b> "<b>No sugar</b> could live on your <b>Home Screen</b>."</li>
+      <li><b>Choice up front.</b> Small, Medium and Lock Screen in a row you can swipe. Tapping one selects it and the button says what it'll do.</li>
+      <li>Biggest of the five on screen: worth it once, right after the first counter, and it folds away for good after.</li>
+    </ul>
+    <h2>Motion</h2>
+    <ul>
+      <li>Words rise 6px into place, 40ms apart; widgets follow, 50ms apart, 400ms strong ease-out.</li>
+      <li>Selection ring and button label change instantly-feeling (200ms), since you'll tap through them.</li>
+    </ul>
+  </div>
+</div>
+<script src="nudge.js"></script>
+<script>
+  const N = Nudge;
+  N.mount("d-sentence.html", {
+    async play(_, cancelled) {
+      const words = [["b", N.event.title], ["", "could"], ["", "live"], ["", "on"], ["", "your"], ["b", "Home Screen."]];
+      const line = words.map(([t, w]) => `<span class="w">${t ? "<b>" + w + "</b>" : w}</span>`).join(" ");
+      const nudge = N.html(`
+        <div class="nudge nudge-in sent">
+          <button class="x" aria-label="Dismiss"><i>${N.X}</i></button>
+          <p class="line">${line}</p>
+          <div class="row">
+            <button class="opt sel" data-l="Add the small one"><span class="face">${N.smallWidget()}</span><span class="lbl">Small</span></button>
+            <button class="opt" data-l="Add the medium one"><span class="face">${N.medWidget()}</span><span class="lbl">Medium</span></button>
+            <button class="opt" data-l="Add to Lock Screen"><span class="face lockf"><span class="t">9:41</span><span class="r">0d · since ${N.event.title}</span></span><span class="lbl">Lock Screen</span></button>
+          </div>
+          <div class="btns"><button class="btn ghost later">Later</button><button class="btn how"><span>Add the small one</span></button></div>
+        </div>`);
+      N.openSlot(nudge);
+      const how = nudge.querySelector(".how span");
+      nudge.querySelectorAll(".opt").forEach((o) => o.onclick = () => {
+        nudge.querySelectorAll(".opt").forEach((x) => x.classList.toggle("sel", x === o));
+        if (how.textContent === o.dataset.l) return;
+        how.animate([{ opacity: 1, transform: "translateY(0)" }, { opacity: 0, transform: "translateY(-6px)" }], { duration: N.ms(90), easing: "ease-out" }).finished.then(() => {
+          how.textContent = o.dataset.l;
+          how.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: N.ms(160), easing: N.EASE_OUT });
+        });
+      });
+      nudge.querySelector(".x").onclick = () => N.closeSlot();
+      nudge.querySelector(".later").onclick = () => N.closeSlot();
+      nudge.querySelector(".btn.how").onclick = () => N.toast("Opens the guide at this size");
+      const stagger = (els, gap, start) => els.forEach((el, k) => setTimeout(() => {
+        if (cancelled()) return;
+        el.style.transitionDuration = N.ms(300) / 1000 + "s, " + N.ms(400) / 1000 + "s"; el.classList.add("on");
+      }, N.ms(start + k * gap)));
+      stagger([...nudge.querySelectorAll(".w")], 40, 140);
+      stagger([...nudge.querySelectorAll(".opt")], 50, 380);
+    },
+  });
+</script>
+</body>
+</html>

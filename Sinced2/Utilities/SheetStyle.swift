@@ -81,6 +81,8 @@ private struct FittedSheet: ViewModifier {
                 )
             )
             .presentationDragIndicator(.visible)
+            // The sheet's corners follow the screen's own
+            .deviceCornerSheet()
             // Solid white instead of the system's glass, so text keeps full
             // contrast whatever colourful cards sit behind the sheet
             .presentationBackground(Color.white)

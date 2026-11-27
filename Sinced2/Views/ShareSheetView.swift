@@ -2,160 +2,64 @@
 //  ShareSheetView.swift
 //  Sinced2
 //
-//  Bottom sheet for sharing events with a beautiful card preview
+//  Share the card: the counter in one of three designs (Stamp, Month,
+//  Sentence), square or story, always in its own theme. Save or share.
 //
 
 import SwiftUI
 import Photos
-import PhotosUI
 
 struct ShareSheetView: View {
     let event: SinceEvent
     @Environment(\.dismiss) var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("share.design") private var designRaw = ShareDesign.stamp.rawValue
+    @AppStorage("share.format") private var formatRaw = ShareFormat.square.rawValue
     @State private var isSharing = false
     @State private var showingSaveSuccess = false
     @State private var renderedImage: UIImage?
     @State private var optimizedImageData: Data?
-    @State private var selectedTheme: ShareTheme
-    @State private var isChangingTheme = false
-    @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var previewImageData: Data?
-    @State private var showPhotoPicker = false
     @State private var saveError: SaveError?
     @State private var didShareOrSave = false
-    
+    @Namespace private var knob
+
     private enum SaveError: Identifiable {
         case permissionDenied, failed
         var id: Self { self }
     }
-    
+
     /// Set when sharing from a milestone or goal moment, for the message
     var moment: ShareMessage.Moment? = nil
 
     init(event: SinceEvent, moment: ShareMessage.Moment? = nil) {
         self.event = event
         self.moment = moment
-        _selectedTheme = State(initialValue: ShareSheetView.defaultShareTheme(for: event))
     }
-    
+
+    private var design: ShareDesign { ShareDesign(rawValue: designRaw) ?? .stamp }
+    private var format: ShareFormat { ShareFormat(rawValue: formatRaw) ?? .square }
+
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
-                    .frame(height: 10)
-                
-                // Card Preview
-                ZStack {
-                    ShareableCardPreview(event: previewEvent, theme: selectedTheme)
-                        .scaleEffect(isChangingTheme ? 0.97 : (isSharing ? 0.95 : 1.0))
-                        .blur(radius: isChangingTheme ? 3 : 0)
-                        .opacity(isChangingTheme ? 0.8 : 1.0)
-                        .animation(.spring(response: 0.22, dampingFraction: 0.95), value: isChangingTheme)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSharing)
-                }
-                .padding(.horizontal, 40)
-                .padding(.vertical, 30) // Extra vertical padding for shadows
-                .sheetEntrance(0)
-                
-                // Theme Selection
-                VStack(spacing: 12) {
-                    Text("Theme")
-                        .font(.allo(14, weight: .semibold))
-                        .foregroundColor(.primary.opacity(0.4))
-                    
-                    HStack(spacing: 16) {
-                        ForEach(themeOptions) { theme in
-                            Button(action: {
-                                handleThemeSelection(theme)
-                            }) {
-                                themeDot(for: theme)
-                            }
-                            .buttonStyle(ThemeDotButtonStyle())
-                        }
-                    }
-                }
-                .padding(.vertical, 10)
-                .sheetEntrance(1)
-                
-                Spacer()
-                
-                // Action Buttons
-                VStack(spacing: 12) {
-                    // Share Button
-                    Button(action: shareImage) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 18, weight: .semibold))
-                            Text("Share")
-                                .font(.allo(17, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.primaryGreen)
-                        )
-                    }
-                    .buttonStyle(PressableButtonStyle())
-                    .disabled(isSharing)
-                    
-                    // Save to Photos Button
-                    Button(action: saveToPhotos) {
-                        HStack(spacing: 10) {
-                            Image(systemName: showingSaveSuccess ? "checkmark" : "square.and.arrow.down")
-                                .font(.system(size: 18, weight: .semibold))
-                                // The arrow turns into the tick instead of swapping
-                                .contentTransition(.symbolEffect(.replace))
-                            Text(showingSaveSuccess ? "Saved!" : "Save to Photos")
-                                .font(.allo(17, weight: .semibold))
-                                .contentTransition(.opacity)
-                        }
-                        .foregroundColor(showingSaveSuccess ? .green : .primaryGreen)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(showingSaveSuccess ? Color.green.opacity(0.1) : Color.primaryGreen.opacity(0.1))
-                        )
-                    }
-                    .buttonStyle(PressableButtonStyle())
-                    .disabled(isSharing || showingSaveSuccess)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 30)
-                .sheetEntrance(2)
-            }
-            .background(Color(UIColor.systemBackground))
-            .navigationTitle("Share Event")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
+        VStack(spacing: 0) {
+            topBar
+            preview
+            formatSwitch.padding(.top, 4)
+            designPicker.padding(.top, 18)
+            actions.padding(.top, 20)
         }
+        .padding(.bottom, 12)
+        .background(GrainBackground(color: Color(hex: "F3F2F0")).ignoresSafeArea())
         .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
-        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
-        .onAppear {
-            // Pre-render the image
-            Task {
-                await renderImage()
-            }
-        }
+        .deviceCornerSheet()
+        .presentationDragIndicator(.hidden)
+        .task { await renderImage() }
+        .onChange(of: designRaw) { _, _ in Task { await renderImage() } }
+        .onChange(of: formatRaw) { _, _ in Task { await renderImage() } }
         .onDisappear {
             // Asked once this sheet is gone, so the two never stack
             if didShareOrSave {
                 ReviewPrompter.considerAfterShare(events: [event])
-            }
-        }
-        .onChange(of: selectedPhotoItem) { _, newItem in
-            Task {
-                await loadPreviewImage(from: newItem)
+                SupportPrompter.shared.noteShare(title: event.title)
             }
         }
         .alert(item: $saveError) { error in
@@ -180,169 +84,164 @@ struct ShareSheetView: View {
             }
         }
     }
-    
-    private var themeOptions: [ShareTheme] {
-        if event.imageData != nil {
-            return ShareTheme.allCases
-        }
-        
-        return [.blue, .green, .red, .image]
-    }
-    
-    private var previewEvent: SinceEvent {
-        var previewEvent = event
-        previewEvent.imageData = previewImageData ?? event.imageData
-        return previewEvent
-    }
-    
-    private var currentImageData: Data? {
-        previewImageData ?? event.imageData
-    }
-    
-    private static func defaultShareTheme(for event: SinceEvent) -> ShareTheme {
-        if event.imageData != nil {
-            return .image
-        }
-        
-        switch event.cardTheme {
-        case .clouds, .waves:
-            return .green
-        case .circles, .puffs:
-            return .blue
-        case .mosaic, .eyes, .blooms, .steps:
-            return .red
-        case .custom:
-            return .blue
-        }
-    }
-    
-    @ViewBuilder
-    private func themeDot(for theme: ShareTheme) -> some View {
+
+    // MARK: Pieces
+
+    private var topBar: some View {
         ZStack {
-            if theme == .image {
-                // Image theme circle
-                if let imageData = currentImageData, let uiImage = UIImage(data: imageData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 36, height: 36)
-                        .clipShape(Circle())
-                } else {
-                    Circle()
-                        .fill(Color(UIColor.secondarySystemBackground))
-                        .frame(width: 36, height: 36)
-                        .overlay(Image(systemName: "photo").font(.system(size: 12)).foregroundColor(.secondary))
+            Text("Share the card")
+                .font(.allo(17, weight: .semibold))
+                .foregroundStyle(CardText.word)
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(CardText.word)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(Color.white).shadow(color: .black.opacity(0.06), radius: 8, y: 2))
                 }
-            } else {
-                // Colored theme circle
-                Circle()
-                    .fill(theme.backgroundColor)
-                    .frame(width: 36, height: 36)
+                .buttonStyle(PressableButtonStyle())
+                .accessibilityLabel("Close")
+                Spacer()
             }
-            
-            // Selection ring with dissolve transition
-            Circle()
-                .stroke(Color.primaryGreen, lineWidth: 2)
-                .frame(width: 44, height: 44)
-                .opacity(selectedTheme == theme ? 1 : 0)
-                .scaleEffect(selectedTheme == theme ? 1.0 : 0.8)
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedTheme)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+    }
+
+    private var preview: some View {
+        GeometryReader { proxy in
+            let size = format.size
+            let k = min((proxy.size.width - 64) / size.width, (proxy.size.height - 24) / size.height)
+            ShareCard(event: event, design: design, format: format)
+                .scaleEffect(k)
+                .frame(width: size.width * k, height: size.height * k)
+                .clipShape(RoundedRectangle(cornerRadius: 28 * k, style: .continuous))
+                .shadow(color: .black.opacity(0.28), radius: 24, y: 18)
+                .scaleEffect(isSharing ? 0.97 : 1)
+                .id("\(designRaw)-\(formatRaw)")
+                .transition(reduceMotion ? AnyTransition.opacity : AnyTransition(.blurReplace).combined(with: .scale(scale: 0.97)))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(design.name) card, \(format.name.lowercased())")
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var formatSwitch: some View {
+        HStack(spacing: 0) {
+            ForEach(ShareFormat.allCases) { f in
+                let on = f == format
+                Button {
+                    guard !on else { return }
+                    HapticManager.shared.selection()
+                    withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.3)) { formatRaw = f.rawValue }
+                } label: {
+                    Text(f.name)
+                        .font(.allo(14, weight: .semibold))
+                        .foregroundStyle(on ? CardText.word : CardText.label)
+                        .padding(.horizontal, 16)
+                        .frame(height: 32)
+                        .background {
+                            if on {
+                                Capsule().fill(Color.white)
+                                    .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
+                                    .matchedGeometryEffect(id: "knob", in: knob)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(3)
+        .background(Capsule().fill(Color.black.opacity(0.05)))
+    }
+
+    private var designPicker: some View {
+        HStack(spacing: 14) {
+            ForEach(ShareDesign.allCases) { d in
+                let on = d == design
+                Button {
+                    guard !on else { return }
+                    HapticManager.shared.selection()
+                    withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.28)) { designRaw = d.rawValue }
+                } label: {
+                    VStack(spacing: 6) {
+                        ShareCard(event: event, design: d, format: .square)
+                            .scaleEffect(64 / 360)
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.black.opacity(0.06)))
+                            .padding(4)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .strokeBorder(CardText.word, lineWidth: 2)
+                                    .opacity(on ? 1 : 0)
+                                    .scaleEffect(on ? 1 : 0.92)
+                            )
+                        Text(d.name)
+                            .font(.allo(13, weight: .semibold))
+                            .foregroundStyle(on ? CardText.word : CardText.label)
+                    }
+                }
+                .buttonStyle(PressableButtonStyle())
+                .accessibilityLabel(d.name)
+                .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
+            }
         }
     }
-    
+
+    private var actions: some View {
+        HStack(spacing: 10) {
+            Button(action: saveToPhotos) {
+                HStack(spacing: 8) {
+                    Image(systemName: showingSaveSuccess ? "checkmark" : "arrow.down.to.line")
+                        .font(.system(size: 17, weight: .semibold))
+                        .contentTransition(.symbolEffect(.replace))
+                    Text(showingSaveSuccess ? "Saved" : "Save")
+                        .font(.allo(17, weight: .semibold))
+                        .contentTransition(.opacity)
+                }
+                .foregroundStyle(showingSaveSuccess ? Color.primaryGreen : CardText.word)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(Capsule().fill(Color.white).shadow(color: .black.opacity(0.05), radius: 8, y: 2))
+            }
+            .buttonStyle(PressableButtonStyle())
+            .disabled(isSharing || showingSaveSuccess)
+
+            Button(action: shareImage) {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 17, weight: .semibold))
+                    Text("Share").font(.allo(17, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(Capsule().fill(CardText.word))
+            }
+            .buttonStyle(PressableButtonStyle())
+            .disabled(isSharing)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: Rendering
+
     @MainActor
     private func renderImage() async {
-        let size = CGSize(width: 1080, height: 1080)
-        let cardView = ShareableCardView(event: previewEvent, cardSize: size, theme: selectedTheme)
-        // Render at 2x scale for good quality while keeping file size reasonable
-        renderedImage = cardView.renderToImage(size: size, scale: 2.0)
-        // Pre-generate optimized JPEG data (0.85 quality keeps file around 2-6 MB)
-        optimizedImageData = cardView.renderToJPEGData(size: size, scale: 2.0, compressionQuality: 0.85)
+        let card = ShareCard(event: event, design: design, format: format)
+        renderedImage = card.renderToImage(size: format.size, scale: 3)
+        optimizedImageData = renderedImage?.jpegData(compressionQuality: 0.9)
     }
-    
-    private func handleThemeSelection(_ theme: ShareTheme) {
-        if theme == .image, event.imageData == nil, previewImageData == nil {
-            HapticManager.shared.light()
-            showPhotoPicker = true
-            return
-        }
-        
-        guard selectedTheme != theme else { return }
-        
-        HapticManager.shared.light()
-        selectedTheme = theme
-        animateThemeChange()
-        
-        Task {
-            await renderImage()
-        }
-    }
-    
-    private func animateThemeChange() {
-        withAnimation(.spring(response: 0.22, dampingFraction: 0.95)) {
-            isChangingTheme = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.spring(response: 0.22, dampingFraction: 0.95)) {
-                isChangingTheme = false
-            }
-        }
-    }
-    
-    private func loadPreviewImage(from item: PhotosPickerItem?) async {
-        guard let item else { return }
-        
-        do {
-            guard let data = try await item.loadTransferable(type: Data.self),
-                  let uiImage = UIImage(data: data),
-                  let processedData = processPreviewImage(uiImage) else {
-                return
-            }
-            
-            await MainActor.run {
-                previewImageData = processedData
-                selectedTheme = .image
-                animateThemeChange()
-            }
-            
-            await renderImage()
-        } catch {
-            print("Error loading preview image: \(error)")
-        }
-    }
-    
-    /// Keep preview images square and reasonably sized for sharing.
-    private func processPreviewImage(_ image: UIImage) -> Data? {
-        let size = min(image.size.width, image.size.height)
-        let origin = CGPoint(
-            x: (image.size.width - size) / 2,
-            y: (image.size.height - size) / 2
-        )
-        
-        guard let cgImage = image.cgImage?.cropping(to: CGRect(origin: origin, size: CGSize(width: size, height: size))) else {
-            return image.jpegData(compressionQuality: 0.85)
-        }
-        
-        let croppedImage = UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
-        let maxSize: CGFloat = 1200
-        let scale = min(maxSize / size, 1)
-        let newSize = CGSize(width: size * scale, height: size * scale)
-        
-        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
-        croppedImage.draw(in: CGRect(origin: .zero, size: newSize))
-        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        return resizedImage?.jpegData(compressionQuality: 0.85)
-    }
-    
-    /// Goes along with the card so whoever receives it can tap through to the app
+
     /// The streak, the event and a link to Sinced, sent along with the card
     private var shareText: String {
         ShareMessage.text(for: event, moment: moment)
     }
-    
+
     private func shareImage() {
         isSharing = true
         
@@ -469,15 +368,6 @@ struct ShareSheetView: View {
                 }
             }
         }
-    }
-}
-
-/// Button style for theme dots with touch scale effect
-struct ThemeDotButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 

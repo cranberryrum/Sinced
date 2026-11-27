@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget Nudge Directions</title>
+<link rel="stylesheet" href="nudge.css">
+<style>
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font: 600 40px/1.05 var(--allo); letter-spacing: -.025em; margin: 8px 0 12px; max-width: 18em; text-wrap: balance; }
+  .lede { color: var(--muted); font-size: 17px; max-width: 42em; margin: 0 0 36px; text-wrap: pretty; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+  .opt { display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 22px; transition: transform .16s var(--ease-out), border-color .2s; }
+  @media (hover: hover) and (pointer: fine) { .opt:hover { border-color: var(--ink); } }
+  .opt:active { transform: scale(.99); }
+  .opt .k { font: 600 12px var(--allo); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .opt h2 { font: 600 24px/1.15 var(--allo); margin: 6px 0 8px; letter-spacing: -.015em; }
+  .opt p { margin: 0 0 14px; color: var(--muted); font-size: 15px; text-wrap: pretty; }
+  .opt .go { margin-top: auto; font: 600 15px var(--allo); }
+  .audit { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .audit { grid-template-columns: 1fr; } }
+  .audit div { border: 1px solid var(--line); border-radius: 20px; padding: 20px 22px; }
+  .audit h3 { margin: 0 0 10px; font: 600 15px var(--allo); }
+  .audit ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14.5px; }
+  .audit li { margin-bottom: 6px; }
+  .brand { font: 600 15px var(--allo); color: var(--ink); }
+</style>
+</head>
+<body>
+<div id="chrome"><a class="brand" href="index.html">Sinced <span>/ Widget nudge</span></a></div>
+<div class="wrap">
+  <p class="eyebrow">Sinced · Widget nudge</p>
+  <h1>Five ways to get someone's first counter onto their Home Screen</h1>
+  <p class="lede">Every direction plays the real moment: the first counter lands on Home, then the nudge arrives. Use Replay and Slow ×4 at the top of each page, and the swatches to try other card patterns.</p>
+
+  <a class="opt" href="a-window.html" style="margin-bottom:16px;border-color:var(--ink)">
+    <span class="k">Direction A · recommended, with E's steps behind "Show me how"</span><h2>Window</h2>
+    <p>A tiny Home Screen with an empty widget spot, and the counter you just made flies into it. The idea lands before anyone reads a word.</p>
+    <span class="go">Open →</span>
+  </a>
+  <div class="grid2">
+    <a class="opt" href="b-callout.html"><span class="k">Direction B</span><h2>Callout</h2>
+      <p>Grows out of the new counter like a tip, with Small, Medium and Lock Screen previewed inside. The grid doesn't move.</p><span class="go">Open →</span></a>
+    <a class="opt" href="c-lock.html"><span class="k">Direction C</span><h2>Lock Screen</h2>
+      <p>A little Lock Screen wakes up and the count appears under the clock. Sells the glance, not the chore.</p><span class="go">Open →</span></a>
+    <a class="opt" href="d-sentence.html"><span class="k">Direction D</span><h2>Sentence</h2>
+      <p>"<b>No sugar</b> could live on your <b>Home Screen</b>." Sinced's own voice, then the three widgets side by side to pick from.</p><span class="go">Open →</span></a>
+    <a class="opt" href="e-steps.html"><span class="k">Direction E</span><h2>Steps inline</h2>
+      <p>Small like today's card; tap it and a 20-second walkthrough plays right there. No separate guide sheet.</p><span class="go">Open →</span></a>
+  </div>
+
+  <div class="audit">
+    <div><h3>What today's card gets wrong</h3><ul>
+      <li>Generic: "Add it to your Home Screen" never names the counter.</li>
+      <li>Tells instead of shows: a thumbnail and two lines don't explain what a widget will look like or how to add one.</li>
+      <li>Appears with no relationship to the card you just made.</li>
+      <li>Only one way out (the ×), and no sense of how long adding takes.</li></ul></div>
+    <div><h3>What every direction keeps</h3><ul>
+      <li>Shows once, after the first counter, and goes away for good once a widget is added.</li>
+      <li>Leaves the way it came, quicker than it arrived.</li>
+      <li>Transform and opacity only (plus one accordion height in E), strong ease-out, under 450ms for UI.</li>
+      <li>Reduced motion keeps the fades and drops the movement.</li></ul></div>
+  </div>
+</div>
+</body>
+</html>

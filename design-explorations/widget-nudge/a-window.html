@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget Nudge Window</title>
+<link rel="stylesheet" href="nudge.css">
+<style>
+  .win { padding: 14px 14px 14px; }
+  .mini { position: relative; height: 128px; border-radius: 18px; overflow: hidden; padding: 14px 16px;
+    background: linear-gradient(160deg, #cfd8e6, #e9dcd2 60%, #dfe5d6); display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 42px; gap: 14px 12px; cursor: pointer; }
+  .mini .icon { background: rgba(255,255,255,.55); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.6); }
+  .mini .icon:nth-child(3n) { background: rgba(255,255,255,.4); }
+  .mini .wslot { grid-column: span 2; grid-row: span 2; border-radius: 20px; border: 1.5px dashed rgba(255,255,255,.95); background: rgba(255,255,255,.18); position: relative; }
+  .mini .wslot .wsmall { position: absolute; inset: 0; border-radius: 20px; opacity: 0; transform: scale(.96); }
+  .mini .wslot .wsmall.on { opacity: 1; transform: none; transition: opacity .2s var(--ease-out), transform .3s var(--ease-out); }
+  .mini .wslot .wsmall b { font-size: 26cqi; }
+  .copy { padding: 16px 6px 16px; }
+  .fly { position: absolute; z-index: 50; pointer-events: none; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div class="stage">
+  <div class="device-wrap"><div class="device"><div class="screen" id="screen"></div></div></div>
+  <div class="notes">
+    <p class="eyebrow">Direction A</p>
+    <h1>Window</h1>
+    <p>The nudge shows a little Home Screen with an empty widget spot, and the counter you just made flies from the grid into it. It explains the whole idea in one move, before any words.</p>
+    <h2>What changes</h2>
+    <ul>
+      <li><b>Show, don't tell.</b> The card that just appeared travels into the preview, so the link between "this counter" and "a widget" is obvious.</li>
+      <li><b>Named after the counter.</b> "Keep <b>No sugar</b> in sight" instead of a generic line.</li>
+      <li><b>Two clear choices.</b> "Show me how" opens the guide; "Later" folds the card away the way it came.</li>
+      <li>Tap the preview to play the flight again.</li>
+    </ul>
+    <h2>Motion</h2>
+    <ul>
+      <li>Nudge: slot opens 420ms, card rises 8px and fades in, strong ease-out.</li>
+      <li>Flight: a copy of the counter moves and shrinks into the slot, 700ms strong ease-in-out (it's moving on screen), then the widget settles in.</li>
+      <li>Reduced motion: no flight, the widget just fades into its spot.</li>
+    </ul>
+  </div>
+</div>
+<script src="nudge.js"></script>
+<script>
+  const N = Nudge;
+  let nudge;
+
+  function build() {
+    const icons = Array.from({ length: 8 }, () => '<div class="icon"></div>').join("");
+    return N.html(`
+      <div class="nudge nudge-in win">
+        <button class="x" aria-label="Dismiss"><i>${N.X}</i></button>
+        <div class="mini" title="Play again"><div class="wslot">${N.smallWidget()}</div>${icons}</div>
+        <div class="copy">
+          <p class="h"><span class="c">Keep</span> ${N.event.title} <span class="c">in sight</span></p>
+          <p class="sub">Add it to your Home Screen and see the count without opening Sinced.</p>
+        </div>
+        <div class="btns"><button class="btn ghost later">Later</button><button class="btn how">Show me how</button></div>
+      </div>`);
+  }
+
+  async function fly(cancelled) {
+    const slotEl = nudge.querySelector(".wslot"), widget = slotEl.querySelector(".wsmall");
+    widget.classList.remove("on");
+    await N.wait(380); if (cancelled()) return;
+    if (N.reduced) { widget.classList.add("on"); return; }
+    const from = N.rel(N.card), to = N.rel(slotEl);
+    const clone = N.card.cloneNode(true);
+    clone.removeAttribute("id"); clone.className = "ev fly";
+    Object.assign(clone.style, { left: from.x + "px", top: from.y + "px", width: from.w + "px", transition: "none", opacity: 1 });
+    N.screen.append(clone);
+    const k = to.w / from.w;
+    const a = clone.animate([
+      { transform: "translate(0,0) scale(1)", boxShadow: "0 10px 24px -14px rgba(0,0,0,.45)" },
+      { transform: `translate(${to.x - from.x}px, ${to.y - from.y - 18}px) scale(${k * 1.04})`, offset: .82, boxShadow: "0 18px 30px -14px rgba(0,0,0,.4)" },
+      { transform: `translate(${to.x - from.x}px, ${to.y - from.y}px) scale(${k})`, boxShadow: "0 4px 10px -6px rgba(0,0,0,.3)" },
+    ], { duration: N.ms(700), easing: N.EASE_IN_OUT, fill: "forwards" });
+    await a.finished.catch(() => {});
+    widget.style.transitionDuration = N.ms(200) / 1000 + "s, " + N.ms(300) / 1000 + "s";
+    widget.classList.add("on");
+    clone.animate([{ opacity: 1 }, { opacity: 0 }], { duration: N.ms(120), fill: "forwards" }).finished.then(() => clone.remove());
+  }
+
+  N.mount("a-window.html", {
+    reset() { document.querySelectorAll(".fly").forEach((e) => e.remove()); },
+    async play(slot, cancelled) {
+      nudge = build();
+      N.openSlot(nudge);
+      const close = () => N.closeSlot();
+      nudge.querySelector(".x").onclick = close;
+      nudge.querySelector(".later").onclick = () => { close(); N.toast("We'll leave it in Settings"); };
+      nudge.querySelector(".how").onclick = () => N.toast("Opens the widget guide");
+      nudge.querySelector(".mini").onclick = () => fly(cancelled);
+      await N.wait(420); if (cancelled()) return;
+      fly(cancelled);
+    },
+  });
+</script>
+</body>
+</html>

@@ -42,8 +42,15 @@ final class AddFlow: ObservableObject {
     /// Runs after the card has gone, whether it was saved or closed
     var onFinish: (() -> Void)?
 
-    func present() {
+    /// A name the add card starts with, like an idea tapped on the empty home
+    var presetName: String?
+
+    /// The counter whose delete-or-archive card is open over home
+    @Published var deleting: SinceEvent?
+
+    func present(name: String? = nil) {
         guard !isPresented else { return }
+        presetName = name
         request = .add
         hidesSource = true
         isPresented = true
@@ -253,7 +260,10 @@ struct AddEventOverlay: View {
         case .add:
             original = nil
             fromTile = true
-            _draft = State(initialValue: .fresh())
+            var fresh = EventDraft.fresh()
+            if let name = flow.presetName { fresh.name = name }
+            flow.presetName = nil
+            _draft = State(initialValue: fresh)
             _step = State(initialValue: .sentence)
             _face = State(initialValue: .plus)
             _shellOpacity = State(initialValue: 1)
@@ -677,13 +687,16 @@ struct AddEventOverlay: View {
 /// The radius of the screen's own rounded corners, so a card floating `inset`
 /// in from the edges can follow them exactly
 enum DisplayCorners {
-    static let radius: CGFloat = {
+    private static var cached: CGFloat = 0
+    static var radius: CGFloat {
+        // Read once there's a screen to ask; asked too early it would stay at zero
+        if cached > 0 { return cached }
         let screen = AddEventOverlay.window?.windowScene?.screen
         // UIKit knows the hardware radius but only exposes it by key
         let key = ["_display", "Corner", "Radius"].joined()
-        let value = (screen?.value(forKey: key) as? NSNumber)?.doubleValue ?? 0
-        return CGFloat(value)
-    }()
+        cached = CGFloat((screen?.value(forKey: key) as? NSNumber)?.doubleValue ?? 0)
+        return cached
+    }
 
     static func concentric(inset: CGFloat) -> CGFloat {
         // Square-cornered screens (Home button iPhones) still get soft corners

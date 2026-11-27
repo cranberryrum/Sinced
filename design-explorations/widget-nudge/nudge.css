@@ -1,0 +1,63 @@
+/* Widget nudge explorations. Builds on the event page kit's tokens and phone frame. */
+@import url("../event-detail-v2/kit.css");
+
+:root { --ease-in-out: cubic-bezier(.77, 0, .175, 1); --ease-drawer: cubic-bezier(.32, .72, 0, 1); --pat: url("../../website/assets/patterns/Circles.svg"); }
+
+.replay { height: 30px; padding: 0 12px; border-radius: 9px; background: var(--ink); color: var(--page); font: 600 13px var(--allo); }
+.replay:active { transform: scale(.97); }
+
+/* ---------- Home ---------- */
+.home { position: absolute; inset: 0; padding: 62px 16px 140px; overflow: hidden; }
+.slot { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 0fr; transition: grid-template-rows .42s var(--ease-out); }
+.slot.open { grid-template-rows: 1fr; }
+.slot > .inner { min-height: 0; min-width: 0; overflow: visible; }
+.slot.open > .inner { padding-bottom: 16px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ev { background-image: var(--pat); box-shadow: 0 10px 24px -14px rgba(0,0,0,.45); }
+.ev b { font-size: 26cqi; font-weight: 600; }
+.ev b small { font-size: 13cqi; }
+.ev span { font-size: 8.5cqi; opacity: .85; }
+.addtile { aspect-ratio: 1; border-radius: 22%; border: 1.5px dashed rgba(0,0,0,.16); display: grid; place-items: center; font: 300 46px var(--allo); color: var(--word); }
+.card-new { opacity: 0; transform: scale(.94); }
+.card-new.in { opacity: 1; transform: none; transition: opacity .3s var(--ease-out), transform .45s var(--ease-out); }
+
+.tabbar { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); display: flex; gap: 4px; padding: 5px; border-radius: 40px; background: rgba(255,255,255,.9);
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.25); z-index: 20; }
+.tabbar div { width: 92px; height: 54px; border-radius: 30px; display: grid; place-items: center; font: 500 12px var(--allo); color: var(--word); }
+.tabbar div:first-child { background: var(--fill); color: #0a84ff; }
+.tabbar svg { width: 22px; height: 22px; display: block; margin: 0 auto 2px; }
+
+/* ---------- Shared nudge pieces ---------- */
+.nudge { position: relative; background: #fff; border-radius: 28px; box-shadow: 0 1px 0 rgba(0,0,0,.03), 0 12px 30px -18px rgba(0,0,0,.22); }
+.nudge-in { opacity: 0; transform: translateY(-8px) scale(.98); }
+.nudge-in.on { opacity: 1; transform: none; transition: opacity .3s var(--ease-out), transform .42s var(--ease-out); }
+.x { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; display: grid; place-items: center; z-index: 3; }
+.x i { width: 26px; height: 26px; border-radius: 50%; background: var(--fill); display: grid; place-items: center; transition: transform .14s var(--ease-out); }
+.x:active i { transform: scale(.9); }
+.x svg { width: 10px; height: 10px; }
+.h { font: 600 19px/1.2 var(--allo); letter-spacing: -.01em; color: var(--word); margin: 0; }
+.h .c { color: var(--conn); font-weight: 500; }
+.sub { font: 400 14.5px/1.35 var(--allo); color: var(--label); margin: 3px 0 0; }
+.btns { display: flex; gap: 8px; }
+.btn { flex: 1; height: 46px; border-radius: 46px; font: 600 15.5px var(--allo); background: var(--word); color: #fff; transition: transform .16s var(--ease-out); }
+.btn.ghost { flex: 0 0 auto; padding: 0 20px; background: var(--fill); color: var(--word); }
+.btn:active { transform: scale(.97); }
+
+/* Mini widgets in the card's pattern */
+.wsmall, .wmed { background-image: var(--pat); background-size: cover; background-position: center; color: #fff; container-type: inline-size; display: flex; flex-direction: column; justify-content: center; }
+.wsmall { aspect-ratio: 1; border-radius: 22%; align-items: center; text-align: center; }
+.wsmall b { font: 600 30cqi/1 var(--allo); } .wsmall b small { font-size: 15cqi; }
+.wsmall span { font: 500 9.5cqi var(--allo); opacity: .85; margin-top: 3cqi; }
+.wmed { border-radius: 26px; padding: 0 22px; align-items: flex-start; }
+.wmed b { font: 600 36px/1 var(--allo); } .wmed b small { font-size: 18px; }
+.wmed span { font: 500 12px var(--allo); opacity: .85; margin-top: 4px; }
+.icon { aspect-ratio: 1; border-radius: 23%; }
+
+/* Toast from the island */
+.mtoast { position: absolute; top: 11px; left: 50%; z-index: 92; height: 36px; padding: 0 16px; border-radius: 22px; background: #000; color: #fff; display: flex; align-items: center;
+  font: 500 14px var(--allo); white-space: nowrap; transform: translateX(-50%) scale(.6, .9); opacity: 0; transition: transform .32s var(--ease-out), opacity .2s; pointer-events: none; }
+.mtoast.on { transform: translateX(-50%); opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nudge-in { transform: none; } .card-new { transform: none; }
+}

@@ -60,7 +60,8 @@ struct WidgetGuideView: View {
     private static let stepDuration: TimeInterval = 3.2
     private static let lastStepDuration: TimeInterval = 4.4
 
-    init(event: SinceEvent?) {
+    init(event: SinceEvent?, place: WidgetGuidePlace = .homeScreen) {
+        _place = State(initialValue: place)
         self.event = event ?? SinceEvent(
             title: "I started",
             startedAt: Date().addingTimeInterval(-12 * 86400 - 3600),
@@ -232,14 +233,15 @@ private struct StepBadge: View {
 
 // MARK: - The little phone
 
-private struct WidgetGuideStage: View {
+struct WidgetGuideStage: View {
     let place: WidgetGuidePlace
     let step: Int
     let event: SinceEvent
+    /// How much of the little phone shows; it's cropped at the bottom
+    var height: CGFloat = 264
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let height: CGFloat = 264
     private static let screenWidth: CGFloat = 200
     private static let bezel: CGFloat = 6
 
@@ -254,7 +256,7 @@ private struct WidgetGuideStage: View {
         }
         // Pinned to the top so the phone is cut off at the bottom, not the top
         .frame(maxWidth: .infinity)
-        .frame(height: Self.height, alignment: .top)
+        .frame(height: height, alignment: .top)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .accessibilityHidden(true)
     }
@@ -592,72 +594,6 @@ private struct GuideLockScreen: View {
             )
         }
         .frame(width: 150, height: 40)
-    }
-}
-
-// MARK: - Home card
-
-/// Sits above the events on the home screen until a widget is added or it's dismissed
-struct WidgetGuideCard: View {
-    let event: SinceEvent
-    let onOpen: () -> Void
-    let onDismiss: () -> Void
-
-    private let thumbnail: CGFloat = 52
-
-    var body: some View {
-        Button(action: onOpen) {
-            HStack(spacing: 14) {
-                HomeEventCardView(event: event)
-                    .frame(width: 148, height: 148)
-                    .scaleEffect(thumbnail / 148)
-                    .frame(width: thumbnail, height: thumbnail)
-                    .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Add it to your Home Screen")
-                        .font(.roundedHeadline)
-                        .foregroundColor(.primary)
-
-                    Text("See your count at a glance")
-                        .font(.roundedSubheadline)
-                        .foregroundColor(.secondary)
-                }
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-
-                Spacer(minLength: 0)
-            }
-            .padding(14)
-            // Room for the dismiss button
-            .padding(.trailing, 26)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(Color.black.opacity(0.07), lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        }
-        .buttonStyle(PressableButtonStyle())
-        .accessibilityHint("Shows how to add the widget")
-        .overlay(alignment: .topTrailing) {
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(Color.black.opacity(0.05)))
-                    // Small glyph, full-size target
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(PressableButtonStyle())
-            .accessibilityLabel("Dismiss")
-        }
     }
 }
 

@@ -15,16 +15,25 @@ struct EventListView: View {
     /// The add card, which grows out of the + tile above the tab bar
     @ObservedObject private var addFlow = AddFlow.shared
     @State private var draggingEvent: SinceEvent?
-    @State private var eventPendingDelete: SinceEvent?
     @State private var showingWidgetGuide = false
+    @State private var widgetGuidePlace: WidgetGuidePlace = .homeScreen
+    /// The first counter's card and the nudge's widget spot, for the flight between them
+    @State private var firstCardFrame: CGRect?
+    @State private var nudgeSlotFrame: CGRect?
+    @State private var nudgeFlight: NudgeFlight?
+    @State private var nudgeWidgetPlaced = true
     @ObservedObject private var widgetStatus = WidgetStatus.shared
     @ObservedObject private var guideRouter = WidgetGuideRouter.shared
     @AppStorage("widgetGuide.cardDismissed") private var guideCardDismissed = false
     /// The add sheet opens by itself once, straight after onboarding
-    @AppStorage("firstRun.addSheetOffered") private var addSheetOffered = false
     /// The card currently showing its "look here" ring
     @State private var ringedEventID: UUID?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    /// The card zooms into its event page
+    @Namespace private var cardZoom
+    /// A hello for this visit: shows as the app opens, then tucks away
+    @State private var homeVisible = false
 
     /// Only once iOS has confirmed there's no widget, so it never flashes for people who have one
     private var showsGuideCard: Bool {
@@ -45,36 +54,20 @@ struct EventListView: View {
                 GrainBackground()
                 
                 if isEmptyState {
-                    VStack {
-                        Spacer()
-                        
-                        EmptyEventsView(
-                            title: "no events yet",
-                            subtitle: "track your days since events"
-                        )
-                        
-                        Button("Add event") {
-                            HapticManager.shared.medium()
-                            addFlow.present()
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
-                        // The add card grows out of this button when there's no + tile yet
-                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { addFlow.sourceFrame = $0 }
-                        .opacity(addFlow.hidesSource ? 0 : 1)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 24)
-                        
-                        Spacer()
-                    }
+                    EmptyHomeView(addFlow: addFlow)
                 } else {
                     // Large Cards with Vertical Scroll
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 16) {
                             if showsGuideCard, let first = viewModel.events.first {
-                                WidgetGuideCard(
+                                WidgetNudgeCard(
                                     event: first,
-                                    onOpen: {
+                                    widgetPlaced: nudgeWidgetPlaced,
+                                    onReplay: playNudgeFlight,
+                                    onSlotFrame: { nudgeSlotFrame = $0 },
+                                    onLockScreen: {
                                         HapticManager.shared.light()
+                                        widgetGuidePlace = .lockScreen
                                         showingWidgetGuide = true
                                     },
                                     onDismiss: {
@@ -95,15 +88,33 @@ struct EventListView: View {
                                 ForEach(viewModel.events) { event in
                                     HomeEventCardView(event: event)
                                         .frame(height: cardHeight)
+                                        .overlay(alignment: .topTrailing) {
+                                            if event.isOnBestRun() {
+                                                Text("★ Best")
+                                                    .font(.allo(11, weight: .semibold))
+                                                    .foregroundStyle(.white)
+                                                    .padding(.horizontal, 8)
+                                                    .frame(height: 22)
+                                                    .background(Capsule().fill(Color.black.opacity(0.28)))
+                                                    .padding(10)
+                                                    .accessibilityLabel("Longest run yet")
+                                            }
+                                        }
+                                        .matchedTransitionSource(id: event.id, in: cardZoom) { source in
+                                            source.clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                                        }
                                         // A soft lift off the page, part of the hairline look
                                         .shadow(color: .black.opacity(0.10), radius: 9, y: 8)
                                         // Lands as the add sheet clears; leaves the same way. A card
                                         // the add card is about to land on appears under it instead.
                                         .transition(addFlow.hiddenEventID == event.id ? .identity : cardTransition)
                                         // Hidden while the floating card is it: being edited, or about to be landed on
-                                        .opacity(addFlow.hiddenEventID == event.id ? 0 : 1)
+                                        .opacity(addFlow.hiddenEventID == event.id || (viewModel.spotlightShowing && viewModel.celebration?.eventID == event.id) ? 0 : 1)
                                         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
                                             addFlow.cardFrames[event.id] = frame
+                                        }
+                                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(HomeSpace.name)) } action: { frame in
+                                            if event.id == viewModel.events.first?.id { firstCardFrame = frame }
                                         }
                                         // Where to look, after a widget tap
                                         .overlay {
@@ -153,15 +164,13 @@ struct EventListView: View {
                                             }
                                         
                                             Button(role: .destructive) {
-                                                eventPendingDelete = event
+                                                draggingEvent = nil
+                                                // After the menu has let go of the card, so the card grows out of it
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                                    addFlow.deleting = event
+                                                }
                                             } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-                                        
-                                            Button {
-                                                viewModel.archiveEvent(event)
-                                            } label: {
-                                                Label("Archive", systemImage: "archivebox")
+                                                Label("Delete or archive", systemImage: "trash")
                                             }
                                         }
                                 }
@@ -194,6 +203,19 @@ struct EventListView: View {
                     }
                 }
 
+                // The first counter flying into the nudge's widget spot
+                if let flight = nudgeFlight, let first = viewModel.events.first {
+                    let rect = flight.landed ? flight.to : flight.from
+                    HomeEventCardView(event: first)
+                        .frame(width: flight.from.width, height: flight.from.height)
+                        .shadow(color: .black.opacity(0.2), radius: 12, y: 8)
+                        .scaleEffect(rect.width / flight.from.width)
+                        .position(x: rect.midX, y: rect.midY)
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                        .accessibilityHidden(true)
+                }
+
                 // Top gradient fade
                 VStack {
                     Spacer()
@@ -216,38 +238,22 @@ struct EventListView: View {
                 }
                 
             }
-            .confirmationDialog(
-                "Delete \(eventPendingDelete?.title ?? "event")?",
-                isPresented: Binding(
-                    get: { eventPendingDelete != nil },
-                    set: { if !$0 { eventPendingDelete = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button("Delete", role: .destructive) {
-                    if let event = eventPendingDelete {
-                        viewModel.deleteEvent(event)
-                        showSuccessToast(title: event.title)
-                    }
-                    eventPendingDelete = nil
-                }
-            } message: {
-                Text("This removes the event and its history.")
-            }
+            .coordinateSpace(.named(HomeSpace.name))
             // Opened from a notification or widget tap
             .onReceive(viewModel.$eventToOpen.compactMap { $0 }) { event in
                 addFlow.dismissImmediately()
                 selectedEvent = event
                 viewModel.eventToOpen = nil
             }
-            .sheet(item: $selectedEvent) { event in
-                EventDetailView(
+            .fullScreenCover(item: $selectedEvent) { event in
+                EventPageView(
                     event: event,
                     viewModel: viewModel,
                     onDeleteSuccess: { title in
                         showSuccessToast(title: title)
                     }
                 )
+                .navigationTransition(.zoom(sourceID: event.id, in: cardZoom))
             }
             .onChange(of: viewModel.goalEditRequest) { _, id in
                 guard let id, let event = viewModel.events.first(where: { $0.id == id }) else { return }
@@ -260,8 +266,9 @@ struct EventListView: View {
                 }
             }
             .sheet(isPresented: $showingWidgetGuide) {
-                WidgetGuideView(event: viewModel.events.first)
+                WidgetGuideView(event: viewModel.events.first, place: widgetGuidePlace)
                     .presentationDetents([.large])
+                    .deviceCornerSheet()
                     .presentationDragIndicator(.visible)
             }
             .animation(.spring(duration: 0.4, bounce: 0), value: showsGuideCard)
@@ -280,20 +287,30 @@ struct EventListView: View {
                 withAnimation(.easeOut(duration: 0.24)) { ringedEventID = nil }
                 viewModel.focusedEventID = nil
             }
-            .task {
-                // Someone who's just finished onboarding has nothing to look
-                // at yet, so go straight to adding their first event
-                guard !addSheetOffered, viewModel.events.isEmpty else { return }
-                addSheetOffered = true
-                // Let the home screen settle in first, so the sheet reads as
-                // the next step rather than a pop-up
-                try? await Task.sleep(for: .seconds(0.45))
-                addFlow.present()
-            }
             .onChange(of: guideRouter.isRequested) { openRequestedGuide() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { trySpotlight() }
+            }
+            .onAppear { homeVisible = true; trySpotlight() }
+            .onDisappear { homeVisible = false }
+            .onChange(of: viewModel.celebration) { trySpotlight() }
+            .onChange(of: selectedEvent) { _, open in if open == nil { trySpotlight() } }
+            .onChange(of: addFlow.isPresented) { _, open in if !open { trySpotlight() } }
         }
     }
     
+    /// Greets, holds for a moment, then tucks away so the grid rises into its place
+    /// A milestone waiting to be celebrated plays on home, once home is
+    /// actually what's on screen: not under an event page or the add card
+    private func trySpotlight() {
+        guard homeVisible, selectedEvent == nil, !addFlow.isPresented,
+              viewModel.celebration != nil, !viewModel.spotlightShowing else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            guard homeVisible, selectedEvent == nil, !addFlow.isPresented, viewModel.celebration != nil else { return }
+            viewModel.spotlightShowing = true
+        }
+    }
+
     /// Nothing appears from nothing: just under full size, and faded
     private var cardTransition: AnyTransition {
         reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95))
@@ -313,9 +330,39 @@ struct EventListView: View {
               !WidgetNudge.introShown,
               widgetStatus.hasWidget != true else { return }
         WidgetNudge.introShown = true
-        // Let the new card land before the guide comes up over it
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            showingWidgetGuide = true
+        // Let the new card land and the nudge settle, then the counter flies into its spot
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            playNudgeFlight()
+        }
+    }
+
+    /// A copy of the first counter moves from its card into the nudge's widget spot
+    private func playNudgeFlight() {
+        guard nudgeFlight == nil, showsGuideCard else { return }
+        guard !reduceMotion, let from = firstCardFrame, let to = nudgeSlotFrame else {
+            // Reduce Motion: the widget just fades into its spot
+            nudgeWidgetPlaced = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { nudgeWidgetPlaced = true }
+            return
+        }
+        nudgeWidgetPlaced = false
+        nudgeFlight = NudgeFlight(from: from, to: to)
+        HapticManager.shared.light()
+        DispatchQueue.main.async {
+            // Moving across the screen: a strong ease-in-out
+            withAnimation(.timingCurve(0.77, 0, 0.175, 1, duration: 0.7)) {
+                nudgeFlight?.landed = true
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.72) {
+            // The copy has landed exactly on the spot: swap it for the widget in the
+            // same frame, so the spot never blinks empty between the two
+            var swap = Transaction()
+            swap.disablesAnimations = true
+            withTransaction(swap) {
+                nudgeWidgetPlaced = true
+                nudgeFlight = nil
+            }
         }
     }
 
@@ -327,6 +374,7 @@ struct EventListView: View {
         selectedEvent = nil
         addFlow.dismissImmediately()
         guard !showingWidgetGuide else { return }
+        widgetGuidePlace = .homeScreen
         // A sheet can't open while another is still closing
         DispatchQueue.main.asyncAfter(deadline: .now() + (wasShowingSomething ? 0.5 : 0)) {
             showingWidgetGuide = true
@@ -336,6 +384,13 @@ struct EventListView: View {
     private func showSuccessToast(title: String) {
         ToastManager.shared.show("Deleted “\(title)”", icon: "trash", kind: .destructive)
     }
+}
+
+/// The first counter on its way into the widget nudge
+private struct NudgeFlight {
+    let from: CGRect
+    let to: CGRect
+    var landed = false
 }
 
 private struct AddEventPlaceholderCard: View {
@@ -406,6 +461,10 @@ private struct EventReorderDropDelegate: DropDelegate {
 /// Square home card built with the SVG themes from Assets
 struct HomeEventCardView: View {
     let event: SinceEvent
+    /// Days to show instead of the live count, while a milestone counts up
+    var countOverride: Int? = nil
+    /// Words to show instead of "Since …"
+    var subtitleOverride: String? = nil
     @State private var currentTime = Date()
     
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -509,23 +568,36 @@ struct HomeEventCardView: View {
         }
     }
 
+    /// "23" and "d": a big number with a small unit after it
+    private func countParts(for date: Date) -> (value: Int, unit: String) {
+        let elapsed = max(0, date.timeIntervalSince(event.startedAt))
+        switch event.widgetTimeUnit {
+        case .hours: return (Int(elapsed / 3600), "h")
+        case .days: return (Int(elapsed / 86400), "d")
+        case .months: return (Int(elapsed / (86400 * 30)), "mo")
+        case .years: return (Int(elapsed / (86400 * 365)), "y")
+        }
+    }
+
     private var timeLabel: some View {
-        Text(widgetTimeValue(for: currentTime).uppercased())
-            .font(.allo(20, weight: .medium).monospacedDigit())
+        let parts = countOverride.map { (value: $0, unit: "d") } ?? countParts(for: currentTime)
+        let big: CGFloat = isImageCard ? 40 : 52
+        return (Text(parts.value.formatted()).font(.allo(big, weight: .semibold).monospacedDigit())
+                + Text(parts.unit).font(.allo(big * 0.42, weight: .semibold)))
+            .tracking(-1.5)
             // Digits roll when the count changes, e.g. after an undo
-            .contentTransition(.numericText())
+            .contentTransition(.numericText(value: Double(parts.value)))
             .foregroundColor(.white)
-            .tracking(-0.6)
             .lineLimit(1)
-            .minimumScaleFactor(0.65)
-            .fixedSize(horizontal: true, vertical: false)
-            .padding(.horizontal, 3)
+            .minimumScaleFactor(0.5)
+            .accessibilityLabel(widgetTimeValue(for: currentTime))
     }
 
     private func subtitleLabel(multilineAlignment: TextAlignment) -> some View {
-        Text("Since \(event.title)")
-            .font(.allo(14, weight: .medium))
-            .foregroundColor(Color.white.opacity(0.6))
+        Text(subtitleOverride ?? "Since \(event.title)")
+            .font(.allo(13, weight: .medium))
+            .contentTransition(.opacity)
+            .foregroundColor(Color.white.opacity(0.78))
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .multilineTextAlignment(multilineAlignment)
@@ -536,3 +608,5 @@ struct HomeEventCardView: View {
     EventListView()
         .environmentObject(EventViewModel())
 }
+
+

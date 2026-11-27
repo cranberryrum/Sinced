@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sinced · Empty home</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .view { position: absolute; inset: 0; }
+  .view[hidden] { display: none; }
+
+  /* Rolling digits (from D): each digit slides by place value */
+  .roll { display: inline-flex; line-height: 1; font-variant-numeric: tabular-nums; }
+  .roll .dg { display: inline-block; height: 1em; overflow: hidden; }
+  .roll .st { display: flex; flex-direction: column; will-change: transform; }
+  .roll .st i { height: 1em; font-style: normal; }
+
+  /* Tick meter (from GO): capsules growing taller toward the goal */
+  .ticks { display: flex; align-items: flex-end; gap: 3px; }
+  .ticks i { flex: 1; border-radius: 6px; background: rgba(255,255,255,.3); transition: background-color .3s; }
+  .ticks i.on { background: #fff; }
+
+  /* ---------- Home: Sinced's grid, bolder ---------- */
+  .home-scroll { padding: 64px 16px 130px; }
+  .hello { padding: 0 8px; }
+  .hello p { margin: 0; font-size: 18px; font-weight: 500; color: var(--label); }
+  .hello h2 { margin: 2px 0 0; font-size: 25px; line-height: 32px; font-weight: 500; color: var(--conn); letter-spacing: -.015em; text-wrap: pretty; }
+  .hello h2 b { color: var(--word); font-weight: 600; }
+  .hello { padding-bottom: 22px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .tile { aspect-ratio: 1; border-radius: 26px; position: relative; overflow: hidden; color: #fff; text-align: center; cursor: pointer;
+    background: var(--c) var(--p) center / cover; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06), 0 9px 18px -12px rgba(0,0,0,.28); transition: transform .16s var(--ease-out);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .tile:active { transform: scale(.97); }
+  .tile .n { font-size: 54px; font-weight: 600; letter-spacing: -.045em; line-height: 1; text-shadow: 0 2px 14px rgba(0,0,0,.16); display: flex; align-items: baseline; }
+  .tile .n small { font-size: 22px; letter-spacing: -.01em; margin-left: 2px; }
+  .tile .s { font-size: 13px; font-weight: 500; opacity: .78; margin-top: 4px; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .tile .best { position: absolute; top: 12px; right: 12px; height: 22px; padding: 0 8px; border-radius: 22px; background: rgba(0,0,0,.28); font-size: 11px; font-weight: 600; line-height: 22px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .tile.add { background: #fff; border: 1.5px dashed rgba(0,0,0,.18); box-shadow: none; color: var(--word); padding: 0; }
+  .tile.add svg { width: 34px; height: 34px; }
+
+  .tabbar { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); display: flex; gap: 4px; padding: 5px; border-radius: 40px; background: #fff; z-index: 20;
+    box-shadow: 0 6px 24px rgba(0,0,0,.08); }
+  .tabbar div { width: 92px; height: 54px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 11px; font-weight: 500; }
+  .tabbar div.on { background: #EDEDED; color: var(--green); }
+  .tabbar svg { width: 24px; height: 24px; }
+
+  /* ---------- Page ---------- */
+  .page-scroll { padding: 0 0 130px; }
+  .hero { position: relative; margin: 8px 8px 0; height: 400px; border-radius: 44px; overflow: hidden; color: #fff; background: var(--t-bg) var(--t-pattern) center / cover; }
+  .hero::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); pointer-events: none; }
+  /* Top nav: a soft progressive blur over whatever scrolls under it. Over the
+     card it stays light; once the card has scrolled away it turns solid */
+  .pnav { position: absolute; top: 0; left: 0; right: 0; height: 112px; z-index: 25; pointer-events: none; }
+  .pnav .blur { position: absolute; inset: 0; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    -webkit-mask-image: linear-gradient(#000 45%, transparent); mask-image: linear-gradient(#000 45%, transparent); }
+  .pnav .tint { position: absolute; inset: 0; background: linear-gradient(rgba(243,242,240,.94) 42%, rgba(243,242,240,0)); opacity: 0; }
+  .pnav .row { position: absolute; top: 52px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: space-between; pointer-events: auto; }
+  .pnav .glass, .pnav .useg { transition: background-color .25s, color .25s; }
+  .pnav.solid .glass { background: rgba(0,0,0,.06); color: var(--word); }
+  .pnav.solid .useg { background: rgba(0,0,0,.06); }
+  .pnav.solid .useg button { color: var(--label); }
+  .pnav.solid .useg button.on { color: var(--word); }
+  .pnav.solid .useg .knob { box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .glass { height: 38px; min-width: 38px; padding: 0 12px; border-radius: 38px; background: rgba(255,255,255,.22); color: #fff; font: 500 15px var(--allo); display: grid; place-items: center;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: transform .16s var(--ease-out); }
+  .glass:active { transform: scale(.94); }
+  .glass svg { width: 18px; height: 18px; }
+  .useg { display: flex; padding: 3px; border-radius: 30px; background: rgba(0,0,0,.22); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); position: relative; }
+  .useg button { width: 34px; height: 30px; border-radius: 30px; font: 600 13px var(--allo); color: rgba(255,255,255,.75); position: relative; z-index: 1; transition: color .2s; }
+  .useg button.on { color: var(--word); }
+  .useg .knob { position: absolute; top: 3px; left: 3px; width: 34px; height: 30px; border-radius: 30px; background: #fff; }
+  .count { position: absolute; left: 0; right: 0; top: 112px; display: flex; flex-direction: column; align-items: center; text-shadow: 0 2px 18px rgba(0,0,0,.16); }
+  .count .num { font-size: 138px; font-weight: 600; letter-spacing: -.05em; line-height: .95; }
+  .count .unit { font-size: 23px; font-weight: 500; margin-top: 4px; }
+  .count .lab { font-size: 16px; font-weight: 500; opacity: .75; margin-top: 4px; min-height: 22px; }
+  /* Goal meter, under the card */
+  .goalrow { margin: 18px 20px 0; cursor: pointer; transition: transform .16s var(--ease-out); }
+  .goalrow:active { transform: scale(.985); }
+  .goalrow .ticks { height: 40px; }
+  .goalrow .ticks i { background: rgba(0,0,0,.09); }
+  .goalrow .ticks i.on { background: var(--t-bg); }
+  .goalrow .gl { display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 600; margin-top: 10px; color: var(--word); }
+  .goalrow .gl > span { display: inline-flex; align-items: baseline; white-space: pre; }
+  .goalrow #gGoal { color: var(--label); }
+  #gLeftN:not(:empty) + #gLeftW { margin-left: .28em; }
+  .goalrow svg { width: 12px; height: 12px; margin-left: 3px; align-self: center; }
+
+  .para { padding: 22px 26px 0; font-size: 24px; line-height: 33px; font-weight: 500; letter-spacing: -.015em; color: var(--conn); }
+  .para p { margin: 0 0 10px; text-wrap: pretty; }
+  .para b { color: var(--word); font-weight: 600; }
+
+  .box { margin: 16px 12px 0; border-radius: 32px; background: #fff; padding: 18px 18px 16px; box-shadow: 0 1px 0 rgba(0,0,0,.03); }
+  .box-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--label); }
+  .box-h span:last-child { text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .bars { position: relative; height: 150px; margin-top: 14px; display: flex; align-items: flex-end; gap: 8px; touch-action: none; cursor: ew-resize; }
+  .bars .b { flex: 1; border-radius: 30px; background: color-mix(in srgb, var(--t-bg) 26%, #EEECE7); transform-origin: bottom; transition: background-color .18s; position: relative; }
+  .bars .b.cur { background: var(--t-bg); }
+  .bars .b.on { background: color-mix(in srgb, var(--t-bg) 50%, #EEECE7); }
+  .bars .b.cur.on { background: color-mix(in srgb, var(--t-bg) 82%, black); }
+  .bars .b em { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 11px; color: var(--label); white-space: nowrap; }
+  .bars .best { position: absolute; left: 0; right: 0; border-top: 1.5px dashed rgba(0,0,0,.2); pointer-events: none; }
+  .note { font-size: 14px; color: var(--label); margin-top: 28px; min-height: 21px; }
+  .trio { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 14px; padding-top: 14px; border-top: 1.5px dashed rgba(0,0,0,.1); }
+  .trio div + div { border-left: 1.5px dashed rgba(0,0,0,.1); padding-left: 14px; }
+  .trio b { display: block; font-size: 26px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
+  .trio b small { font-size: 15px; }
+  .trio div > span { font-size: 12px; color: var(--label); font-weight: 500; }
+
+  .list { margin: 12px 12px 0; border-radius: 28px; background: #fff; padding: 0 16px; }
+  .list button { width: 100%; height: 56px; display: flex; align-items: center; gap: 12px; font: 500 16px var(--allo); color: var(--word); text-align: left; }
+  .list button + button { border-top: 1.5px dashed rgba(0,0,0,.1); }
+  .list button svg { width: 19px; height: 19px; }
+  .list .v { margin-left: auto; color: var(--label); font-size: 15px; }
+  .list .red { color: var(--red); }
+
+  .dock { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 30; display: flex; gap: 8px; padding: 8px; border-radius: 44px; background: rgba(255,255,255,.9);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px -18px rgba(0,0,0,.3); }
+  .dock .reset { flex: 1; height: 56px; border-radius: 36px; background: var(--green); color: #fff; font: 600 17px var(--allo); display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .16s var(--ease-out); }
+  .dock .reset:active { transform: scale(.97); }
+  .dock .reset svg { width: 19px; height: 19px; }
+  .dock .elapsed { display: flex; flex-direction: column; justify-content: center; padding: 0 14px 0 12px; }
+  .dock .elapsed b { font-size: 22px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+  .dock .elapsed > span { font-size: 11px; color: var(--label); font-weight: 500; margin-top: 3px; }
+
+
+  /* ---------- Empty home variations ---------- */
+  #empty { margin-top: 4px; }
+  #empty[hidden] { display: none; }
+  .emv { display: none; }
+  #empty[data-v="ghost"] .emv-ghost, #empty[data-v="type"] .emv-type, #empty[data-v="live"] .emv-live,
+  #empty[data-v="deck"] .emv-deck, #empty[data-v="calm"] .emv-calm { display: block; }
+
+  /* 1 · Ghost grid: the + tile, then faint tiles cycling through ideas */
+  .egrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .ghost { aspect-ratio: 1; border-radius: 26px; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #fff; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.06); color: var(--conn); transition: transform .16s var(--ease-out); }
+  .ghost:active { transform: scale(.97); }
+  .ghost::before { content: ""; position: absolute; inset: 0; background: var(--p) center / cover; opacity: .07; transition: opacity .5s; }
+  .ghost b { position: relative; font-size: 44px; font-weight: 600; letter-spacing: -.04em; line-height: 1; color: rgba(0,0,0,.12); }
+  .ghost > span { position: relative; font-size: 13px; font-weight: 500; margin-top: 6px; padding: 0 12px; justify-content: center; max-width: 100%; min-height: 34px; align-content: flex-start; }
+
+  /* 2 · Sentence starter */
+  .emv-type { padding: 120px 8px 0; }
+  .starter { display: block; text-align: left; width: 100%; font: 500 40px/1.12 var(--allo); letter-spacing: -.02em; color: var(--conn); cursor: pointer; }
+  .starter .w { color: var(--word); font-weight: 600; }
+  .starter .caret { display: inline-block; width: 3px; height: .9em; margin-left: 3px; vertical-align: -.08em; background: var(--green); border-radius: 2px; animation: blink 1s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  .type-hint { margin-top: 18px; font-size: 15px; color: var(--label); }
+  .type-row { display: flex; gap: 10px; margin-top: 28px; }
+  .pill-dark { height: 50px; padding: 0 22px; border-radius: 30px; background: var(--word); color: #fff; font: 600 16px var(--allo); transition: transform .16s var(--ease-out); }
+  .pill-dark:active, .pill-soft:active { transform: scale(.96); }
+  .pill-soft { height: 50px; padding: 0 20px; border-radius: 30px; background: rgba(0,0,0,.06); color: var(--word); font: 600 16px var(--allo); transition: transform .16s var(--ease-out); }
+
+  /* 3 · A counter that's already running */
+  .livecard { height: 220px; border-radius: 28px; position: relative; overflow: hidden; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--c) var(--p) center / cover; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06), 0 12px 24px -16px rgba(0,0,0,.35); }
+  .livecard .n { font-size: 72px; font-weight: 600; letter-spacing: -.045em; line-height: 1; display: flex; align-items: baseline; text-shadow: 0 2px 14px rgba(0,0,0,.16); }
+  .livecard .n small { font-size: 26px; margin-left: 3px; letter-spacing: -.01em; }
+  .livecard .s { font-size: 15px; font-weight: 500; opacity: .8; margin-top: 6px; }
+  .live-q { margin: 24px 8px 0; font-size: 22px; line-height: 29px; font-weight: 500; color: var(--conn); letter-spacing: -.01em; }
+  .live-q b { color: var(--word); font-weight: 600; }
+  .ichips { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 8px 0; }
+  .ichips button { height: 38px; padding: 0 15px; border-radius: 20px; background: #fff; font: 500 15px var(--allo); color: var(--word); box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); transition: transform .16s var(--ease-out); }
+  .ichips button:active { transform: scale(.95); }
+  .ichips .more { background: var(--word); color: #fff; box-shadow: none; }
+
+  /* 4 · A deck of ideas */
+  .emv-deck { padding-top: 34px; }
+  .deck { position: relative; height: 300px; }
+  .dcard { position: absolute; left: 50%; top: 10px; width: 220px; height: 260px; margin-left: -110px; border-radius: 30px; overflow: hidden; color: #fff; cursor: pointer;
+    background: var(--c) var(--p) center / cover; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06), 0 16px 30px -18px rgba(0,0,0,.4);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform .6s cubic-bezier(.32,.72,0,1), opacity .4s; }
+  .dcard .n { font-size: 60px; font-weight: 600; letter-spacing: -.045em; line-height: 1; display: flex; align-items: baseline; text-shadow: 0 2px 14px rgba(0,0,0,.16); }
+  .dcard .n small { font-size: 24px; margin-left: 2px; }
+  .dcard .s { font-size: 15px; font-weight: 500; opacity: .8; margin-top: 6px; }
+  .deck-cap { text-align: center; margin-top: 8px; font-size: 22px; line-height: 29px; font-weight: 500; color: var(--conn); padding: 0 24px; }
+  .deck-cap b { color: var(--word); font-weight: 600; }
+  .deck-row { display: flex; justify-content: center; gap: 10px; margin-top: 22px; }
+
+  /* 5 · Calm: the grid as it will be, with room for the first one */
+  .calm-note { aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 8px; color: var(--label); font-size: 16px; line-height: 22px; font-weight: 500; }
+  .calm-note b { color: var(--word); font-weight: 600; display: block; font-size: 18px; margin-bottom: 4px; }
+  .calm-note svg { width: 34px; height: 20px; color: var(--conn); margin-top: 10px; }
+  .pulse { animation: pulse 2.4s var(--ease-out) 1.2s 2; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(72,139,90,.35); } 70% { box-shadow: 0 0 0 16px rgba(72,139,90,0); } 100% { box-shadow: 0 0 0 0 rgba(72,139,90,0); } }
+  @media (prefers-reduced-motion: reduce) { .pulse, .starter .caret { animation: none; } .dcard { transition: none; } }
+
+  /* Picker */
+  .vbar { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; padding: 14px 16px 0; }
+  .vbar button { height: 34px; padding: 0 14px; border-radius: 20px; background: color-mix(in srgb, var(--ink) 7%, transparent); font: 500 14px var(--allo); color: var(--ink); }
+  .vbar button.on { background: var(--ink); color: var(--page); }
+  .vlist { display: grid; gap: 4px; margin-top: 8px; }
+  .vlist button { text-align: left; padding: 12px 14px; border-radius: 16px; font: inherit; color: inherit; }
+  .vlist button b { display: block; font-weight: 600; }
+  .vlist button span { color: var(--muted); font-size: 14px; }
+  .vlist button.on { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  .namefield { margin-top: 18px; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 14px; }
+  .namefield input { height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 0 10px; font: inherit; }
+
+  .expander { position: absolute; z-index: 50; background: var(--c) var(--p) center / cover; pointer-events: none; }
+
+  /* Floating card extras */
+  .stepper { display: flex; height: 40px; border-radius: 40px; background: var(--fill); overflow: hidden; margin-left: auto; align-self: center; }
+  .stepper button { width: 46px; display: grid; place-items: center; color: var(--word); transition: background-color .14s; }
+  .stepper button:active { background: rgba(0,0,0,.06); }
+  .stepper button + button { border-left: 1px solid rgba(0,0,0,.08); }
+  .stepper svg { width: 15px; height: 15px; }
+  .vrow { display: flex; align-items: baseline; gap: .28em; font-size: 26px; line-height: 40px; font-weight: 500; letter-spacing: -.012em; }
+  .hint { font-size: 14px; color: var(--label); line-height: 1.45; margin-top: 10px; }
+  .hint b { color: var(--word); font-weight: 600; }
+  .trow { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 14px 16px; border-radius: 20px; background: var(--fill); font-size: 15px; font-weight: 500; }
+  .trow small { display: block; font-size: 13px; color: var(--label); font-weight: 400; }
+  .tg { width: 50px; height: 30px; border-radius: 30px; background: #D9D7D1; position: relative; transition: background-color .25s; margin-left: auto; flex: none; }
+  .tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 24px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .3s cubic-bezier(.3,1.4,.5,1); }
+  .tg.on { background: var(--word); }
+  .tg.on::after { transform: translateX(20px); }
+  .note-in { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: 600 26px/40px var(--allo); color: var(--word); caret-color: var(--green); padding: 0; }
+  .note-in::placeholder { color: var(--placeholder); }
+  /* Add card */
+  .ideah { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 14px; color: var(--label); }
+  .shuf { width: 34px; height: 34px; border-radius: 34px; background: var(--fill); display: grid; place-items: center; color: #4a484a; transition: transform .16s var(--ease-out); }
+  .shuf:active { transform: scale(.92); }
+  .shuf svg { width: 15px; height: 15px; }
+  .ichip { height: 34px; padding: 0 14px; border-radius: 34px; font: 400 14px var(--allo); color: #4a484a; background: #fff; border: 1px dashed rgba(0,0,0,.28); transition: transform .14s var(--ease-out); }
+  .ichip:active { transform: scale(.95); }
+  .ichip.on { color: var(--green); border-color: var(--green); background: rgba(72,139,90,.08); }
+  .hair { height: 1px; background: rgba(0,0,0,.08); margin-top: 6px; }
+  .ttiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+  .ttile { aspect-ratio: 1; border-radius: 16px; background-size: cover; position: relative; transition: transform .2s cubic-bezier(.3,1.4,.5,1); }
+  .ttile:active { transform: scale(.92); }
+  .ttile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; transition: box-shadow .25s cubic-bezier(.3,1.4,.5,1); }
+  .ttile.on::after { box-shadow: inset 0 0 0 3px var(--word), inset 0 0 0 5px #fff; }
+  .pv { width: 128px; height: 128px; margin: 16px auto 0; border-radius: 30px; background: var(--c) var(--p) center / cover; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-shadow: 0 2px 12px rgba(0,0,0,.16); }
+  .pv b { font-size: 40px; font-weight: 600; letter-spacing: -.04em; line-height: 1; }
+  .pv b small { font-size: 18px; }
+  .pv span { font-size: 11px; font-weight: 500; opacity: .8; margin-top: 3px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tok .ph { color: var(--placeholder); border-bottom: 2px dashed #d6d4d6; }
+  .cta.hold .fill { background: color-mix(in srgb, var(--green) 68%, black); color: #fff; border-radius: inherit; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip { height: 34px; padding: 0 14px; border-radius: 34px; font: 500 14px var(--allo); background: var(--fill); color: #3a383a; transition: background-color .18s, color .18s; }
+  .chip.on { background: var(--word); color: #fff; }
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div class="vbar" id="vbar"></div>
+<div class="stage">
+  <div class="device-wrap"><div class="device"><div class="screen" id="screen">
+
+    <!-- HOME -->
+    <section class="view" id="home">
+      <div class="scroll"><div class="home-scroll">
+        <div class="hello"><p id="hi"></p><h2 id="sum"></h2></div>
+        <div class="grid" id="grid"></div>
+        <div id="empty" hidden></div>
+      </div></div>
+      <nav class="tabbar">
+        <div class="on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2 2.6 11a1 1 0 0 0 1.3 1.5L5 11.6V20a1 1 0 0 0 1 1h4v-5.5h4V21h4a1 1 0 0 0 1-1v-8.4l1.1.9A1 1 0 0 0 21.4 11Z"/></svg>Home</div>
+        <div><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.7 2.5h-3.4l-.5 2.6a7.6 7.6 0 0 0-1.8 1L5.5 5.3 3.8 8.2l2 1.8a7.7 7.7 0 0 0 0 2.1l-2 1.7 1.7 3 2.5-.9c.5.4 1.1.8 1.8 1l.5 2.6h3.4l.5-2.6c.7-.2 1.3-.6 1.8-1l2.5.9 1.7-3-2-1.7a7.7 7.7 0 0 0 0-2.1l2-1.8-1.7-2.9-2.5.8a7.6 7.6 0 0 0-1.8-1ZM12 8.6a3.4 3.4 0 1 1 0 6.8 3.4 3.4 0 0 1 0-6.8Z"/></svg>Settings</div>
+      </nav>
+    </section>
+
+    <!-- PAGE -->
+    <section class="view" id="page" hidden>
+      <header class="pnav" id="pnav">
+        <div class="blur"></div><div class="tint"></div>
+        <div class="row">
+          <button class="glass" id="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+          <div class="useg" id="useg"><span class="knob"></span><button data-u="days">D</button><button data-u="hours">H</button><button data-u="months">M</button><button data-u="years">Y</button></div>
+          <button class="glass" id="edit">Edit</button>
+        </div>
+      </header>
+      <div class="scroll" id="pageScroll"><div class="page-scroll">
+        <section class="hero">
+          <div class="count"><div class="num"><span id="num"></span></div><div class="unit" id="unit"></div><div class="lab" id="lab"></div></div>
+        </section>
+        <section class="goalrow" id="heroGoal" role="button" aria-label="Change goal">
+          <div class="ticks" id="hTicks"></div>
+          <div class="gl">
+            <span id="gLeft"><span id="gLeftN"></span> <span id="gLeftW"></span></span>
+            <span id="gGoal"><span id="gGoalN"></span>-<span id="gGoalW"></span> goal<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"/></svg></span>
+          </div>
+        </section>
+
+        <div class="para" id="para"><p id="l1"></p><p id="l2"></p></div>
+
+        <section class="box">
+          <div class="box-h"><span>Every run</span><span>drag across</span></div>
+          <div class="bars" id="bars"></div>
+          <div class="note" id="note"></div>
+          <div class="trio"><div><b id="t1"></b><span>Best before</span></div><div><b id="t2"></b><span>Average</span></div><div><b id="t3"></b><span>Resets</span></div></div>
+        </section>
+
+        <div class="list">
+          <button id="share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Share the card</button>
+          <button id="del" class="red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Delete or archive</button>
+        </div>
+      </div></div>
+      <div class="dock">
+        <div class="elapsed"><b><span id="dockNum"></span></b><span>this run</span></div>
+        <button class="reset" id="reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Reset</button>
+      </div>
+    </section>
+  </div></div></div>
+
+  <aside class="notes">
+    <p class="eyebrow">Home · Nothing added yet</p>
+    <h1>The first home screen</h1>
+    <p>What someone sees right after telling us their name. Today it's an old illustration in the previous type, “no events yet”, and an Add event button. Each of these greets them by name in the home's own voice and makes the first counter one tap away.</p>
+    <p>Tap anything to open the add card; ideas arrive already filled in. Save one to see the empty screen hand over to the grid. <a href="" style="color:inherit">Reload</a> to start empty again. Press <b>1–5</b> to switch.</p>
+    <div class="vlist" id="vlist"></div>
+    <label class="namefield">Name <input id="nameIn" value="Aditya" maxlength="20"></label>
+  </aside>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+  Kit.mount("h-empty.html");
+  const $ = (s, r = document) => r.querySelector(s);
+  const DAY = Kit.DAY, HOUR = Kit.HOUR, P = "../../website/assets/patterns/";
+  const card = new Kit.FloatingCard();
+  const MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg>';
+  const PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+
+  // ---------- Data ----------
+  const now = Date.now();
+  function mk(title, theme, cur, past, goal, notes = {}) {
+    let cursor = now - cur * DAY - 3 * HOUR;
+    const runs = [];
+    [...past].reverse().forEach((d, k) => { const start = cursor - d * DAY - 5 * HOUR; runs.push({ start, end: cursor, note: notes[past.length - 1 - k] || null }); cursor = start; });
+    return { title, theme, startedAt: now - cur * DAY - 3 * HOUR, runs, goal, unit: "days", firstStartedAt: cursor, remind: { on: true, every: "day", time: "9:00 am" } };
+  }
+  const E = [
+    mk("No caffeine", "Waves", 23, [3, 11, 6, 18], 30, { 0: "Friday drinks with the team", 3: "Deadline week" }),
+    mk("Started the gym", "Mosaic", 112, [9, 40], 180),
+    mk("Moved cities", "Clouds", 383, [], 365),
+    mk("Changed bedsheets", "Eyes", 9, [12, 14, 10, 13], 14),
+    mk("No doomscrolling", "Puffs", 4, [2, 7, 5], 7),
+  ];
+  E.length = 0;
+  let ev = null;
+  const dd = (ms) => Math.floor(ms / DAY);
+  const runLen = (e) => Date.now() - e.startedAt;
+  const bestPast = (e) => Math.max(0, ...e.runs.map((r) => r.end - r.start));
+  const fmtN = (n) => n.toLocaleString("en-GB");
+  const plural = (n, w) => fmtN(n) + " " + (n === 1 ? w : w + "s");
+  function valueIn(unit, ms) { const d = ms / DAY; return unit === "hours" ? Math.floor(ms / HOUR) : unit === "months" ? Math.floor(d / 30) : unit === "years" ? Math.floor(d / 365) : Math.floor(d); }
+  function setTheme(t) { const r = document.documentElement.style; r.setProperty("--t-bg", Kit.THEMES[t].bg); r.setProperty("--t-pattern", "url(" + P + t + ".svg)"); }
+  const ticksHTML = (n, on, base = 34, step = 3.4) => Array.from({ length: n }, (_, k) => '<i class="' + (k < on ? "on" : "") + '" style="height:' + (base + k * step) + '%"></i>').join("");
+
+  // ---------- Rolling digits ----------
+  function setDigit(dg, n, instant) {
+    const st = dg.firstChild, from = st._n ?? n; st._n = n;
+    st.style.transform = "translateY(" + (-n * 10) + "%)";
+    if (instant || from === n || Kit.reduced()) return;
+    const s = Kit.spring(0.55, 0.8);
+    st.getAnimations().forEach((a) => a.cancel());
+    st.animate([{ transform: "translateY(" + (-from * 10) + "%)", filter: "blur(0)" }, { filter: "blur(2.5px)", offset: 0.35 }, { transform: "translateY(" + (-n * 10) + "%)", filter: "blur(0)" }], { duration: s.duration, easing: s.easing });
+  }
+  function roll(node, str) {
+    const chars = [...str], shape = chars.map((c) => (/\d/.test(c) ? "d" : c)).join("");
+    if (node._shape === shape) { chars.forEach((c, i) => /\d/.test(c) && setDigit(node.children[i], +c)); return; }
+    const had = node._shape !== undefined;
+    node.classList.add("roll");
+    node.innerHTML = chars.map((c) => /\d/.test(c) ? '<span class="dg"><span class="st">' + "0123456789".split("").map((d) => "<i>" + d + "</i>").join("") + "</span></span>" : "<span>" + c + "</span>").join("");
+    chars.forEach((c, i) => /\d/.test(c) && setDigit(node.children[i], +c, true));
+    if (had) node.animate([{ opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0)" }], { duration: Kit.ms(280), easing: Kit.EASE_OUT });
+    node._shape = shape;
+  }
+
+  // ---------- Home ----------
+  function renderHome() {
+    const h = new Date().getHours();
+    const nm = ($("#nameIn") && $("#nameIn").value.trim()) || "";
+    $("#hi").textContent = (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + (nm ? ", " + nm + "." : ".");
+    if (!E.length) { $("#grid").hidden = true; renderEmpty(); return; }
+    $("#grid").hidden = false; $("#empty").hidden = true; stopEmpty();
+    const bests = E.filter((e) => e.runs.length && runLen(e) >= bestPast(e)).length;
+    $("#sum").innerHTML = "<b>" + E.length + " counters</b> going, " + (bests ? "<b>" + bests + "</b> on a personal best." : "keep it up.");
+    $("#grid").innerHTML = E.map((e, i) => {
+      const d = dd(runLen(e));
+      const best = e.runs.length && runLen(e) >= bestPast(e) ? '<span class="best">★ Best</span>' : "";
+      return '<button class="tile" data-i="' + i + '" style="--c:' + Kit.THEMES[e.theme].bg + ";--p:url(" + P + e.theme + '.svg)">' + best +
+        '<span class="n">' + fmtN(d) + "<small>d</small></span>" + '<span class="s">Since ' + e.title + "</span>" +
+        "</button>";
+    }).join("") + '<button class="tile add" aria-label="Add an event"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6v28M6 20h28"/></svg></button>';
+    $("#grid").querySelectorAll(".tile[data-i]").forEach((t) => t.addEventListener("click", () => openPage(+t.dataset.i, t)));
+    $("#grid .tile.add").addEventListener("click", (e) => openAdd(e.currentTarget));
+  }
+
+  // ---------- Card grows into the page (GO's expanding cards) ----------
+  const screen = Kit.screen;
+  const px = (q, rad) => ({ left: q.left + "px", top: q.top + "px", width: q.width + "px", height: q.height + "px", borderRadius: rad + "px" });
+  function expander(t) { const x = document.createElement("div"); x.className = "expander"; x.style.setProperty("--c", Kit.THEMES[t].bg); x.style.setProperty("--p", "url(" + P + t + ".svg)"); screen.appendChild(x); return x; }
+  function heroRect() { return { left: 8, top: 8, width: screen.clientWidth - 16, height: 400 }; }
+  function openPage(i, tile) {
+    ev = E[i]; setTheme(ev.theme); Kit.haptic(6);
+    const from = Kit.rel(tile), to = heroRect(), x = expander(ev.theme), s = Kit.spring(0.5, 0.86);
+    tile.style.visibility = "hidden";
+    Object.assign(x.style, px(to, 44));
+    // The home screen steps back as the card comes forward
+    $("#home").animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.96)" }], { duration: Kit.ms(300), easing: Kit.EASE_OUT, fill: "forwards" });
+    x.animate([px(from, 26), px(to, 44)], { duration: s.duration, easing: s.easing }).finished.then(() => {
+      $("#home").hidden = true; $("#home").getAnimations().forEach((a) => a.cancel());
+      $("#page").hidden = false; $("#pageScroll").scrollTop = 0; navOnScroll();
+      renderPage(true);
+      tile.style.visibility = "";
+      x.animate([{ opacity: 1 }, { opacity: 0 }], { duration: Kit.ms(200), easing: "ease-out", fill: "forwards" }).finished.then(() => x.remove());
+      Kit.enter([$(".count"), $("#heroGoal"), ...$("#para").children, $(".box"), $(".list"), $(".dock")], 30, 50);
+    });
+  }
+  $("#back").addEventListener("click", () => {
+    const idx = E.indexOf(ev);
+    $("#page").hidden = true; $("#home").hidden = false; $(".hello").hidden = true; clearTimeout(greet._t); renderHome();
+    const tile = $('#grid .tile[data-i="' + idx + '"]'), x = expander(ev.theme), s = Kit.spring(0.42, 0.95);
+    const to = Kit.rel(tile); tile.style.visibility = "hidden";
+    Object.assign(x.style, px(to, 26));
+    $("#home").animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: Kit.ms(320), easing: Kit.EASE_OUT });
+    x.animate([px(heroRect(), 44), px(to, 26)], { duration: s.duration, easing: s.easing }).finished.then(() => { tile.style.visibility = ""; x.remove(); });
+  });
+
+  // ---------- Page ----------
+  let scrubIdx = -1, runs = [];
+  function renderPage(first) {
+    syncSeg(true);
+    if (first) { const t = fmtN(valueIn(ev.unit, runLen(ev))); roll($("#num"), t.replace(/\d/g, "0")); requestAnimationFrame(() => showRun(null)); } else showRun(null);
+    const d = dd(runLen(ev)), p = ev.goal ? Math.min(1, d / ev.goal) : 0;
+    $("#hTicks").innerHTML = ticksHTML(28, ev.goal ? Math.round(p * 28) : 0, 26, 2.7);
+    if (first && !Kit.reduced()) [...$("#hTicks").children].filter((t) => t.classList.contains("on")).forEach((t, k) => t.animate([{ opacity: .15, transform: "scaleY(.5)" }, { opacity: 1, transform: "none" }], { duration: Kit.ms(260), delay: Kit.ms(260 + k * 22), easing: Kit.EASE_OUT, fill: "backwards" }));
+    renderGoalLabels(first);
+    renderPara(first);
+    renderBars(first);
+    const lens = ev.runs.map((r) => r.end - r.start), bp = bestPast(ev), avg = (lens.reduce((a, b) => a + b, 0) + runLen(ev)) / (lens.length + 1);
+    $("#t1").innerHTML = bp ? fmtN(dd(bp)) + "<small>d</small>" : "–";
+    $("#t2").innerHTML = fmtN(dd(avg)) + "<small>d</small>";
+    $("#t3").textContent = lens.length;
+    roll($("#dockNum"), fmtN(d) + "d");
+  }
+  /// "68 days to go · 180-day goal", in whatever unit the page is showing,
+  /// with digits that roll. On opening they roll up from zero.
+  function renderGoalLabels(fromZero) {
+    const u = ev.unit, w = u.slice(0, -1);
+    if (!ev.goal) {
+      $("#gLeftN").textContent = ""; Kit.morph($("#gLeftW"), "No goal yet", { noWidth: true });
+      $("#gGoalN").textContent = ""; $("#gGoalW").textContent = "set one"; return;
+    }
+    const goalMs = ev.goal * DAY, leftMs = goalMs - runLen(ev);
+    const left = valueIn(u, Math.max(0, leftMs)), goal = valueIn(u, goalMs);
+    const go = (node, n) => { const t = fmtN(n); if (fromZero) { roll(node, t.replace(/\d/g, "0")); requestAnimationFrame(() => roll(node, t)); } else roll(node, t); };
+    if (leftMs <= 0) { $("#gLeftN").textContent = ""; Kit.morph($("#gLeftW"), "Goal reached", { noWidth: true }); }
+    else { if (!$("#gLeftN").classList.contains("roll")) $("#gLeftN").textContent = ""; go($("#gLeftN"), left); Kit.morph($("#gLeftW"), (left === 1 ? w : w + "s") + " to go", { noWidth: true }); }
+    go($("#gGoalN"), goal); Kit.morph($("#gGoalW"), w, { noWidth: true });
+  }
+
+  // The nav goes from light-over-the-card to solid as the card scrolls away
+  function navOnScroll() {
+    const y = $("#pageScroll").scrollTop, p = Math.max(0, Math.min(1, (y - 230) / 140));
+    $("#pnav .tint").style.opacity = p;
+    $("#pnav").classList.toggle("solid", p > 0.5);
+  }
+  $("#pageScroll").addEventListener("scroll", navOnScroll, { passive: true });
+
+  function showRun(r) {
+    const ms = r ? r.end - r.start : runLen(ev), v = valueIn(ev.unit, ms), w = ev.unit.slice(0, -1);
+    roll($("#num"), fmtN(v));
+    Kit.morph($("#unit"), v === 1 ? w : w + "s");
+    Kit.morph($("#lab"), r && !r.cur ? "run " + (r.i + 1) + " · " + Kit.fmt(r.start) + " – " + Kit.fmt(r.end) : "since " + ev.title.toLowerCase(), { noWidth: true });
+  }
+  function syncSeg(instant) {
+    const btns = [...$("#useg").querySelectorAll("button")], i = btns.findIndex((b) => b.dataset.u === ev.unit), knob = $("#useg .knob");
+    btns.forEach((b, j) => b.classList.toggle("on", j === i));
+    const x = i * 34, from = knob._x ?? x, s = Kit.spring(0.35, 0.8); knob._x = x;
+    knob.style.transform = "translateX(" + x + "px)";
+    if (!instant) knob.animate([{ transform: "translateX(" + from + "px)" }, { transform: "translateX(" + x + "px)" }], { duration: s.duration, easing: s.easing });
+  }
+  $("#useg").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b || b.dataset.u === ev.unit) return;
+    ev.unit = b.dataset.u; Kit.haptic(4); syncSeg(false); showRun(scrubIdx >= 0 ? runs[scrubIdx] : null); renderGoalLabels(false);
+  });
+
+  function renderPara(first) {
+    const cur = runLen(ev), bp = bestPast(ev);
+    let l1;
+    if (!ev.runs.length) l1 = "Your first run, and going strong.";
+    else if (cur >= bp) l1 = "That’s your <b>longest run</b> yet, <b>" + plural(dd(cur - bp), "day") + "</b> past your old best.";
+    else l1 = "Your best is <b>" + plural(dd(bp), "day") + "</b>. <b>" + plural(Math.ceil((bp - cur) / DAY), "day") + "</b> to beat it.";
+    const r = ev.remind;
+    const l2 = r.on ? 'Remind me <span class="tok" data-go="remind">' + (r.every === "day" ? "every day" : r.every === "weekdays" ? "on weekdays" : "every " + r.every) + '</span> at <span class="tok" data-go="remind">' + r.time + "</span>."
+      : 'No reminders. <span class="tok" data-go="remind">Remind me</span>?';
+    if (first) { $("#l1").innerHTML = l1; $("#l2").innerHTML = l2; } else { Kit.blurSwap($("#l1"), l1); Kit.blurSwap($("#l2"), l2); }
+  }
+  $("#para").addEventListener("click", (e) => { const t = e.target.closest("[data-go]"); if (t) { Kit.haptic(4); editRemind(t); } });
+
+  function renderBars(first) {
+    const nowT = Date.now();
+    runs = [...ev.runs].reverse().map((r, i) => ({ ...r, i })).concat([{ start: ev.startedAt, end: nowT, cur: true, i: ev.runs.length }]);
+    const max = Math.max(...runs.map((r) => r.end - r.start)), bp = bestPast(ev);
+    $("#bars").innerHTML = runs.map((r) => '<div class="b' + (r.cur ? " cur" : "") + '" style="height:' + Math.max(5, ((r.end - r.start) / max) * 100) + '%"><em>' + (r.cur ? "now" : Kit.monthShort(r.start)) + "</em></div>").join("") +
+      (bp ? '<div class="best" style="bottom:' + (bp / max) * 100 + '%"></div>' : "");
+    if (first && !Kit.reduced()) [...$("#bars").querySelectorAll(".b")].forEach((b, i) => { const s = Kit.spring(0.6, 0.72); b.animate([{ transform: "scaleY(.03)" }, { transform: "none" }], { duration: s.duration, easing: s.easing, delay: Kit.ms(320 + i * 55), fill: "backwards" }); });
+    note(null);
+  }
+  function note(r) {
+    Kit.blurSwap($("#note"), !r || r.cur ? "This run started " + Kit.fmt(ev.startedAt) + ". The dashed line is your best before it." : Kit.daysText(r.end - r.start) + (r.note ? " · “" + r.note + "”" : ""));
+  }
+  const bars = $("#bars");
+  function pick(e) {
+    const bs = [...bars.querySelectorAll(".b")]; let best = 0, dist = Infinity;
+    bs.forEach((b, i) => { const r = b.getBoundingClientRect(), d = Math.abs(e.clientX - (r.left + r.width / 2)); if (d < dist) { dist = d; best = i; } });
+    if (best === scrubIdx) return;
+    scrubIdx = best; Kit.haptic(3);
+    bs.forEach((b, i) => b.classList.toggle("on", i === best));
+    showRun(runs[best]); note(runs[best]);
+  }
+  bars.addEventListener("pointerdown", (e) => { bars.setPointerCapture(e.pointerId); bars._d = true; pick(e); });
+  bars.addEventListener("pointermove", (e) => bars._d && pick(e));
+  const up = () => { bars._d = false; setTimeout(() => { if (bars._d) return; scrubIdx = -1; bars.querySelectorAll(".b").forEach((b) => b.classList.remove("on")); showRun(null); note(null); }, Kit.ms(1400)); };
+  bars.addEventListener("pointerup", up); bars.addEventListener("pointercancel", up);
+
+  // ---------- Floating cards (the add card), with GO's stepper ----------
+  function stepperHTML() { return '<div class="stepper"><button data-s="-1" aria-label="Less">' + MINUS + '</button><button data-s="1" aria-label="More">' + PLUS + "</button></div>"; }
+
+  $("#reset").addEventListener("click", () => {
+    const steps = [["now", 0], ["an hour ago", HOUR], ["this morning", null], ["yesterday", DAY], ["2 days ago", 2 * DAY]];
+    let i = 0, note = "";
+    const when = () => { const o = steps[i][1]; if (o === null) { const d = new Date(); d.setHours(8, 0, 0, 0); return d.getTime(); } return Date.now() - o; };
+    card.open($("#reset"), (b) => {
+      b.innerHTML =
+        '<div class="line26"><span class="conn">Reset</span><span class="word">' + ev.title.toLowerCase() + "</span></div>" +
+        '<div class="vrow fx"><span class="conn">from</span><span class="word" id="rw"></span>' + stepperHTML() + "</div>" +
+        '<div class="vrow fx"><span class="conn">with</span><input class="note-in" id="rn" placeholder="a note" maxlength="80"></div>' +
+        '<div class="hint fx" id="rk"></div>';
+      const sync = () => {
+        Kit.morph(b.querySelector("#rw"), steps[i][0]);
+        Kit.blurSwap(b.querySelector("#rk"), "Your <b>" + Kit.daysText(when() - ev.startedAt) + "</b> run is saved in your history. The first start, " + Kit.fmt(ev.firstStartedAt, true) + ", stays.");
+      };
+      b.querySelectorAll(".stepper button").forEach((s) => s.onclick = () => { i = Math.max(0, Math.min(steps.length - 1, i - +s.dataset.s)); Kit.haptic(3); sync(); });
+      b.querySelector("#rn").oninput = (e) => (note = e.target.value);
+      sync();
+    }, [
+      { label: "Cancel", kind: "ghost", onClick: () => card.close() },
+      { label: '<span class="hold-label">Hold to reset</span><span class="fill"><span class="hold-label">Keep holding…</span></span>', kind: "hold", onClick: () => {} },
+    ], { sourceRadius: 36 });
+    Kit.holdButton(card.foot.querySelector(".hold"), {
+      duration: 1200,
+      onComplete: () => {
+        const at = when(), len = at - ev.startedAt, prev = ev.startedAt;
+        ev.runs.unshift({ start: ev.startedAt, end: at, note: note.trim() || null });
+        ev.startedAt = at;
+        setTimeout(() => card.close(true, () => {
+          renderPage(false);
+          Kit.toast("Saved your " + Kit.daysText(len) + " run", "Undo", () => { ev.runs.shift(); ev.startedAt = prev; renderPage(false); });
+        }), Kit.ms(250));
+      },
+    });
+  });
+
+  $("#heroGoal").addEventListener("click", () => {
+    const stops = [7, 14, 30, 60, 90, 100, 180, 365, 500, 730];
+    let g = stops.includes(ev.goal) ? ev.goal : 30;
+    card.open($("#heroGoal"), (b) => {
+      b.innerHTML = '<div class="vrow"><span class="conn">goal</span><span class="word" style="font-size:44px;letter-spacing:-.03em"><span id="gv"></span></span><span class="word">days</span>' + stepperHTML() + "</div>" +
+        '<div class="hint fx" id="gn"></div>';
+      const sync = () => {
+        roll(b.querySelector("#gv"), String(g));
+        const at = ev.startedAt + g * DAY;
+        Kit.blurSwap(b.querySelector("#gn"), at < Date.now() ? "You’re already past this one." : "You’ll get there on <b>" + Kit.fmt(at, true) + "</b> if you keep going.");
+      };
+      b.querySelectorAll(".stepper button").forEach((s) => s.onclick = () => { g = stops[Math.max(0, Math.min(stops.length - 1, stops.indexOf(g) + +s.dataset.s))]; Kit.haptic(3); sync(); });
+      sync();
+    }, [{ label: "Done", onClick: () => { ev.goal = g; card.close(true, () => renderPage(false)); } }], { sourceRadius: 20, fadeIn: true });
+  });
+
+  function editRemind(src) {
+    const freq = [["off", "Off"], ["day", "Every day"], ["weekdays", "Weekdays"], ["Monday", "Mondays"]], times = ["8:00 am", "9:00 am", "12:30 pm", "6:00 pm", "9:00 pm"];
+    card.open(src, (b) => {
+      b.innerHTML = '<div class="line26"><span class="conn">Remind me</span><span class="word" id="rw"></span></div><div class="chips fx" id="rf">' +
+        freq.map(([k, l]) => '<button class="chip" data-k="' + k + '">' + l + "</button>").join("") + '</div><div class="chips fx" id="rt">' + times.map((t) => '<button class="chip" data-t="' + t + '">' + t + "</button>").join("") + "</div>";
+      const sync = () => { const r = ev.remind;
+        Kit.morph(b.querySelector("#rw"), r.on ? (r.every === "day" ? "every day" : r.every === "weekdays" ? "on weekdays" : "every " + r.every) + " at " + r.time : "never");
+        b.querySelectorAll("#rf .chip").forEach((c) => c.classList.toggle("on", r.on ? c.dataset.k === r.every : c.dataset.k === "off"));
+        b.querySelectorAll("#rt .chip").forEach((c) => c.classList.toggle("on", r.on && c.dataset.t === r.time)); };
+      b.querySelectorAll("#rf .chip").forEach((c) => c.onclick = () => { ev.remind.on = c.dataset.k !== "off"; if (ev.remind.on) ev.remind.every = c.dataset.k; Kit.haptic(3); sync(); });
+      b.querySelectorAll("#rt .chip").forEach((c) => c.onclick = () => { ev.remind.on = true; ev.remind.time = c.dataset.t; Kit.haptic(3); sync(); });
+      sync();
+    }, [{ label: "Done", onClick: () => card.close(true, () => renderPara(false)) }], { sourceRadius: 12, fadeIn: true });
+  }
+
+  $("#del").addEventListener("click", () => {
+    let archive = true;
+    card.open($("#del"), (b) => {
+      b.innerHTML = '<div class="line26"><span class="conn" id="dv">Archive</span><span class="word">' + ev.title.toLowerCase() + "?</span></div>" +
+        '<div class="hint fx"><b><span id="dn"></span></b> runs and every note. </div>' +
+        '<div class="trow fx"><div>Keep its history<small>Archive hides it from home and keeps everything.</small></div><span class="tg on" id="dk"></span></div>';
+      roll(b.querySelector("#dn"), String(ev.runs.length + 1));
+      b.querySelector("#dk").onclick = (e) => {
+        archive = e.currentTarget.classList.toggle("on"); Kit.haptic(3);
+        Kit.morph(b.querySelector("#dv"), archive ? "Archive" : "Delete");
+        const cta = card.foot.querySelectorAll(".cta")[1];
+        Kit.morph(cta, archive ? "Archive" : "Delete for good"); cta.classList.toggle("danger", !archive);
+      };
+    }, [{ label: "Cancel", kind: "ghost", onClick: () => card.close() }, { label: "Archive", onClick: () => card.close(true, () => Kit.toast(archive ? "Archived" : "Deleted")) }], { sourceRadius: 0, fadeIn: true });
+  });
+
+  $("#edit").addEventListener("click", () => {
+    card.open($("#edit"), (b) => {
+      b.innerHTML = ["Since|" + ev.title, "started|" + Kit.fmt(ev.startedAt), "goal|" + ev.goal + " days", "on|" + ev.theme]
+        .map((l) => { const [c, w] = l.split("|"); return '<div class="line26 fx"><span class="conn">' + c + '</span><span class="tok">' + w + "</span></div>"; }).join("");
+    }, [{ label: "Save", onClick: () => card.close() }], { sourceRadius: 19, fadeIn: true });
+  });
+  $("#share").addEventListener("click", () => Kit.toast("Share sheet opens here"));
+
+  // ---------- Add an event: the sentence card, in this design ----------
+  const IDEAS = ["Quit smoking", "Last cigarette", "No alcohol", "Quit vaping", "No sugar", "No junk food", "No social media", "Started the gym",
+    "Started running", "Meditating daily", "Started therapy", "New job", "Got sober", "Last breakup", "Our anniversary", "Got a pet", "Last haircut",
+    "Last vacation", "Called mom", "Watered the plants", "Car service", "Started journaling", "Reading daily"];
+  const GOALS = [7, 14, 30, 60, 90, 100, 180, 365, 500, 730];
+  const SHUFFLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>';
+  const startOfDay = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+
+  function openAdd(src, preset, presetTheme) {
+    const themes = Object.keys(Kit.THEMES);
+    const d = { name: preset || "", daysAgo: 0, goal: 0, theme: presetTheme || themes[Math.floor(Math.random() * themes.length)], suggested: false };
+    const start = () => (d.daysAgo ? startOfDay(Date.now() - d.daysAgo * DAY) + 9 * HOUR : Date.now());
+    const dateWord = () => (d.daysAgo === 0 ? "today" : d.daysAgo === 1 ? "yesterday" : d.daysAgo + " days ago");
+    const pick = (n, avoid) => IDEAS.filter((x) => !avoid.includes(x)).sort(() => Math.random() - 0.5).slice(0, n);
+    let ideas = pick(6, []);
+    setTheme(d.theme);
+
+    const swatch = (t) => '<i class="sw" style="background-image:url(' + P + t + '.svg)"></i>';
+    function sentence(b) {
+      b.innerHTML =
+        '<div class="line26 fx"><span class="conn">Since</span><span class="tok" data-go="name">' + (d.name ? "<span>" + d.name + "</span>" : '<span class="ph">something</span>') + "</span></div>" +
+        '<div class="line26 fx"><span class="conn">started</span><span class="tok" data-go="date">' + dateWord() + "</span></div>" +
+        '<div class="line26 fx"><span class="conn">goal</span><span class="tok" data-go="goal">' + (d.goal ? d.goal + " days" : "not set") + "</span></div>" +
+        '<div class="line26 fx"><span class="conn">on</span><span class="tok" data-go="theme">' + swatch(d.theme) + d.theme + "</span></div>";
+      b.querySelectorAll("[data-go]").forEach((t) => t.onclick = () => { Kit.haptic(4); ({ name: nameStep, date: dateStep, goal: goalStep, theme: themeStep })[t.dataset.go](); });
+    }
+    const saveActions = () => [{ label: "Save", onClick: save }];
+    const doneActions = () => [{ label: "Done", onClick: back }];
+    const back = () => card.swap(sentence, saveActions());
+
+    function nameStep() {
+      card.swap((b) => {
+        b.innerHTML = '<div class="line26"><span class="conn">Since</span><input class="note-in" id="an" placeholder="something" maxlength="40" value="' + d.name.replace(/"/g, "&quot;") + '"></div>' +
+          '<div class="hair fx"></div><div class="ideah fx"><span>Need an idea?</span><button class="shuf" id="sh" aria-label="Shuffle ideas">' + SHUFFLE + "</button></div>" +
+          '<div class="chips fx" id="ic">' + ideas.map((x, i) => '<button class="ichip" data-i="' + i + '"><span></span></button>').join("") + "</div>";
+        const input = b.querySelector("#an");
+        b.querySelectorAll(".ichip").forEach((c, i) => { Kit.morph(c.firstChild, ideas[i]); c.classList.toggle("on", ideas[i] === d.name); });
+        input.oninput = () => { d.name = input.value.trim(); b.querySelectorAll(".ichip").forEach((c, i) => c.classList.toggle("on", ideas[i] === d.name)); };
+        input.onkeydown = (e) => { if (e.key === "Enter") back(); };
+        setTimeout(() => input.focus(), Kit.ms(200));
+        b.querySelectorAll(".ichip").forEach((c) => c.onclick = () => { d.name = ideas[+c.dataset.i]; input.value = d.name; Kit.haptic(3); c.classList.add("on"); setTimeout(back, Kit.ms(160)); });
+        // New ideas roll in chip by chip, each morphing out of the last
+        b.querySelector("#sh").onclick = () => {
+          const next = pick(6, ideas.concat(d.name));
+          b.querySelector("#sh").animate([{ transform: "rotate(0)" }, { transform: "rotate(180deg)" }], { duration: Kit.ms(420), easing: Kit.EASE_OUT });
+          next.forEach((x, i) => setTimeout(() => { ideas[i] = x; const c = b.querySelectorAll(".ichip")[i]; if (!c) return; Kit.morph(c.firstChild, x); c.classList.remove("on"); Kit.haptic(2); }, Kit.ms(i * 45)));
+        };
+      }, doneActions());
+    }
+
+    function dateStep() {
+      card.swap((b) => {
+        const quick = [["Today", 0], ["Yesterday", 1], ["A week ago", 7], ["A month ago", 30]];
+        b.innerHTML = '<div class="vrow"><span class="conn">started</span><span class="word" id="dw"></span>' + stepperHTML() + "</div>" +
+          '<div class="chips fx">' + quick.map(([l, n]) => '<button class="chip" data-n="' + n + '">' + l + "</button>").join("") + "</div>" +
+          '<div class="hint fx" id="dh"></div>';
+        const sync = () => {
+          Kit.morph(b.querySelector("#dw"), dateWord());
+          b.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", +c.dataset.n === d.daysAgo));
+          Kit.blurSwap(b.querySelector("#dh"), d.daysAgo ? "That’s <b>" + Kit.fmt(start(), true) + "</b>. The card starts at <b>" + d.daysAgo + " days</b>." : "Counting starts from right now.");
+        };
+        b.querySelectorAll(".stepper button").forEach((s) => s.onclick = () => { d.daysAgo = Math.max(0, d.daysAgo - +s.dataset.s); Kit.haptic(3); sync(); });
+        b.querySelectorAll(".chip").forEach((c) => c.onclick = () => { d.daysAgo = +c.dataset.n; Kit.haptic(3); sync(); });
+        sync();
+      }, doneActions());
+    }
+
+    function goalStep() {
+      card.swap((b) => {
+        b.innerHTML = '<div class="vrow"><span class="conn">goal</span><span class="word" style="font-size:44px;letter-spacing:-.03em"><span id="gv"></span></span><span class="word" id="gu"></span>' + stepperHTML() + "</div>" +
+          '<div class="chips fx"><button class="chip" id="ng">No goal</button></div><div class="hint fx" id="gh"></div>';
+        const sync = () => {
+          roll(b.querySelector("#gv"), String(d.goal));
+          Kit.morph(b.querySelector("#gu"), d.goal ? "days" : "– not set");
+          b.querySelector("#ng").classList.toggle("on", !d.goal);
+          const at = start() + d.goal * DAY;
+          Kit.blurSwap(b.querySelector("#gh"), !d.goal ? "Just counting, no finish line." : at < Date.now() ? "You’re already past this one." : "You’ll get there on <b>" + Kit.fmt(at, true) + "</b>.");
+        };
+        b.querySelectorAll(".stepper button").forEach((s) => s.onclick = () => {
+          const i = GOALS.indexOf(d.goal);
+          d.goal = +s.dataset.s > 0 ? GOALS[Math.min(GOALS.length - 1, i + 1)] : i <= 0 ? 0 : GOALS[i - 1];
+          Kit.haptic(3); sync();
+        });
+        b.querySelector("#ng").onclick = () => { d.goal = 0; Kit.haptic(3); sync(); };
+        sync();
+        // Opened with no goal: roll up to a month, so it's clear this moves
+        if (!d.goal && !d.suggested) { d.suggested = true; setTimeout(() => { d.goal = 30; sync(); }, Kit.ms(380)); }
+      }, doneActions());
+    }
+
+    function themeStep() {
+      card.swap((b) => {
+        b.innerHTML = '<div class="line26"><span class="conn">on</span><span class="word" id="tw"></span></div>' +
+          '<div class="pv fx" id="pv"><b>' + Math.max(0, d.daysAgo) + "<small>d</small></b><span>Since " + (d.name || "something") + "</span></div>" +
+          '<div class="ttiles">' + themes.map((t) => '<button class="ttile fx" data-t="' + t + '" aria-label="' + t + '" style="background-image:url(' + P + t + '.svg)"></button>').join("") + "</div>";
+        const sync = (anim) => {
+          Kit.morph(b.querySelector("#tw"), d.theme);
+          const pv = b.querySelector("#pv");
+          pv.style.setProperty("--c", Kit.THEMES[d.theme].bg); pv.style.setProperty("--p", "url(" + P + d.theme + ".svg)");
+          if (anim) { const s = Kit.spring(0.4, 0.62); pv.animate([{ transform: "scale(.9) rotate(-4deg)" }, { transform: "none" }], { duration: s.duration, easing: s.easing }); }
+          b.querySelectorAll(".ttile").forEach((x) => x.classList.toggle("on", x.dataset.t === d.theme));
+        };
+        b.querySelectorAll(".ttile").forEach((x) => x.onclick = () => { if (x.dataset.t === d.theme) return; d.theme = x.dataset.t; setTheme(d.theme); Kit.haptic(3); sync(true); });
+        sync(false);
+      }, doneActions());
+    }
+
+    function save() {
+      if (!d.name) {
+        const tok = card.body.querySelector('[data-go="name"]');
+        tok.animate([{ transform: "translateX(0)" }, { transform: "translateX(-7px)" }, { transform: "translateX(6px)" }, { transform: "translateX(-3px)" }, { transform: "none" }], { duration: Kit.ms(360), easing: "ease-out" });
+        Kit.haptic(20);
+        setTimeout(nameStep, Kit.ms(380));
+        return;
+      }
+      const e = { title: d.name, theme: d.theme, startedAt: start(), runs: [], goal: d.goal, unit: "days", firstStartedAt: start(), remind: { on: false, every: "day", time: "9:00 am" } };
+      E.push(e);
+      // The card becomes the new tile: it shrinks into the grid slot where the + was
+      const from = card.current();
+      card.el.style.display = "none"; card.el.getAnimations().forEach((a) => a.cancel());
+      card.isOpen = false; card.ro.disconnect(); card.fadeScrim(false);
+      renderHome();
+      const tile = $('#grid .tile[data-i="' + (E.length - 1) + '"]');
+      tile.style.visibility = "hidden";
+      tile.querySelector(".n").innerHTML = '<span class="roll"></span><small>d</small>';
+      const x = expander(d.theme), s = Kit.spring(0.55, 0.8), to = Kit.rel(tile);
+      Object.assign(x.style, px(to, 26));
+      x.animate([px(from, from.radius), px(to, 26)], { duration: s.duration, easing: s.easing }).finished.then(() => {
+        tile.style.visibility = ""; x.remove(); Kit.haptic(12);
+        const n = tile.querySelector(".roll"), t = fmtN(dd(Date.now() - e.startedAt));
+        roll(n, t.replace(/\d/g, "0")); requestAnimationFrame(() => roll(n, t));
+        tile.animate([{ transform: "scale(1)" }, { transform: "scale(1.04)" }, { transform: "scale(1)" }], { duration: Kit.ms(420), easing: Kit.EASE_OUT });
+        const add = $("#grid .tile.add"), s2 = Kit.spring(0.5, 0.7);
+        add.animate([{ opacity: 0, transform: "scale(.85)" }, { opacity: 1, transform: "none" }], { duration: s2.duration, easing: s2.easing, delay: Kit.ms(80), fill: "backwards" });
+      });
+    }
+
+    card.open(src, sentence, saveActions(), { sourceRadius: 26 });
+  }
+
+
+  // ---------- Empty home variations ----------
+  const VS = [
+    ["ghost", "Ghost grid", "The grid as it will look: the + tile, then three faint tiles whose ideas quietly change every few seconds. Tap one to start with it."],
+    ["type", "Sentence starter", "Big and typographic, like the add card: “Since …” writes itself out with a new idea every few seconds. Tap the sentence to use that one, or start something else."],
+    ["live", "Already counting", "A counter is already running, “since you joined Sinced”, ticking up by the second. It shows what a counter is before asking for one, with ideas as chips."],
+    ["deck", "Idea deck", "The old illustration, made live: a small deck of themed cards that shuffles through ideas. Tap the front card to start with it."],
+    ["calm", "Just the grid", "Nothing extra. The + tile sits where the first counter will go, with a short note beside it. Empty and full look the same."],
+  ];
+  const THEMES = Object.keys(Kit.THEMES);
+  const somIdeas = (n) => [...IDEAS].sort(() => Math.random() - 0.5).slice(0, n);
+  const PLUS_SVG = '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6v28M6 20h28"/></svg>';
+  let V = "ghost", timers = [];
+  try { V = localStorage.getItem("sinced-empty-v") || V; } catch (e) {}
+  if (!VS.some((x) => x[0] === V)) V = "ghost";
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+  const every = (fn, ms) => timers.push(setInterval(fn, ms));
+  function stopEmpty() { timers.forEach((t) => { clearTimeout(t); clearInterval(t); }); timers = []; }
+  const tileStyle = (t) => "--c:" + Kit.THEMES[t].bg + ";--p:url(" + P + t + ".svg)";
+
+  function renderEmpty() {
+    stopEmpty();
+    const box = $("#empty"); box.hidden = false; box.dataset.v = V;
+    const sum = $("#sum");
+    if (V === "ghost") {
+      sum.innerHTML = "Nothing counting yet. <b>What’s the first one?</b>";
+      const ideas = somIdeas(3), th = somIdeas(3).map((_, i) => THEMES[(i * 3 + 1) % THEMES.length]);
+      box.innerHTML = '<div class="emv emv-ghost"><div class="egrid"><button class="tile add" id="eAdd" aria-label="Add an event">' + PLUS_SVG + "</button>" +
+        ideas.map((x, i) => '<button class="ghost" data-i="' + i + '" style="' + tileStyle(th[i]) + '"><b>0<small style="font-size:20px">d</small></b><span></span></button>').join("") + "</div></div>";
+      const gs = [...box.querySelectorAll(".ghost")];
+      gs.forEach((g, i) => { Kit.morph(g.querySelector("span"), "Since " + ideas[i].toLowerCase()); g.onclick = () => openAdd(g, ideas[i], th[i]); });
+      $("#eAdd").onclick = (e) => openAdd(e.currentTarget);
+      let k = 0;
+      every(() => {
+        const i = k++ % 3, used = new Set(ideas);
+        const next = IDEAS.filter((x) => !used.has(x))[Math.floor(Math.random() * (IDEAS.length - 3))] || IDEAS[0];
+        ideas[i] = next; Kit.morph(gs[i].querySelector("span"), "Since " + next.toLowerCase());
+      }, Kit.ms(2400));
+    }
+    if (V === "type") {
+      sum.innerHTML = "";
+      box.innerHTML = '<div class="emv emv-type"><button class="starter" id="st">Since <span class="w" id="stw"></span><span class="caret"></span></button>' +
+        '<p class="type-hint">Tap to start with this, or count anything you like.</p>' +
+        '<div class="type-row"><button class="pill-dark" id="stUse">Start counting</button><button class="pill-soft" id="stOther">Something else</button></div></div>';
+      const w = $("#stw"); let cur = "";
+      const ideas = somIdeas(IDEAS.length);
+      let n = 0;
+      const typeOut = (word) => {
+        // Delete what's there, then type the next idea letter by letter
+        let s = cur;
+        const del = () => { if (s.length) { s = s.slice(0, -1); w.textContent = s; later(del, 28); } else add(0); };
+        const add = (j) => { if (j <= word.length) { w.textContent = word.slice(0, j); later(() => add(j + 1), 55); } else { cur = word; later(() => typeOut(ideas[++n % ideas.length].toLowerCase()), 1800); } };
+        del();
+      };
+      later(() => typeOut(ideas[0].toLowerCase()), Kit.ms(500));
+      const use = (src) => openAdd(src, cur ? cur[0].toUpperCase() + cur.slice(1) : "");
+      $("#st").onclick = (e) => use(e.currentTarget);
+      $("#stUse").onclick = (e) => use(e.currentTarget);
+      $("#stOther").onclick = (e) => openAdd(e.currentTarget);
+      $(".hello").style.display = "";
+    }
+    if (V === "live") {
+      sum.innerHTML = "";
+      const joined = Date.now() - 4000;
+      box.innerHTML = '<div class="emv emv-live"><div class="livecard" style="' + tileStyle("Waves") + '"><div class="n"><span id="lvN"></span><small id="lvU">s</small></div><div class="s">Since you joined Sinced</div></div>' +
+        '<p class="live-q">That’s a counter. <b>What do you want to count?</b></p>' +
+        '<div class="ichips" id="lvC">' + somIdeas(5).map((x) => "<button>" + x + "</button>").join("") + '<button class="more">Something else</button></div></div>';
+      const tick = () => { const s = Math.floor((Date.now() - joined) / 1000); const m = Math.floor(s / 60);
+        roll($("#lvN"), String(m ? m : s)); $("#lvU").textContent = m ? "m" : "s"; };
+      tick(); every(tick, 1000);
+      box.querySelectorAll("#lvC button").forEach((b) => b.onclick = () => openAdd(b, b.classList.contains("more") ? "" : b.textContent));
+    }
+    if (V === "deck") {
+      sum.innerHTML = "";
+      const ideas = somIdeas(4), th = ["Circles", "Mosaic", "Clouds", "Eyes"], days = [365, 30, 12, 100];
+      box.innerHTML = '<div class="emv emv-deck"><div class="deck" id="deck">' + ideas.map((x, i) =>
+        '<div class="dcard" data-i="' + i + '" style="' + tileStyle(th[i]) + '"><div class="n">' + days[i] + '<small>d</small></div><div class="s">Since ' + x.toLowerCase() + "</div></div>").join("") + "</div>" +
+        '<p class="deck-cap">Count the days since <b>anything</b>.</p><div class="deck-row"><button class="pill-dark" id="dkAdd">Add your first</button></div></div>';
+      const cards = [...box.querySelectorAll(".dcard")];
+      let order = [0, 1, 2, 3];
+      const place = () => order.forEach((ci, pos) => {
+        const c = cards[ci], rot = [0, -7, 7, 0][pos], x = [0, -34, 34, 0][pos], y = [0, 10, 10, 18][pos];
+        c.style.transform = "translate(" + x + "px," + y + "px) rotate(" + rot + "deg) scale(" + (pos ? 0.92 : 1) + ")";
+        c.style.zIndex = 10 - pos; c.style.opacity = pos === 3 ? 0 : 1;
+      });
+      place();
+      every(() => { order.push(order.shift()); place(); }, Kit.ms(2800));
+      cards.forEach((c, i) => c.onclick = () => { if (order[0] === i) openAdd(c, ideas[i], th[i]); });
+      $("#dkAdd").onclick = (e) => openAdd(e.currentTarget);
+    }
+    if (V === "calm") {
+      sum.innerHTML = "Let’s start your <b>first counter</b>.";
+      box.innerHTML = '<div class="emv emv-calm"><div class="egrid"><button class="tile add pulse" id="eAdd" aria-label="Add an event">' + PLUS_SVG + '</button>' +
+        '<div class="calm-note"><b>Your first one goes here</b>Quit something, start something, or just remember when.<svg viewBox="0 0 34 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M32 10H3M10 3 3 10l7 7"/></svg></div></div></div>';
+      $("#eAdd").onclick = (e) => openAdd(e.currentTarget);
+    }
+    Kit.enter([...box.querySelectorAll(".emv > *")], 120, 60);
+  }
+
+  function setVariant(v) {
+    V = v;
+    try { localStorage.setItem("sinced-empty-v", v); } catch (e) {}
+    document.querySelectorAll("#vbar button, #vlist button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+    if (!E.length) { if (card.isOpen) card.close(false); renderHome(); }
+  }
+  $("#vbar").innerHTML = VS.map(([k, n], i) => '<button data-v="' + k + '">' + (i + 1) + " · " + n + "</button>").join("");
+  $("#vlist").innerHTML = VS.map(([k, n, d], i) => '<button data-v="' + k + '"><b>' + (i + 1) + " · " + n + "</b><span>" + d + "</span></button>").join("");
+  document.querySelectorAll("#vbar button, #vlist button").forEach((b) => b.addEventListener("click", () => setVariant(b.dataset.v)));
+  addEventListener("keydown", (e) => { if (e.target.closest("input")) return; const i = +e.key - 1; if (VS[i]) setVariant(VS[i][0]); });
+  $("#nameIn").addEventListener("input", () => { if ($("#page").hidden) { const h = new Date().getHours(), nm = $("#nameIn").value.trim();
+    $("#hi").textContent = (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + (nm ? ", " + nm + "." : "."); } });
+  document.querySelectorAll("#vbar button, #vlist button").forEach((b) => b.classList.toggle("on", b.dataset.v === V));
+
+  // The theme swatches at the top recolour the open counter
+  Kit.onChange(() => { if (ev) { ev.theme = Kit.event.theme; setTheme(ev.theme); } if ($("#page").hidden) renderHome(); });
+  // The greeting is a hello for this visit: it arrives with the app, holds for
+  // a moment, then tucks away and the grid rises into its place
+  function greet() {
+    const hello = $(".hello"), grid = $("#grid");
+    hello.hidden = false;
+    hello.getAnimations().forEach((a) => a.cancel());
+    grid.getAnimations().forEach((a) => a.cancel());
+    Kit.enter([...hello.children], 80, 90);
+    Kit.enter(grid.children, 260, 40);
+    clearTimeout(greet._t);
+    greet._t = setTimeout(() => {
+      // With nothing added yet, the greeting is the page: it stays
+      if ($("#home").hidden || !E.length) return;
+      const h = hello.offsetHeight;
+      hello.animate([{ opacity: 1, filter: "blur(0)", transform: "none" }, { opacity: 0, filter: "blur(6px)", transform: "translateY(-10px)" }],
+        { duration: Kit.ms(260), easing: "ease-out", fill: "forwards" }).finished.then(() => {
+        hello.hidden = true;
+        hello.getAnimations().forEach((a) => a.cancel());
+        if (Kit.reduced()) return;
+        const s = Kit.spring(0.55, 0.86);
+        grid.animate([{ transform: "translateY(" + h + "px)" }, { transform: "none" }], { duration: s.duration, easing: s.easing });
+      });
+    }, Kit.ms(2600));
+  }
+  // Coming back to the app counts as a new visit
+  let hiddenAt = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) hiddenAt = Date.now();
+    else if (Date.now() - hiddenAt > 30000 && !$("#home").hidden) greet();
+  });
+  renderHome();
+  greet();
+  Kit.tick(() => { if (!$("#page").hidden && scrubIdx < 0) showRun(null); });
+})();
+</script>
+</body>
+</html>

@@ -17,6 +17,12 @@ struct MainTabView: View {
     @EnvironmentObject var viewModel: EventViewModel
     @State private var selectedTab: Tab = .home
     @ObservedObject private var addFlow = AddFlow.shared
+    @ObservedObject private var support = SupportPrompter.shared
+
+    private var firstName: String {
+        viewModel.userName.trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ").first.map(String.init) ?? ""
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -34,6 +40,19 @@ struct MainTabView: View {
                 }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        // Now and then, after a milestone or a share: a gentle ask for a tip
+        .sheet(item: $support.ask, onDismiss: support.askDidClose) { ask in
+            SupportAskSheet(ask: ask, firstName: firstName)
+        }
+        .background {
+            // The thank-you after tipping from that ask, once it has closed
+            Color.clear.sheet(item: $support.thanks) { thanks in
+                TipThankYouSheet(thanks: thanks, firstName: firstName)
+            }
+        }
+        .onChange(of: selectedTab, initial: true) { _, tab in
+            support.homeVisible = tab == .home
+        }
         .onReceive(viewModel.$eventToOpen.compactMap { $0 }) { _ in
             // Events open from the home tab
             selectedTab = .home
@@ -62,20 +81,37 @@ struct MainTabView: View {
                 AddEventOverlay(viewModel: viewModel)
             }
         }
-        // A milestone or goal reached since the app last looked
+        // Delete or archive, from a long press on a home card: the event
+        // page's card, growing out of the home card
         .overlay {
-            if let celebration = viewModel.celebration {
-                MilestoneCelebrationView(
+            if let event = addFlow.deleting {
+                FloatingCardHost(source: addFlow.cardFrames[event.id] ?? .zero, sourceRadius: 24, onDismissed: { addFlow.deleting = nil }) { close in
+                    DeleteCard(event: event, close: close) { archive in
+                        let title = event.title
+                        if archive {
+                            viewModel.archiveEvent(event)
+                            ToastManager.shared.show("Archived “\(title)”", icon: "archivebox", kind: .info)
+                        } else {
+                            viewModel.deleteEvent(event)
+                            ToastManager.shared.show("Deleted “\(title)”", icon: "trash", kind: .destructive)
+                        }
+                    }
+                }
+                .id(event.id)
+            }
+        }
+        // A milestone or goal reached since the app last looked: home dims and
+        // that card counts up to it, then confetti
+        .overlay {
+            if viewModel.spotlightShowing, let celebration = viewModel.celebration,
+               let event = viewModel.events.first(where: { $0.id == celebration.eventID }) {
+                MilestoneSpotlight(
                     celebration: celebration,
-                    event: viewModel.events.first { $0.id == celebration.eventID },
-                    onClose: viewModel.closeCelebration,
-                    onSetNextGoal: viewModel.setNextGoal
+                    event: event,
+                    cardFrame: addFlow.cardFrames[event.id],
+                    onOpen: viewModel.openCelebratedEvent,
+                    onDismiss: viewModel.closeCelebration
                 )
-                // Fades in; leaves a touch smaller, quicker than it came
-                .transition(.asymmetric(
-                    insertion: .opacity,
-                    removal: .opacity.combined(with: .scale(scale: 0.98))
-                ))
                 .zIndex(10)
             }
         }

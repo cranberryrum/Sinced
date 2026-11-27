@@ -47,8 +47,26 @@ class EventViewModel: ObservableObject {
         let allEvents = storageManager.loadEvents()
         events = allEvents.filter { !$0.isArchived }
         archivedEvents = allEvents.filter { $0.isArchived }
+        #if DEBUG
+        // Launch with -SincedDemoHistory to give the first counter a few months
+        // of resets, in memory only, to see the calendar on its page
+        if ProcessInfo.processInfo.arguments.contains("-SincedDemoHistory"), !events.isEmpty {
+            let day: TimeInterval = 86400
+            var cursor = Date().addingTimeInterval(-23 * day - 3 * 3600)
+            let current = cursor
+            let notes = [0: "Friday drinks with the team", 1: "Deadline week", 3: "Flight at 6 am", 4: "Visiting home"]
+            var history: [Reset] = []
+            for (i, length) in [3, 11, 6, 18, 9, 14].enumerated() {
+                let start = cursor.addingTimeInterval(-Double(length) * day)
+                history.append(Reset(at: cursor, note: notes[i], previousStart: start))
+                cursor = start
+            }
+            events[0].startedAt = current
+            events[0].history = history
+        }
+        #endif
     }
-    
+
     /// Add a new event. Returns false if it couldn't be saved.
     @discardableResult
     func addEvent(_ event: SinceEvent) -> Bool {
@@ -263,16 +281,42 @@ class EventViewModel: ObservableObject {
     /// "was it a mistake?" strip, and never during onboarding.
     func checkMilestones() {
         guard hasCompletedOnboarding, outsideReset == nil, celebration == nil else { return }
+        #if DEBUG
+        // Launch with -SincedDemoMilestone to see the celebration on the first counter
+        if ProcessInfo.processInfo.arguments.contains("-SincedDemoMilestone"), !demoMilestoneShown, let first = events.first {
+            demoMilestoneShown = true
+            celebration = MilestoneCelebration(eventID: first.id, title: first.title, theme: first.cardTheme, days: 30, isGoal: false, isComeback: false)
+            return
+        }
+        #endif
         guard let found = MilestoneLedger.nextCelebration(in: events) else { return }
         withAnimation(.easeOut(duration: 0.35)) { celebration = found }
     }
 
-    /// The milestone moment is always on a dark ground, so the status bar
-    /// turns light while it shows
-    var celebrationIsDark: Bool { celebration != nil }
+    #if DEBUG
+    private var demoMilestoneShown = false
+    #endif
+
+    /// True while home is playing the milestone on its card
+    @Published var spotlightShowing = false
 
     func closeCelebration() {
-        withAnimation(.easeOut(duration: 0.25)) { celebration = nil }
+        // Remembered for the next app open, when a tip might be welcome
+        if let celebration { SupportPrompter.shared.noteCelebration(celebration) }
+        withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.3)) {
+            spotlightShowing = false
+            celebration = nil
+        }
+    }
+
+    /// Tapping the celebrating card: home comes back, then the event opens
+    /// from its card as usual
+    func openCelebratedEvent() {
+        guard let id = celebration?.eventID else { return }
+        closeCelebration()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { [weak self] in
+            self?.eventToOpen = self?.events.first { $0.id == id }
+        }
     }
 
     /// "Set the next goal": close the moment, then open the goal dial
@@ -298,8 +342,6 @@ class EventViewModel: ObservableObject {
         // A milestone reached since the app last looked takes priority:
         // check now, because a widget tap arrives before the app's own check
         // on becoming active, and the event page would cover the moment
-        checkMilestones()
-        if celebration != nil { return }
         eventToOpen = events.first { $0.id == id }
     }
     

@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sinced · Calendar</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .page-scroll { padding: 8px 0 130px; }
+
+  /* A short version of the card, so the box sits in context */
+  .hero { position: relative; margin: 54px 8px 0; height: 230px; border-radius: 40px; overflow: hidden; color: #fff; background: var(--t-bg) var(--t-pattern) center / cover;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .hero::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); pointer-events: none; }
+  .hero b { font-size: 84px; line-height: .95; font-weight: 600; letter-spacing: -.04em; text-shadow: 0 2px 12px rgba(0,0,0,.12); }
+  .hero span { font-size: 24px; font-weight: 600; margin-top: 2px; }
+  .hero p { margin: 4px 0 0; font-size: 15px; font-weight: 500; opacity: .85; }
+
+  /* ---------- The box ---------- */
+  .cal { margin: 16px 12px 0; border-radius: 32px; background: #fff; padding: 18px 14px 16px; box-shadow: 0 1px 0 rgba(0,0,0,.03); }
+  .cal-h { display: flex; justify-content: space-between; align-items: center; padding: 0 6px 0 6px; height: 30px; }
+  .cal-h .t { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+  .mnav { display: flex; align-items: center; margin-right: -6px; }
+  .mnav .m { font-size: 15px; font-weight: 600; min-width: 76px; text-align: center; color: var(--word); }
+  .mnav .m small { font-size: 15px; color: var(--conn); font-weight: 500; }
+  .mnav button { width: 30px; height: 30px; border-radius: 15px; display: grid; place-items: center; color: var(--word); transition: color .15s, transform .16s var(--ease-out); }
+  .mnav button:active:not(:disabled) { transform: scale(.88); }
+  .mnav button:disabled { color: #dcdadc; cursor: default; }
+  .mnav svg { width: 16px; height: 16px; }
+
+  .wd { display: grid; grid-template-columns: repeat(7, 1fr); margin-top: 12px; font-size: 12px; font-weight: 500; color: var(--conn); text-align: center; }
+  .gridwrap { overflow: hidden; }
+  .grid { margin-top: 4px; min-height: calc(6 * var(--row)); }
+  .cal { --row: 44px; }
+  .wk { display: grid; grid-template-columns: repeat(7, 1fr); height: var(--row); }
+  .d { position: relative; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500; color: var(--word); }
+  .d .n { position: relative; z-index: 1; width: 32px; height: 32px; border-radius: 16px; display: grid; place-items: center; font-variant-numeric: tabular-nums;
+    transition: background-color .18s, color .18s, transform .16s var(--ease-out); }
+  .d.off .n { color: #cfcdcf; }
+  .d.out .n { color: #ebe9eb; font-weight: 400; }
+  .cal[data-v="quiet"] .d.out .n::after { background: #efedef; opacity: 1; transform: scale(.7); }
+  .d.today .n { background: var(--fill); font-weight: 700; }
+  .d .dot { position: absolute; z-index: 1; left: 50%; bottom: 0; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 3px; background: var(--t-bg); display: none; transition: transform .2s var(--ease-out); }
+  .d.reset .dot { display: block; }
+  .d.reset { cursor: pointer; }
+  .d.reset:active .n { transform: scale(.9); }
+  .d.sel .n { background: var(--word); color: #fff; }
+  .d.sel .dot { transform: scale(1.3); }
+
+  /* Bands: every run drawn as a soft stripe, broken by each reset */
+  .d::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: 0; right: 0; display: none; background: color-mix(in srgb, var(--t-bg) 13%, transparent); transition: background-color .2s; }
+  .cal[data-v="bands"] .d.band::before { display: block; }
+  .d.bl::before { left: 6px; border-radius: 16px 0 0 16px; }
+  .d.br::before { right: 6px; border-radius: 0 16px 16px 0; }
+  .d.bl.br::before { border-radius: 16px; }
+  .d.now::before { background: color-mix(in srgb, var(--t-bg) 22%, transparent); }
+  .cal[data-v="bands"] .grid.picking .d.band:not(.hl)::before { background: color-mix(in srgb, var(--t-bg) 6%, transparent); }
+  .d.hl::before { background: color-mix(in srgb, var(--t-bg) 30%, transparent); }
+  .cal[data-v="bands"] .d.today .n { background: transparent; }
+  .cal[data-v="bands"] .d.reset .n { color: var(--word); }
+  .cal[data-v="bands"] .d.reset.sel .n { color: #fff; }
+
+  /* Quiet: no numbers, just a dot a day */
+  .cal[data-v="quiet"] { --row: 34px; }
+  .cal[data-v="quiet"] .d .n { font-size: 0; width: 28px; height: 28px; border-radius: 14px; }
+  .cal[data-v="quiet"] .d .n::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--word); opacity: .75; transition: transform .2s var(--ease-out), background-color .2s; }
+  .cal[data-v="quiet"] .d.off .n::after { background: #d8d6d8; opacity: 1; }
+  .cal[data-v="quiet"] .d.today .n { background: transparent; box-shadow: inset 0 0 0 1.5px var(--word); }
+  .cal[data-v="quiet"] .d .dot { display: none; }
+  .cal[data-v="quiet"] .d.reset .n::after { background: var(--t-bg); opacity: 1; transform: scale(1.9); }
+  .cal[data-v="quiet"] .d.sel .n { background: var(--fill); }
+  .cal[data-v="quiet"] .d.sel .n::after { transform: scale(2.3); }
+  .cal[data-v="quiet"] .wd { margin-top: 14px; }
+
+  /* The note under the month, a fixed two lines so nothing moves */
+  .cnote { margin: 8px 6px 0; min-height: 44px; }
+  .cnote b { display: block; font-size: 15px; font-weight: 600; line-height: 22px; color: var(--word); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cnote b.q::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 4px; background: var(--t-bg); margin: 0 8px 1.5px 0; vertical-align: middle; }
+  .cnote span { display: block; font-size: 13.5px; line-height: 20px; color: var(--label); }
+
+  /* Inline: the note opens inside the month, under its week */
+  .cal[data-v="inline"] .cnote { display: none; }
+  .inote { overflow: hidden; }
+  .inote > div { position: relative; margin: 6px 2px 8px; padding: 11px 14px 12px; border-radius: 18px; background: var(--fill); }
+  .inote > div::before { content: ""; position: absolute; top: -6px; left: var(--x); width: 12px; height: 12px; margin-left: -6px; background: var(--fill); border-radius: 2px; transform: rotate(45deg); }
+  .inote b { display: block; font-size: 15px; font-weight: 600; line-height: 21px; }
+  .inote span { display: block; font-size: 13.5px; line-height: 19px; color: var(--label); }
+  .cal[data-v="inline"] .grid { min-height: 0; }
+  .cal[data-v="inline"] .gridwrap { min-height: calc(6 * var(--row) + 4px); }
+
+  /* Swipe: months side by side, paged */
+  .pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -14px; overscroll-behavior-x: contain; }
+  .pager::-webkit-scrollbar { display: none; }
+  .pager > .pg { flex: 0 0 100%; scroll-snap-align: center; padding: 0 14px; }
+  .pdots { display: none; justify-content: center; gap: 5px; margin-top: 6px; }
+  .pdots i { width: 5px; height: 5px; border-radius: 3px; background: #dcdadc; transition: background-color .2s, width .25s var(--ease-out); }
+  .pdots i.on { width: 14px; background: var(--word); }
+  .cal[data-v="swipe"] .pdots { display: flex; }
+  .cal[data-v="swipe"] .mnav button { display: none; }
+  .cal[data-v="swipe"] .mnav { margin-right: 0; }
+  .cal[data-v="swipe"] .mnav .m { text-align: right; }
+
+  .trio { display: grid; grid-template-columns: repeat(3, 1fr); margin: 12px 4px 0; padding-top: 14px; border-top: 1px solid rgba(0,0,0,.08); }
+  .trio div + div { border-left: 1px solid rgba(0,0,0,.08); padding-left: 14px; }
+  .trio b { display: block; font-size: 26px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
+  .trio b small { font-size: 15px; }
+  .trio div > span { font-size: 12px; color: var(--label); font-weight: 500; }
+
+  .list { margin: 16px 12px 0; border-radius: 26px; background: #fff; overflow: hidden; }
+  .list div { display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 18px; font-size: 16px; font-weight: 500; }
+  .list div + div { border-top: 1px solid rgba(0,0,0,.06); }
+  .list div.red { color: var(--red); }
+  .list svg { width: 20px; height: 20px; }
+
+  .gpill { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); z-index: 30; height: 52px; padding: 0 18px 0 16px; border-radius: 30px; display: flex; align-items: center; gap: 8px;
+    font-size: 16px; font-weight: 600; background: rgba(255,255,255,.72); backdrop-filter: blur(20px) saturate(1.8); -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.6), 0 10px 30px -12px rgba(0,0,0,.25); }
+  .gpill svg { width: 18px; height: 18px; color: var(--green); }
+  .gpill em { font-style: normal; color: var(--label); font-weight: 500; padding-left: 10px; margin-left: 2px; border-left: 1.5px solid rgba(0,0,0,.1); line-height: 18px; }
+
+  .topfade { position: absolute; inset: 0 0 auto 0; height: 60px; z-index: 20; pointer-events: none; background: linear-gradient(#F3F2F0 50%, rgba(243,242,240,0)); }
+
+  /* Picker */
+  .vbar { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; padding: 14px 16px 0; }
+  .vbar button { height: 34px; padding: 0 14px; border-radius: 20px; background: color-mix(in srgb, var(--ink) 7%, transparent); font: 500 14px var(--allo); color: var(--ink); transition: background-color .15s, color .15s; }
+  .vbar button.on { background: var(--ink); color: var(--page); }
+  .cbar { padding-top: 8px; }
+  .cbar span { font: 500 13px var(--allo); color: var(--muted); align-self: center; margin-right: 2px; }
+  .cbar button { height: 30px; font-size: 13px; }
+  .vlist { display: grid; gap: 4px; margin-top: 8px; }
+  .vlist button { text-align: left; padding: 12px 14px; border-radius: 16px; font: inherit; color: inherit; }
+  .vlist button b { display: block; font-weight: 600; }
+  .vlist button span { color: var(--muted); font-size: 14px; }
+  .vlist button.on { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+
+  @media (prefers-reduced-motion: reduce) { .d .n, .d .dot, .pdots i { transition: none; } }
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div class="vbar" id="vbar"></div>
+<div class="vbar cbar" id="cbar"></div>
+<div class="stage">
+  <div class="device-wrap"><div class="device"><div class="screen" id="screen">
+    <div class="topfade"></div>
+    <div class="scroll" id="scroll"><div class="page-scroll">
+      <section class="hero"><b>23</b><span>days</span><p>No caffeine</p></section>
+
+      <section class="cal" id="cal" data-v="dots">
+        <div class="cal-h">
+          <span class="t">Every run</span>
+          <div class="mnav">
+            <button id="prev" aria-label="Previous month"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 3-5 5 5 5"/></svg></button>
+            <span class="m" id="mlabel"></span>
+            <button id="next" aria-label="Next month"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"/></svg></button>
+          </div>
+        </div>
+        <div class="wd"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+        <div class="gridwrap" id="gridwrap"></div>
+        <div class="pdots" id="pdots"></div>
+        <div class="cnote" id="cnote"></div>
+        <div class="trio"><div><b id="t1"></b><span id="l1"></span></div><div><b id="t2"></b><span id="l2"></span></div><div><b id="t3"></b><span id="l3"></span></div></div>
+      </section>
+
+      <div class="list">
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Share the card</div>
+        <div class="red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Delete or archive</div>
+      </div>
+    </div></div>
+    <button class="gpill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Reset</span><em>23d</em></button>
+  </div></div></div>
+
+  <aside class="notes">
+    <p class="eyebrow">Event page · Every run</p>
+    <h1>Every run, as a calendar</h1>
+    <p>The bars become a month. Each reset is a small dot on its day; tap one and its note shows under the month.</p><p>“Best before” is gone: <b>Longest</b> now counts this run too, so it never reads lower than the card above. Switch the wording with <b>Copy</b> at the top: Plain, Sentences or Streaks.</p>
+    <p>Step through months with the arrows (or swipe in 5). Press <b>1–5</b> to switch.</p>
+    <div class="vlist" id="vlist"></div>
+  </aside>
+</div>
+
+<script src="kit.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const VS = [
+    ["dots", "Dots", "A plain month. Reset days get a small dot under the number; tap one for its note."],
+    ["quiet", "Just dots", "No numbers. A dot for every day, darker while counting, a bigger coloured one for each reset."],
+    ["bands", "Runs", "Each run is a soft stripe across the days, broken where you reset. Tap a reset to light up the run it ended."],
+    ["inline", "Opens in place", "The note opens inside the month, right under the week you tapped, pointing at the day."],
+    ["swipe", "Swipe months", "Months sit side by side. Swipe between them; dots under the month show where you are."],
+  ];
+
+  // ---------- Data: 23 days into this run, six resets before it ----------
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const SHORT = MONTHS.map((m) => m.slice(0, 3));
+  const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const startOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const add = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const key = (d) => d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
+  const today = startOf(new Date());
+  const CUR = 23;
+  const PAST = [3, 11, 6, 18, 9, 14];            // most recent first
+  const NOTES = { 0: "Friday drinks with the team", 1: "Deadline week", 3: "Flight at 6 am", 4: "Visiting home" };
+  const runs = [];                                // oldest first, each ends in a reset
+  let cursor = add(today, -CUR);
+  const currentStart = cursor;
+  PAST.forEach((len, i) => { const start = add(cursor, -len); runs.unshift({ start, end: cursor, len, note: NOTES[i] || null }); cursor = start; });
+  const firstStart = cursor;
+  const resets = new Map(runs.map((r) => [key(r.end), r]));
+
+  // Longest counts this run too, so it never reads lower than the card above
+  const longest = Math.max(CUR, ...PAST), avg = Math.round(PAST.reduce((a, b) => a + b, 0) / PAST.length);
+  const longestIsNow = CUR >= Math.max(...PAST);
+
+  // ---------- Copy: three ways of saying the same things ----------
+  const ORD = (n) => n + (n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th");
+  const andList = (a) => a.length === 1 ? "" + a[0] : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+  const dm = (d) => d.getDate() + " " + SHORT[d.getMonth()];
+  const TIMES = ["", "once", "twice", "three times", "four times", "five times"];
+  const COPY = {
+    plain: {
+      name: "Plain", desc: "Name the thing. A run has a length and two dates.",
+      trio: [longestIsNow ? "Longest · this one" : "Longest run", "Average run", "Resets"],
+      pick: (r) => ({ t: r.note ? "“" + r.note + "”" : "No note", s: "A " + r.len + "-day run · " + dm(r.start) + " – " + dm(r.end) }),
+      month: (n, days, mo) => ({ t: n + (n === 1 ? " reset" : " resets") + " in " + MONTHS[mo], s: "On the " + andList(days.map(ORD)) }),
+      clean: (mo, isNow) => isNow ? { t: "No resets in " + MONTHS[mo] + " yet", s: "This run began " + dm(currentStart) } : { t: "No resets in " + MONTHS[mo], s: "The whole month, unbroken" },
+      first: (mo) => ({ t: "You started on " + dm(firstStart), s: "No resets that month" }),
+    },
+    sentence: {
+      name: "Sentences", desc: "Say it like a person would. The number leads, the note follows.",
+      trio: [longestIsNow ? "Your longest, now" : "Your longest", "A typical run", "Fresh starts"],
+      pick: (r) => ({ t: "Lasted " + r.len + " days, until " + dm(r.end), s: r.note ? "“" + r.note + "”" : "No note for this one" }),
+      month: (n, days, mo) => ({ t: "You reset " + (TIMES[n] || n + " times") + " in " + MONTHS[mo], s: "On the " + andList(days.map(ORD)) }),
+      clean: (mo, isNow) => isNow ? { t: "Not a single reset yet", s: "Going since " + dm(currentStart) } : { t: "All of " + MONTHS[mo] + ", no resets", s: "Not a single one" },
+      first: (mo) => ({ t: "Where it began, " + dm(firstStart), s: "No resets that month" }),
+    },
+    streak: {
+      name: "Streaks", desc: "Call a run a streak, the word people already use.",
+      trio: [longestIsNow ? "Best streak · now" : "Best streak", "Average streak", "Times reset"],
+      pick: (r) => ({ t: r.note ? "“" + r.note + "”" : r.len + "-day streak", s: (r.note ? r.len + "-day streak · " : "") + "ended " + WEEKDAYS[r.end.getDay()].slice(0, 3) + " " + dm(r.end) }),
+      month: (n, days, mo) => ({ t: n + (n === 1 ? " streak" : " streaks") + " ended in " + MONTHS[mo], s: "On the " + andList(days.map(ORD)) }),
+      clean: (mo, isNow) => isNow ? { t: "Streak unbroken in " + MONTHS[mo], s: "Since " + dm(currentStart) } : { t: "Unbroken all " + MONTHS[mo], s: "No resets" },
+      first: (mo) => ({ t: "First streak began " + dm(firstStart), s: "No resets that month" }),
+    },
+  };
+  let copy = "plain";
+  function renderTrio() {
+    const c = COPY[copy];
+    $("#t1").innerHTML = longest + "<small>d</small>"; $("#t2").innerHTML = avg + "<small>d</small>"; $("#t3").textContent = PAST.length;
+    ["#l1", "#l2", "#l3"].forEach((id, i) => { $(id).textContent = c.trio[i]; });
+  }
+
+  const minM = firstStart.getFullYear() * 12 + firstStart.getMonth();
+  const maxM = today.getFullYear() * 12 + today.getMonth();
+  let shown = maxM, sel = null, variant = "dots";
+
+  // ---------- Month ----------
+  function inRun(d) { return d >= firstStart && d <= today; }
+  function runOf(d) { return runs.find((r) => d > r.start && d < r.end) || (d >= currentStart && d <= today ? { current: true } : runs.find((r) => +d === +r.start) || null); }
+
+  function monthEl(m) {
+    const y = Math.floor(m / 12), mo = m % 12;
+    const lead = new Date(y, mo, 1).getDay();
+    const grid = document.createElement("div"); grid.className = "grid"; grid.dataset.m = m;
+    const selRun = sel ? resets.get(sel) : null;
+    if (selRun) grid.classList.add("picking");
+    let row;
+    // Always six weeks, the neighbouring months' days faint, so every month is the same height
+    for (let i = 0; i < 42; i++) {
+      if (i % 7 === 0) { row = document.createElement("div"); row.className = "wk"; grid.appendChild(row); }
+      const c = document.createElement("div"); c.className = "d";
+      const d = new Date(y, mo, i - lead + 1), k = key(d), col = i % 7;
+      if (d.getMonth() !== mo) { c.classList.add("out"); c.innerHTML = '<span class="n">' + d.getDate() + "</span>"; row.appendChild(c); continue; }
+      const isReset = resets.has(k);
+      if (!inRun(d)) c.classList.add("off");
+      if (+d === +today) c.classList.add("today");
+      if (isReset) { c.classList.add("reset"); c.dataset.k = k; c.setAttribute("role", "button");
+        c.setAttribute("aria-label", "Reset on " + d.getDate() + " " + MONTHS[mo] + (resets.get(k).note ? ", " + resets.get(k).note : "")); }
+      if (k === sel) c.classList.add("sel");
+      // The stripe for this day, capped where the run or the week ends
+      const band = (x) => inRun(x) && !resets.has(key(x));
+      if (band(d)) {
+        c.classList.add("band");
+        const prev = add(d, -1), next = add(d, 1);
+        if (col === 0 || !band(prev) || prev.getMonth() !== mo) c.classList.add("bl");
+        if (col === 6 || !band(next) || next.getMonth() !== mo || +d === +today) c.classList.add("br");
+        if (d >= currentStart) c.classList.add("now");
+        if (selRun && d > selRun.start && d < selRun.end) c.classList.add("hl");
+      }
+      c.innerHTML = '<span class="n">' + d.getDate() + '</span><i class="dot"></i>';
+      row.appendChild(c);
+    }
+    return grid;
+  }
+
+  function label(m) { const y = Math.floor(m / 12), mo = m % 12; return MONTHS[mo] + (y !== today.getFullYear() ? " <small>" + y + "</small>" : ""); }
+
+  // ---------- Note ----------
+  function noteFor(m) {
+    const c = COPY[copy];
+    if (sel) return { q: true, ...c.pick(resets.get(sel)) };
+    const y = Math.floor(m / 12), mo = m % 12;
+    const inMonth = runs.filter((r) => r.end.getFullYear() === y && r.end.getMonth() === mo);
+    const isNow = m === maxM;
+    if (!inMonth.length) return m === minM && !isNow ? c.first(mo) : c.clean(mo, isNow);
+    return c.month(inMonth.length, inMonth.map((r) => r.end.getDate()), mo);
+  }
+  // Blur the old note out and the new one in; a newer swap always wins
+  let swapId = 0;
+  function swapNote(html) {
+    const el = $("#cnote"), id = ++swapId;
+    if (el.innerHTML === html) return;
+    if (Kit.reduced() || !el.innerHTML) { el.innerHTML = html; return; }
+    el.getAnimations().forEach((a) => a.cancel());
+    el.animate([{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(4px)" }], { duration: Kit.ms(90), easing: "ease-out" }).finished.then(() => {
+      if (id !== swapId) return;
+      el.innerHTML = html;
+      el.animate([{ opacity: 0, filter: "blur(4px)", transform: "translateY(3px)" }, { opacity: 1, filter: "blur(0)", transform: "none" }], { duration: Kit.ms(200), easing: Kit.EASE_OUT });
+    }).catch(() => {});
+  }
+  const noteHTML = (n) => "<b" + (n.q ? ' class="q"' : "") + ">" + n.t + "</b><span>" + n.s + "</span>";
+
+  // ---------- Render ----------
+  const wrap = $("#gridwrap");
+  function render(dir = 0) {
+    $("#cal").dataset.v = variant;
+    $("#mlabel").innerHTML = label(shown);
+    $("#prev").disabled = shown <= minM; $("#next").disabled = shown >= maxM;
+    if (variant === "swipe") return renderPager();
+    const g = monthEl(shown);
+    if (variant === "inline" && sel) insertInline(g, false);
+    wrap.replaceChildren(g);
+    if (dir && !Kit.reduced()) g.animate([{ opacity: 0, transform: "translateX(" + dir * 28 + "px)" }, { opacity: 1, transform: "none" }], { duration: Kit.ms(240), easing: Kit.EASE_OUT });
+    swapNote(noteHTML(noteFor(shown)));
+    $("#pdots").innerHTML = "";
+  }
+
+  function insertInline(g, animate) {
+    g.querySelectorAll(".inote").forEach((n) => n.remove());
+    const cell = g.querySelector('.d[data-k="' + sel + '"]'); if (!cell) return;
+    const row = cell.parentElement, col = [...row.children].indexOf(cell);
+    const n = noteFor(shown), box = document.createElement("div"); box.className = "inote";
+    box.innerHTML = "<div style='--x:" + ((col + .5) / 7 * 100) + "%'>" + "<b>" + n.t + "</b><span>" + n.s + "</span></div>";
+    row.after(box);
+    if (animate && !Kit.reduced()) {
+      const h = box.offsetHeight;
+      box.animate([{ height: "0px", opacity: 0 }, { height: h + "px", opacity: 1 }], { duration: Kit.ms(260), easing: Kit.EASE_OUT });
+    }
+  }
+
+  function renderPager() {
+    const pager = document.createElement("div"); pager.className = "pager";
+    for (let m = minM; m <= maxM; m++) { const pg = document.createElement("div"); pg.className = "pg"; pg.appendChild(monthEl(m)); pager.appendChild(pg); }
+    wrap.replaceChildren(pager);
+    pager.scrollLeft = (shown - minM) * pager.clientWidth;
+    $("#pdots").innerHTML = Array.from({ length: maxM - minM + 1 }, (_, i) => "<i" + (minM + i === shown ? ' class="on"' : "") + "></i>").join("");
+    swapNote(noteHTML(noteFor(shown)));
+    let t;
+    pager.addEventListener("scroll", () => {
+      const m = minM + Math.round(pager.scrollLeft / pager.clientWidth);
+      if (m === shown) return;
+      shown = m; Kit.haptic(4);
+      if (sel) { pager.querySelectorAll(".sel").forEach((n) => n.classList.remove("sel")); pager.querySelectorAll(".grid.picking").forEach((n) => n.classList.remove("picking")); sel = null; }
+      $("#mlabel").innerHTML = label(shown);
+      $("#pdots").querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", minM + i === shown));
+      clearTimeout(t); t = setTimeout(() => swapNote(noteHTML(noteFor(shown))), 60);
+    });
+  }
+
+  function go(dir) {
+    const m = shown + dir; if (m < minM || m > maxM) return;
+    shown = m; sel = null; Kit.haptic(4); render(dir);
+  }
+  $("#prev").addEventListener("click", () => go(-1));
+  $("#next").addEventListener("click", () => go(1));
+
+  // Tapping a reset day picks it; tapping it again, or any other day, lets go
+  wrap.addEventListener("click", (e) => {
+    const cell = e.target.closest(".d");
+    if (!cell || cell.classList.contains("out")) return;
+    const k = cell.dataset.k ? +cell.dataset.k : null;
+    const next = k && k !== sel ? k : null;
+    if (next === sel) return;
+    sel = next; Kit.haptic(next ? 8 : 4);
+    if (variant === "swipe") {
+      const pg = cell.closest(".pg"), m = +pg.querySelector(".grid").dataset.m;
+      pg.replaceChildren(monthEl(m));
+      swapNote(noteHTML(noteFor(shown)));
+      return;
+    }
+    const g = monthEl(shown);
+    if (variant === "inline" && sel) {
+      const had = wrap.querySelector(".inote");
+      insertInline(g, !had);
+    }
+    wrap.replaceChildren(g);
+    swapNote(noteHTML(noteFor(shown)));
+  });
+
+  // ---------- Variants ----------
+  function setCopy(k) {
+    copy = k;
+    document.querySelectorAll("#cbar button").forEach((b) => b.classList.toggle("on", b.dataset.c === k));
+    renderTrio(); swapNote(noteHTML(noteFor(shown)));
+    const pill = document.querySelector(".inote > div");
+    if (pill && sel) { const n = noteFor(shown); pill.innerHTML = "<b>" + n.t + "</b><span>" + n.s + "</span>"; }
+  }
+  $("#cbar").innerHTML = "<span>Copy</span>" + Object.entries(COPY).map(([k, c]) => '<button data-c="' + k + '" title="' + c.desc + '">' + c.name + "</button>").join("");
+  document.querySelectorAll("#cbar button").forEach((b) => b.addEventListener("click", () => setCopy(b.dataset.c)));
+  function setVariant(v) {
+    variant = v; sel = null;
+    document.querySelectorAll("#vbar button, #vlist button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+    render();
+  }
+  $("#vbar").innerHTML = VS.map(([k, n], i) => '<button data-v="' + k + '">' + (i + 1) + " · " + n + "</button>").join("");
+  $("#vlist").innerHTML = VS.map(([k, n, d], i) => '<button data-v="' + k + '"><b>' + (i + 1) + " · " + n + "</b><span>" + d + "</span></button>").join("");
+  document.querySelectorAll("#vbar button, #vlist button").forEach((b) => b.addEventListener("click", () => setVariant(b.dataset.v)));
+  addEventListener("keydown", (e) => { const i = +e.key - 1; if (VS[i]) setVariant(VS[i][0]); if (e.key === "ArrowLeft") go(-1); if (e.key === "ArrowRight") go(1); });
+
+  Kit.mount("j-calendar.html");
+  renderTrio(); setCopy("plain");
+  setVariant("bands");
+  // Open with the calendar in view
+  $("#scroll").scrollTop = 150;
+</script>
+</body>
+</html>

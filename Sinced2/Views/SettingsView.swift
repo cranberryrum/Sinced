@@ -10,114 +10,84 @@ import UserNotifications
 
 struct SettingsView: View {
     @EnvironmentObject private var viewModel: EventViewModel
+    @ObservedObject private var notifications = NotificationManager.shared
     @State private var activeSheet: SettingsSheet?
     @State private var showingNameEditor = false
     @Environment(\.openURL) private var openURL
-    
+
     private static let privacyPolicyURL = URL(string: "https://adityakolte.com/sinced/privacy")!
     private static let supportEmailURL = URL(string: "mailto:adityakoltedes@gmail.com?subject=Sinced")!
     private static let supportPageURL = URL(string: "https://adityakolte.com/sinced/support")!
 
-    private var displayName: String {
-        let trimmed = viewModel.userName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Your name" : trimmed
+    private var firstName: String {
+        viewModel.userName.trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ").first.map(String.init) ?? ""
     }
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    Button {
-                        showingNameEditor = true
-                    } label: {
-                        NameSettingsRow(name: displayName)
-                    }
-                    .buttonStyle(.plain)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 12) {
+                    header
+                        .padding(.bottom, 10)
 
-                    Button {
-                        activeSheet = .aboutApp
-                    } label: {
-                        SettingsRowLabel(icon: "info.circle", title: "About Sinced")
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        activeSheet = .widgetGuide
-                    } label: {
-                        SettingsRowLabel(icon: "square.grid.2x2", title: "Add a Widget")
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        NotificationSettingsView()
-                            .environmentObject(viewModel)
-                    } label: {
-                        SettingsRowLabel(icon: "bell", title: "Notifications", showsChevron: false)
-                    }
-
-                    NavigationLink {
-                        ArchivedEventsView()
-                            .environmentObject(viewModel)
-                    } label: {
-                        SettingsRowLabel(
-                            icon: "archivebox",
-                            title: "Archived Events",
-                            value: viewModel.archivedEvents.isEmpty ? nil : "\(viewModel.archivedEvents.count)",
-                            showsChevron: false
-                        )
-                    }
-
-                    Button {
-                        activeSheet = .aboutDeveloper
-                    } label: {
-                        SettingsRowLabel(icon: "hammer", title: "About Developer")
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Section {
-                    Button {
-                        openURL(AppStoreLinks.writeReview)
-                    } label: {
-                        SettingsRowLabel(icon: "star", title: "Rate Sinced")
-                    }
-                    .buttonStyle(.plain)
-
-                    ShareLink(
-                        item: AppStoreLinks.listing,
-                        message: Text("I use Sinced to count the days since the moments that matter. No account, no ads.")
-                    ) {
-                        SettingsRowLabel(icon: "heart", title: "Tell a Friend")
-                    }
-                    .buttonStyle(.plain)
-                } footer: {
-                    // The small print, kept quiet at the very bottom
-                    VStack(spacing: 8) {
-                        HStack(spacing: 6) {
-                            Button("Privacy Policy") { openURL(Self.privacyPolicyURL) }
-                            Text("·").accessibilityHidden(true)
-                            Button("Support") {
-                                // No mail app set up → open the support page instead
-                                openURL(Self.supportEmailURL) { accepted in
-                                    if !accepted { openURL(Self.supportPageURL) }
-                                }
-                            }
+                    SettingsCard {
+                        Button { showingNameEditor = true } label: {
+                            SettingsRow(icon: "person", title: "Your name", value: firstName.isEmpty ? "Add" : viewModel.userName)
                         }
-                        .font(.roundedFootnote)
-                        .foregroundColor(.secondary)
-                        .buttonStyle(.plain)
-
-                        Text(AppVersion.label)
-                            .font(.roundedCaption)
-                            .foregroundColor(Color(UIColor.tertiaryLabel))
+                        DashedRule()
+                        NavigationLink {
+                            NotificationSettingsView().environmentObject(viewModel)
+                        } label: {
+                            SettingsRow(icon: "bell", title: "Notifications", value: notifications.notificationsEnabled ? "On" : "Off")
+                        }
+                        DashedRule()
+                        NavigationLink {
+                            ArchivedEventsView().environmentObject(viewModel)
+                        } label: {
+                            SettingsRow(icon: "archivebox", title: "Archived", value: viewModel.archivedEvents.isEmpty ? "None" : "\(viewModel.archivedEvents.count)")
+                        }
+                        DashedRule()
+                        Button { activeSheet = .widgetGuide } label: {
+                            SettingsRow(icon: "square.grid.2x2", title: "Add a widget")
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 28)
+
+                    TipJarCard()
+
+                    SettingsCard {
+                        Button { openURL(AppStoreLinks.writeReview) } label: {
+                            SettingsRow(icon: "star", title: "Rate Sinced")
+                        }
+                        DashedRule()
+                        ShareLink(
+                            item: AppStoreLinks.listing,
+                            message: Text("I use Sinced to count the days since the moments that matter. No account, no ads.")
+                        ) {
+                            SettingsRow(icon: "heart", title: "Tell a friend")
+                        }
+                    }
+
+                    SettingsCard {
+                        Button { activeSheet = .aboutApp } label: {
+                            SettingsRow(icon: "info.circle", title: "About Sinced")
+                        }
+                        DashedRule()
+                        Button { activeSheet = .aboutDeveloper } label: {
+                            SettingsRow(icon: "hammer", title: "Who made this")
+                        }
+                    }
+
+                    footer
+                        .padding(.top, 22)
                 }
+                .buttonStyle(SettingsRowButtonStyle())
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 130)
             }
-            .listStyle(.insetGrouped)
-            .grainListBackground()
-            .navigationTitle("Settings")
+            .background(GrainBackground().ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .aboutApp:
@@ -127,6 +97,7 @@ struct SettingsView: View {
                 case .widgetGuide:
                     WidgetGuideView(event: viewModel.events.first)
                         .presentationDetents([.large])
+                        .deviceCornerSheet()
                         .presentationDragIndicator(.visible)
                 }
             }
@@ -137,6 +108,45 @@ struct SettingsView: View {
             }
         }
     }
+
+    /// "Settings", then a line in the home's voice
+    private var header: some View {
+        let count = viewModel.events.count
+        let bold = { (s: String) in Text(s).font(.allo(25, weight: .semibold)).foregroundColor(CardText.word) }
+        return VStack(alignment: .leading, spacing: 2) {
+            Text("Settings").font(.allo(18, weight: .medium)).foregroundStyle(CardText.label)
+            (Text(firstName.isEmpty ? "Hi. " : "Hi, ") + (firstName.isEmpty ? Text("") : bold(firstName) + Text(". "))
+             + Text(count == 0 ? "Nothing counting yet." : "") + (count == 0 ? Text("") : bold("\(count) \(count == 1 ? "counter" : "counters")") + Text(" going.")))
+                .font(.allo(25, weight: .medium))
+                .foregroundStyle(CardText.connector)
+        }
+        .padding(.horizontal, 6)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The small print, kept quiet at the very bottom
+    private var footer: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Button("Privacy") { openURL(Self.privacyPolicyURL) }
+                Text("·").accessibilityHidden(true)
+                Button("Support") {
+                    // No mail app set up → open the support page instead
+                    openURL(Self.supportEmailURL) { accepted in
+                        if !accepted { openURL(Self.supportPageURL) }
+                    }
+                }
+            }
+            .font(.allo(14, weight: .medium))
+            .foregroundStyle(CardText.label)
+            .buttonStyle(.plain)
+
+            Text(AppVersion.label)
+                .font(.allo(12))
+                .foregroundStyle(CardText.connector)
+        }
+        .frame(maxWidth: .infinity)
+    }
 }
 
 private enum SettingsSheet: Identifiable {
@@ -146,85 +156,83 @@ private enum SettingsSheet: Identifiable {
 
     var id: Int {
         switch self {
-        case .aboutApp:
-            return 0
-        case .aboutDeveloper:
-            return 1
-        case .widgetGuide:
-            return 2
+        case .aboutApp: return 0
+        case .aboutDeveloper: return 1
+        case .widgetGuide: return 2
         }
     }
 }
 
-/// Leading SF Symbol for a settings row: one size, weight and width so
-/// every title lines up
-private struct SettingsIcon: View {
-    let systemName: String
-
+/// A white card of rows, like the event page's actions
+struct SettingsCard<Content: View>: View {
+    @ViewBuilder let content: Content
     var body: some View {
-        Image(systemName: systemName)
-            .symbolVariant(.fill)
-            .font(.system(size: 15, weight: .regular))
-            .foregroundStyle(Color(.systemGray))
-            .frame(width: 22)
-            .accessibilityHidden(true)
+        VStack(spacing: 0) { content }
+            .padding(.horizontal, 16)
+            .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Color.white))
     }
 }
 
-private struct NameSettingsRow: View {
-    let name: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            SettingsIcon(systemName: "person")
-
-            Text(name)
-                .font(.roundedBody)
-                .foregroundColor(.primary)
-                // Separators start under the title, not the icon
-                .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
-
-            Spacer()
-
-            Image(systemName: "pencil")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.secondary)
-        }
-        .contentShape(Rectangle())
-    }
-}
-
-private struct SettingsRowLabel: View {
+/// Icon, title, a quiet value and a chevron, in Allo
+struct SettingsRow: View {
     let icon: String
     let title: String
     var value: String? = nil
-    var showsChevron: Bool = true
 
     var body: some View {
         HStack(spacing: 12) {
-            SettingsIcon(systemName: icon)
-
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(CardText.word)
+                .frame(width: 22)
+                .accessibilityHidden(true)
             Text(title)
-                .font(.roundedBody)
-                .foregroundColor(.primary)
-                .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
-
-            Spacer()
-
+                .font(.allo(16, weight: .medium))
+                .foregroundStyle(CardText.word)
+            Spacer(minLength: 12)
             if let value {
                 Text(value)
-                    .font(.roundedBody)
-                    .foregroundColor(.secondary)
+                    .font(.allo(16))
+                    .foregroundStyle(CardText.label)
+                    .lineLimit(1)
                     .contentTransition(.numericText())
             }
-
-            if showsChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary.opacity(0.6))
-            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(CardText.connector.opacity(0.8))
+                .accessibilityHidden(true)
         }
+        .frame(height: 56)
         .contentShape(Rectangle())
+    }
+}
+
+/// A settings page's title: a small label, then a line in the home's voice
+struct SettingsPageHeader: View {
+    let label: String
+    let line: Text
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.allo(18, weight: .medium)).foregroundStyle(CardText.label)
+            line.font(.allo(25, weight: .medium)).foregroundStyle(CardText.connector)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 6)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    /// The bold part of a header line
+    static func bold(_ s: String) -> Text { Text(s).font(.allo(25, weight: .semibold)).foregroundColor(CardText.word) }
+}
+
+/// Rows dim a touch and shrink slightly under the finger
+struct SettingsRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.55 : 1)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -310,77 +318,95 @@ private struct NotificationSettingsView: View {
         viewModel.events.filter { listedEventIds.contains($0.id) }
     }
 
+    private var headerLine: Text {
+        let on = notificationManager.notificationsEnabled
+        let count = viewModel.events.filter { $0.reminderSettings.isEnabled }.count
+        guard on else { return Text("Reminders are ") + SettingsPageHeader.bold("off") + Text(".") }
+        if count == 0 { return Text("No counter is reminding you yet.") }
+        return SettingsPageHeader.bold("\(count) \(count == 1 ? "counter" : "counters")") + Text(count == 1 ? " reminds you." : " remind you.")
+    }
+
     var body: some View {
-        List {
-            Section {
-                Toggle(isOn: Binding(
-                    get: { notificationManager.notificationsEnabled },
-                    set: handleGlobalNotificationsToggle
-                )) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Allow notifications")
-                            .font(.roundedBody)
-                            .foregroundColor(.primary)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 12) {
+                SettingsPageHeader(label: "Notifications", line: headerLine)
+                    .padding(.bottom, 10)
 
-                        Text("Turn this off to dismiss all Sinced notifications.")
-                            .font(.roundedCaption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .tint(.primaryGreen)
-
-                if notificationManager.authorizationStatus == .denied {
-                    Button("Open System Settings") {
-                        notificationManager.openSettings()
-                    }
-                    .foregroundColor(.primaryGreen)
-                }
-            }
-
-            Section("Event notifications") {
-                if eventsWithNotifications.isEmpty {
-                    Text("No event reminders are turned on right now.")
-                        .font(.roundedBody)
-                        .foregroundColor(.secondary)
-                } else {
-                    ForEach(eventsWithNotifications) { event in
-                        Toggle(isOn: Binding(
-                            get: { isReminderEnabled(for: event) },
-                            set: { isEnabled in
-                                updateReminder(for: event, isEnabled: isEnabled)
-                            }
-                        )) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(event.title)
-                                    .font(.roundedBody)
-                                    .foregroundColor(.primary)
-
-                                Text(reminderDescription(for: event))
-                                    .font(.roundedCaption)
-                                    .foregroundColor(.secondary)
-                            }
+                SettingsCard {
+                    Toggle(isOn: Binding(
+                        get: { notificationManager.notificationsEnabled },
+                        set: handleGlobalNotificationsToggle
+                    )) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Allow notifications").font(.allo(16, weight: .medium)).foregroundStyle(CardText.word)
+                            Text("Off pauses every reminder from Sinced.").font(.allo(13)).foregroundStyle(CardText.label)
                         }
-                        .tint(.primaryGreen)
+                    }
+                    .tint(.primaryGreen)
+                    .padding(.vertical, 14)
+
+                    if notificationManager.authorizationStatus == .denied {
+                        DashedRule()
+                        Button { notificationManager.openSettings() } label: {
+                            SettingsRow(icon: "gear", title: "Turn on in iOS Settings")
+                        }
+                        .buttonStyle(SettingsRowButtonStyle())
+                    }
+                }
+
+                Text("Counters with reminders")
+                    .font(.allo(14, weight: .medium))
+                    .foregroundStyle(CardText.label)
+                    .padding(.horizontal, 6)
+                    .padding(.top, 12)
+
+                SettingsCard {
+                    if eventsWithNotifications.isEmpty {
+                        Text("None yet. Open a counter and tap “Remind me” to set one up.")
+                            .font(.allo(15))
+                            .foregroundStyle(CardText.label)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 18)
+                    } else {
+                        ForEach(Array(eventsWithNotifications.enumerated()), id: \.element.id) { i, event in
+                            if i > 0 { DashedRule() }
+                            Toggle(isOn: Binding(
+                                get: { isReminderEnabled(for: event) },
+                                set: { updateReminder(for: event, isEnabled: $0) }
+                            )) {
+                                HStack(spacing: 12) {
+                                    EventThumbnail(event: event, size: 36)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(event.title).font(.allo(16, weight: .medium)).foregroundStyle(CardText.word).lineLimit(1)
+                                        Text(reminderDescription(for: event)).font(.allo(13)).foregroundStyle(CardText.label).lineLimit(1)
+                                    }
+                                }
+                            }
+                            .tint(.primaryGreen)
+                            .padding(.vertical, 12)
+                        }
                     }
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 130)
         }
-        .listStyle(.insetGrouped)
-        .grainListBackground()
+        .background(GrainBackground().ignoresSafeArea())
         .onAppear {
             listedEventIds = viewModel.events
                 .filter { $0.reminderSettings.isEnabled }
                 .map(\.id)
         }
-        .navigationTitle("Notifications")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Notifications Disabled", isPresented: $showingPermissionAlert) {
+        .alert("Notifications are off", isPresented: $showingPermissionAlert) {
             Button("Open Settings") {
                 notificationManager.openSettings()
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("To receive Sinced reminders, please enable notifications in Settings.")
+            Text("To get reminders, turn on notifications for Sinced in Settings.")
         }
     }
 
@@ -426,13 +452,13 @@ private struct NotificationSettingsView: View {
         case .daily:
             let formatter = DateFormatter()
             formatter.timeStyle = .short
-            return "Daily at \(formatter.string(from: event.reminderSettings.dailyReminderTime))"
+            return "Every day at \(formatter.string(from: event.reminderSettings.dailyReminderTime).lowercased())"
         case .weekly:
             let days = event.reminderSettings.weeklyDays
                 .sorted { $0.rawValue < $1.rawValue }
                 .map(\.shortName)
                 .joined(separator: ", ")
-            return "Weekly on \(days)"
+            return "On \(days)"
         }
     }
 }

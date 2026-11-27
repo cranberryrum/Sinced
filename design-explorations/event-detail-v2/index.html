@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Page Directions</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font: 600 40px/1.05 var(--allo); letter-spacing: -.025em; margin: 8px 0 12px; max-width: 18em; text-wrap: balance; }
+  .lede { color: var(--muted); font-size: 17px; max-width: 40em; margin: 0 0 36px; text-wrap: pretty; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .opt { display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 22px; transition: transform .16s var(--ease-out), border-color .2s; }
+  .opt:hover { border-color: var(--ink); }
+  .opt:active { transform: scale(.99); }
+  .opt .k { font: 600 12px var(--allo); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .opt h2 { font: 600 24px/1.15 var(--allo); margin: 6px 0 8px; letter-spacing: -.015em; }
+  .opt p { margin: 0 0 14px; color: var(--muted); font-size: 15px; text-wrap: pretty; }
+  .opt ul { margin: 0 0 18px; padding-left: 18px; font-size: 14.5px; }
+  .opt li { margin-bottom: 5px; }
+  .opt .go { margin-top: auto; font: 600 15px var(--allo); }
+  .audit { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .audit { grid-template-columns: 1fr; } }
+  .audit div { border: 1px solid var(--line); border-radius: 20px; padding: 20px 22px; }
+  .audit h3 { margin: 0 0 10px; font: 600 15px var(--allo); }
+  .audit ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14.5px; }
+  .audit li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div class="wrap">
+  <p class="eyebrow">Sinced · Event page, round 2</p>
+  <h1>Five ways to make the event page feel crafted</h1>
+  <p class="lede">Each one keeps everything the page does today: the count and its unit, the start dates, the goal, reset with undo, reminders, share, delete, edit and every past run. All three use the add card's language: Allo, the event's own pattern, the floating card for anything you edit, and Torph-style morphing text. Pick a theme at the top and it carries across all three.</p>
+
+  <a class="opt" href="e-mix.html" style="margin-bottom:16px;border-color:var(--ink)">
+    <span class="k">Direction E · recommended</span><h2>Sinced, with a little of GO</h2>
+    <p>The home grid of pattern cards, the event's card leading its page, the sentence voice and the white floating card, plus GO's big numbers with small units, rolling digits, scrubbable capsule bars, tick meters, −/+ steppers and hold to confirm.</p>
+    <span class="go">Open →</span>
+  </a>
+
+  <div class="grid">
+    <a class="opt" href="a-card.html">
+      <span class="k">Direction A</span><h2>The card</h2>
+      <p>The event's own card grows into the top half of the page, with one big number on it.</p>
+      <ul><li>Tap the number for hours, months, years</li><li>Hold to reset</li><li>A strip of every run you can drag across</li></ul>
+      <span class="go">Open →</span>
+    </a>
+    <a class="opt" href="b-sentence.html">
+      <span class="k">Direction B</span><h2>The sentence</h2>
+      <p>The page reads as a paragraph, and every bold word is editable. There's no separate Edit mode.</p>
+      <ul><li>"23 days since no caffeine, 5 days past your old best"</li><li>Reset in the floating card, from "now" or earlier</li><li>The story: every run with its note</li></ul>
+      <span class="go">Open →</span>
+    </a>
+    <a class="opt" href="c-journey.html">
+      <span class="k">Direction C</span><h2>The journey</h2>
+      <p>A ring filling towards the goal, the milestones you've passed, and your history as a chart and a calendar.</p>
+      <ul><li>Goal ring, with your best run behind it</li><li>Milestone cards, the next one pinging</li><li>Runs chart and the last 12 weeks</li></ul>
+      <span class="go">Open →</span>
+    </a>
+    <a class="opt" href="d-bold.html">
+      <span class="k">Direction D</span><h2>Bold</h2>
+      <p>The GO Club app's language on Sinced's white: very large numbers, capsule bars, a white panel with the tabs built in, and dark sheets for reset, goal, delete and new counters.</p>
+      <ul><li>Home: swipe the counter cards; tap one to grow it into its page</li><li>Digits that roll by place value as you scrub</li><li>Dark sheets with −/+ steppers and hold to reset</li></ul>
+      <span class="go">Open →</span>
+    </a>
+  </div>
+
+  <div class="audit">
+    <div>
+      <h3>What makes today's page feel sloppy</h3>
+      <ul>
+        <li>System grey boxes and a stock segmented control: it's the only screen that doesn't look like Sinced.</li>
+        <li>The event's own theme never appears, so the page could be any event.</li>
+        <li>Six blocks fight equally for attention: count, reset, undo, reminders, share/delete, runs.</li>
+        <li>Share and Delete in green and red pastel tiles get as much weight as the count.</li>
+        <li>Reset is one tap away with nothing to slow it down; undo comes later as a patch.</li>
+        <li>Edit opens a separate mode, while the add card edits in place.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What all three fix</h3>
+      <ul>
+        <li>The event's colour and pattern lead the page.</li>
+        <li>One primary action. A and C use hold to reset (deliberate, no accidents); B confirms in the floating card, so you can backdate and add a note on the way.</li>
+        <li>Every editor is the add card's floating card, growing out of what you tapped.</li>
+        <li>Numbers and words morph when they change, never snap.</li>
+        <li>History is something you can touch: a strip, a story or a chart.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<script src="kit.js"></script>
+<script>Kit.mount("index.html");</script>
+</body>
+</html>
