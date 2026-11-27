@@ -474,10 +474,27 @@ struct HomeEventCardView: View {
         event.cardTheme == .custom && event.imageData != nil
     }
     
+    private var styled: Bool { event.cardStyle != .classic }
+
     var body: some View {
         ZStack(alignment: isImageCard ? .bottomLeading : .center) {
             backgroundView
-            
+
+            if styled {
+                if isImageCard {
+                    // Text runs across the whole photo in these layouts
+                    Color.black.opacity(0.2).allowsHitTesting(false)
+                }
+                StyledCardFace(
+                    event: event,
+                    style: event.cardStyle,
+                    count: countOverride ?? countParts(for: currentTime).value,
+                    subtitleOverride: subtitleOverride,
+                    now: currentTime
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(widgetTimeValue(for: currentTime)) since \(event.title)")
+            } else {
             if isImageCard {
                 LinearGradient(
                     colors: [.black.opacity(0.02), .black.opacity(0.36)],
@@ -488,6 +505,7 @@ struct HomeEventCardView: View {
             }
 
             textStack
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         .cardEdge(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
@@ -508,8 +526,11 @@ struct HomeEventCardView: View {
         } else {
             ZStack {
                 event.cardTheme.backgroundColor
-                
-                if let squareAsset = event.cardTheme.squareSvgAssetName {
+
+                // The styled layouts sit on the flat colour; the type is the graphic
+                if styled {
+                    EmptyView()
+                } else if let squareAsset = event.cardTheme.squareSvgAssetName {
                     Image(squareAsset)
                         .resizable()
                         .scaledToFill()
@@ -581,7 +602,8 @@ struct HomeEventCardView: View {
 
     private var timeLabel: some View {
         let parts = countOverride.map { (value: $0, unit: "d") } ?? countParts(for: currentTime)
-        let big: CGFloat = isImageCard ? 40 : 52
+        // Small enough to sit clear of the pattern on every theme
+        let big: CGFloat = isImageCard ? 36 : 42
         return (Text(parts.value.formatted()).font(.allo(big, weight: .semibold).monospacedDigit())
                 + Text(parts.unit).font(.allo(big * 0.42, weight: .semibold)))
             .tracking(-1.5)

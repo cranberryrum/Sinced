@@ -461,6 +461,75 @@ private struct GoalWheel: View {
 
 // MARK: - Theme
 
+/// The card in each style, side by side: swipe or tap to pick one. The
+/// theme below changes them all at once.
+private struct StyleCarousel: View {
+    @Binding var draft: EventDraft
+    @State private var position: CardStyle?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let side: CGFloat = 136
+
+    var body: some View {
+        VStack(spacing: 12) {
+            GeometryReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        ForEach(CardStyle.allCases) { style in
+                            card(style)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .contentMargins(.horizontal, max(0, (proxy.size.width - side) / 2), for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $position)
+                .scrollClipDisabled()
+            }
+            .frame(height: side)
+
+            HStack(spacing: 8) {
+                MorphText(text: draft.style.name, font: .allo(14, weight: .semibold), color: Style.word)
+                HStack(spacing: 4) {
+                    ForEach(CardStyle.allCases) { style in
+                        Capsule()
+                            .fill(style == draft.style ? Style.word : Color.black.opacity(0.15))
+                            .frame(width: style == draft.style ? 12 : 5, height: 5)
+                    }
+                }
+                .animation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.25), value: draft.style)
+            }
+            .accessibilityHidden(true)
+        }
+        .onAppear { position = draft.style }
+        .onChange(of: position) { _, new in
+            guard let new, new != draft.style else { return }
+            HapticManager.shared.selection()
+            draft.style = new
+        }
+    }
+
+    private func card(_ style: CardStyle) -> some View {
+        var event = draft.preview
+        event.cardStyle = style
+        return HomeEventCardView(event: event)
+            .frame(width: side, height: side)
+            .id(style)
+            .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                content
+                    .scaleEffect(phase.isIdentity || reduceMotion ? 1 : 0.84)
+                    .opacity(phase.isIdentity ? 1 : 0.5)
+            }
+            .onTapGesture {
+                guard style != draft.style else { return }
+                withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.35)) { position = style }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(style.name) card")
+            .accessibilityAddTraits(style == draft.style ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
 struct ThemeStep: View {
     @Binding var draft: EventDraft
     let words: Namespace.ID
@@ -476,17 +545,8 @@ struct ThemeStep: View {
                     .matchedGeometryEffect(id: "word-\(AddStep.theme)", in: words)
             }
 
-            ZStack {
-                HomeEventCardView(event: draft.preview)
-                    .id(draft.resolvedTheme.rawValue + (draft.imageData == nil ? "" : "-photo"))
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                        removal: .opacity.combined(with: .scale(scale: 1.04))
-                    ))
-            }
-            .frame(width: 136, height: 136)
-            .frame(maxWidth: .infinity)
-            .stepEntrance(0)
+            StyleCarousel(draft: $draft)
+                .stepEntrance(0)
 
             LazyVGrid(columns: columns, spacing: 10) {
                 photoTile.stepEntrance(1)
