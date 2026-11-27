@@ -37,7 +37,10 @@ struct EventListView: View {
 
     /// Only once iOS has confirmed there's no widget, so it never flashes for people who have one
     private var showsGuideCard: Bool {
-        widgetStatus.hasWidget == false && !guideCardDismissed && !viewModel.events.isEmpty
+        #if DEBUG
+        if EventViewModel.screenshotMode { return false }
+        #endif
+        return widgetStatus.hasWidget == false && !guideCardDismissed && !viewModel.events.isEmpty
     }
     
     private var isEmptyState: Bool {
