@@ -25,7 +25,7 @@ struct SincePairProvider: AppIntentTimelineProvider {
         if context.isPreview && first == nil {
             return placeholder(in: context)
         }
-        return SincePairEntry(date: Date(), first: first, second: second)
+        return SincePairEntry(date: Date(), first: first, second: second, style: configuration.style)
     }
 
     func timeline(for configuration: SelectEventPairIntent, in context: Context) async -> Timeline<SincePairEntry> {
@@ -38,7 +38,7 @@ struct SincePairProvider: AppIntentTimelineProvider {
             .flatMap { $0.countChangeDates(after: now, limit: $0.widgetTimeUnit.timelineSteps) }
         let dates = [now] + Array(Set(changeDates)).sorted().prefix(24)
 
-        let entries = dates.map { SincePairEntry(date: $0, first: first, second: second) }
+        let entries = dates.map { SincePairEntry(date: $0, first: first, second: second, style: configuration.style) }
         // With no events there's nothing to tick; the app reloads widgets when events change
         return Timeline(entries: entries, policy: first == nil ? .never : .atEnd)
     }
@@ -63,6 +63,7 @@ struct SincePairEntry: TimelineEntry {
     let date: Date
     let first: SinceEvent?
     let second: SinceEvent?
+    var style: WidgetStyle = .classic
 }
 
 // MARK: - Entry View
@@ -88,7 +89,7 @@ struct SincePairEntryView: View {
     /// Each half opens its own event
     private func half(for event: SinceEvent) -> some View {
         Link(destination: event.widgetURL ?? URL(string: "sinced://")!) {
-            SmallWidgetView(event: event, currentDate: entry.date)
+            SmallWidgetView(event: event, currentDate: entry.date, style: entry.style)
         }
     }
 }
@@ -119,10 +120,10 @@ struct SincePairBackgroundView: View {
             SinceWidgetBackgroundView(event: nil)
         } else {
             HStack(spacing: 0) {
-                SinceWidgetBackgroundView(event: entry.first)
+                SinceWidgetBackgroundView(event: entry.first, style: entry.style)
 
                 if entry.second != nil {
-                    SinceWidgetBackgroundView(event: entry.second)
+                    SinceWidgetBackgroundView(event: entry.second, style: entry.style)
                 } else {
                     Color(hex: "313131")
                 }

@@ -96,7 +96,7 @@ struct SinceWidgetEntryView: View {
     
     var body: some View {
         if let event = entry.event {
-            SmallWidgetView(event: event, currentDate: entry.date)
+            SmallWidgetView(event: event, currentDate: entry.date, style: entry.configuration.style)
                 .overlay(alignment: .topTrailing) {
                     if entry.configuration.showsResetButton {
                         WidgetResetButton(event: event, currentDate: entry.date)
@@ -151,6 +151,7 @@ struct WidgetResetButton: View {
 /// in tinted and clear Home Screen modes.
 struct SinceWidgetBackgroundView: View {
     let event: SinceEvent?
+    var style: WidgetStyle = .classic
     
     var body: some View {
         GeometryReader { geometry in
@@ -174,7 +175,15 @@ struct SinceWidgetBackgroundView: View {
                         endPoint: .bottom
                     )
                     .frame(height: geometry.size.height * 0.42)
+                    
+                    // The styled layouts put text across the whole photo
+                    if style != .classic {
+                        Color.black.opacity(0.3)
+                    }
                 }
+            } else if let event, style != .classic {
+                // Flat colour: in the styled layouts the type is the graphic
+                event.cardTheme.backgroundColor
             } else if let event {
                 ZStack {
                     event.cardTheme.backgroundColor
@@ -208,22 +217,39 @@ struct PlaceholderWidgetView: View {
 struct SmallWidgetView: View {
     let event: SinceEvent
     let currentDate: Date
+    var style: WidgetStyle = .classic
     
     var body: some View {
         GeometryReader { geometry in
+            switch style {
+            case .bigNumber:
+                BigNumberWidgetView(event: event, currentDate: currentDate, size: geometry.size)
+            case .sentence:
+                SentenceWidgetView(event: event, currentDate: currentDate, size: geometry.size)
+            case .ring:
+                RingWidgetView(event: event, currentDate: currentDate, size: geometry.size)
+            case .classic:
+                classic(size: geometry.size)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func classic(size: CGSize) -> some View {
+        Group {
             if let imageData = event.imageData, UIImage(data: imageData) != nil {
                 // Custom Image Widget Design (from Figma)
                 CustomImageWidgetView(
                     event: event,
                     formattedTime: formattedTimeValue,
-                    size: geometry.size
+                    size: size
                 )
             } else {
                 // Theme-based Widget Design
                 ThemeBasedWidgetView(
                     event: event,
                     formattedTime: formattedTimeValue,
-                    size: geometry.size
+                    size: size
                 )
             }
         }
@@ -699,7 +725,7 @@ struct SinceSmallWidget: Widget {
         ) { entry in
             SinceWidgetEntryView(entry: entry)
                 .containerBackground(for: .widget) {
-                    SinceWidgetBackgroundView(event: entry.event)
+                    SinceWidgetBackgroundView(event: entry.event, style: entry.configuration.style)
                         .cardEdge(ContainerRelativeShape())
                 }
         }
@@ -761,4 +787,21 @@ struct SinceSmallWidget: Widget {
         ),
         configuration: SelectEventIntent()
     )
+}
+
+private extension SelectEventIntent {
+    static func styled(_ style: WidgetStyle) -> SelectEventIntent {
+        let intent = SelectEventIntent()
+        intent.style = style
+        return intent
+    }
+}
+
+#Preview("Styles", as: .systemSmall) {
+    SinceSmallWidget()
+} timeline: {
+    SinceWidgetEntry(date: .now, event: SinceEvent(title: "No caffeine", startedAt: Date().addingTimeInterval(-47 * 86400), cardTheme: .mosaic), configuration: .styled(.bigNumber))
+    SinceWidgetEntry(date: .now, event: SinceEvent(title: "Quit caffeine", startedAt: Date().addingTimeInterval(-47 * 86400), cardTheme: .eyes), configuration: .styled(.sentence))
+    SinceWidgetEntry(date: .now, event: SinceEvent(title: "Started the gym", startedAt: Date().addingTimeInterval(-112 * 86400), cardTheme: .circles), configuration: .styled(.ring))
+    SinceWidgetEntry(date: .now, event: SinceEvent(title: "Moved cities", startedAt: Date().addingTimeInterval(-383 * 86400), cardTheme: .clouds), configuration: .styled(.bigNumber))
 }
