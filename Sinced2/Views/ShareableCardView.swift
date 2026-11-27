@@ -162,14 +162,32 @@ struct ShareCard: View {
 
     // MARK: Sentence
 
+    /// The theme colour with only the top edge of its pattern, so the fade
+    /// never runs into the pattern's lower half
+    @ViewBuilder private var themeWash: some View {
+        if event.cardTheme == .custom {
+            EventThemeBackground(event: event)
+        } else {
+            ZStack(alignment: .top) {
+                event.cardTheme.backgroundColor
+                if let asset = event.cardTheme.squareSvgAssetName ?? event.cardTheme.svgAssetName {
+                    Image(asset)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: format.size.width, height: format.size.width * 0.42, alignment: .top)
+                        .clipped()
+                }
+            }
+        }
+    }
+
     private var sentence: some View {
         ZStack(alignment: .top) {
             Color(hex: "F3F2F0")
             GrainOverlay(intensity: 0.12)
             // The theme washing down from the top
-            Color.clear
+            themeWash
                 .frame(width: format.size.width, height: format.size.height * (story ? 0.58 : 0.64))
-                .overlay { EventThemeBackground(event: event) }
                 .clipped()
                 .mask(LinearGradient(stops: [
                     .init(color: .black, location: 0),
