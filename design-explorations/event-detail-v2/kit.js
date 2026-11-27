@@ -405,6 +405,7 @@
     ["h-empty.html", "H · Empty home"],
     ["i-celebrate.html", "I · Milestones"],
     ["j-calendar.html", "J · Calendar"],
+    ["k-share.html", "K · Share"],
   ];
   const STATUS = '<svg width="78" height="13" viewBox="0 0 78 13" fill="currentColor" aria-hidden="true"><rect x="0" y="8" width="3.4" height="4.6" rx="1"/><rect x="5" y="5.6" width="3.4" height="7" rx="1"/><rect x="10" y="3" width="3.4" height="9.6" rx="1"/><rect x="15" y="0.4" width="3.4" height="12.2" rx="1"/><path d="M31.5 2.6c2.4 0 4.6.9 6.3 2.5l1.2-1.2A10.6 10.6 0 0 0 31.5 1 10.6 10.6 0 0 0 24 3.9l1.2 1.2a9 9 0 0 1 6.3-2.5Zm0 3.4c1.5 0 2.9.6 3.9 1.5l1.2-1.2a7.2 7.2 0 0 0-10.2 0l1.2 1.2c1-1 2.4-1.5 3.9-1.5Zm0 3.4c.6 0 1.1.2 1.5.6l-1.5 1.5-1.5-1.5c.4-.4.9-.6 1.5-.6Z"/><rect x="50.5" y="0.5" width="24" height="12" rx="3.8" fill="none" stroke="currentColor" opacity=".4"/><rect x="52.3" y="2.3" width="17" height="8.4" rx="2.3"/></svg>';
 

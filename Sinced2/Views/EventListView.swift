@@ -15,8 +15,13 @@ struct EventListView: View {
     /// The add card, which grows out of the + tile above the tab bar
     @ObservedObject private var addFlow = AddFlow.shared
     @State private var draggingEvent: SinceEvent?
-    @State private var eventPendingDelete: SinceEvent?
     @State private var showingWidgetGuide = false
+    @State private var widgetGuidePlace: WidgetGuidePlace = .homeScreen
+    /// The first counter's card and the nudge's widget spot, for the flight between them
+    @State private var firstCardFrame: CGRect?
+    @State private var nudgeSlotFrame: CGRect?
+    @State private var nudgeFlight: NudgeFlight?
+    @State private var nudgeWidgetPlaced = true
     @ObservedObject private var widgetStatus = WidgetStatus.shared
     @ObservedObject private var guideRouter = WidgetGuideRouter.shared
     @AppStorage("widgetGuide.cardDismissed") private var guideCardDismissed = false
@@ -55,10 +60,14 @@ struct EventListView: View {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 16) {
                             if showsGuideCard, let first = viewModel.events.first {
-                                WidgetGuideCard(
+                                WidgetNudgeCard(
                                     event: first,
-                                    onOpen: {
+                                    widgetPlaced: nudgeWidgetPlaced,
+                                    onReplay: playNudgeFlight,
+                                    onSlotFrame: { nudgeSlotFrame = $0 },
+                                    onLockScreen: {
                                         HapticManager.shared.light()
+                                        widgetGuidePlace = .lockScreen
                                         showingWidgetGuide = true
                                     },
                                     onDismiss: {
@@ -103,6 +112,9 @@ struct EventListView: View {
                                         .opacity(addFlow.hiddenEventID == event.id || (viewModel.spotlightShowing && viewModel.celebration?.eventID == event.id) ? 0 : 1)
                                         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
                                             addFlow.cardFrames[event.id] = frame
+                                        }
+                                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(HomeSpace.name)) } action: { frame in
+                                            if event.id == viewModel.events.first?.id { firstCardFrame = frame }
                                         }
                                         // Where to look, after a widget tap
                                         .overlay {
@@ -152,15 +164,13 @@ struct EventListView: View {
                                             }
                                         
                                             Button(role: .destructive) {
-                                                eventPendingDelete = event
+                                                draggingEvent = nil
+                                                // After the menu has let go of the card, so the card grows out of it
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                                    addFlow.deleting = event
+                                                }
                                             } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-                                        
-                                            Button {
-                                                viewModel.archiveEvent(event)
-                                            } label: {
-                                                Label("Archive", systemImage: "archivebox")
+                                                Label("Delete or archive", systemImage: "trash")
                                             }
                                         }
                                 }
@@ -193,6 +203,19 @@ struct EventListView: View {
                     }
                 }
 
+                // The first counter flying into the nudge's widget spot
+                if let flight = nudgeFlight, let first = viewModel.events.first {
+                    let rect = flight.landed ? flight.to : flight.from
+                    HomeEventCardView(event: first)
+                        .frame(width: flight.from.width, height: flight.from.height)
+                        .shadow(color: .black.opacity(0.2), radius: 12, y: 8)
+                        .scaleEffect(rect.width / flight.from.width)
+                        .position(x: rect.midX, y: rect.midY)
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                        .accessibilityHidden(true)
+                }
+
                 // Top gradient fade
                 VStack {
                     Spacer()
@@ -215,24 +238,7 @@ struct EventListView: View {
                 }
                 
             }
-            .confirmationDialog(
-                "Delete \(eventPendingDelete?.title ?? "event")?",
-                isPresented: Binding(
-                    get: { eventPendingDelete != nil },
-                    set: { if !$0 { eventPendingDelete = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button("Delete", role: .destructive) {
-                    if let event = eventPendingDelete {
-                        viewModel.deleteEvent(event)
-                        showSuccessToast(title: event.title)
-                    }
-                    eventPendingDelete = nil
-                }
-            } message: {
-                Text("This removes the event and its history.")
-            }
+            .coordinateSpace(.named(HomeSpace.name))
             // Opened from a notification or widget tap
             .onReceive(viewModel.$eventToOpen.compactMap { $0 }) { event in
                 addFlow.dismissImmediately()
@@ -260,7 +266,7 @@ struct EventListView: View {
                 }
             }
             .sheet(isPresented: $showingWidgetGuide) {
-                WidgetGuideView(event: viewModel.events.first)
+                WidgetGuideView(event: viewModel.events.first, place: widgetGuidePlace)
                     .presentationDetents([.large])
                     .deviceCornerSheet()
                     .presentationDragIndicator(.visible)
@@ -324,9 +330,39 @@ struct EventListView: View {
               !WidgetNudge.introShown,
               widgetStatus.hasWidget != true else { return }
         WidgetNudge.introShown = true
-        // Let the new card land before the guide comes up over it
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            showingWidgetGuide = true
+        // Let the new card land and the nudge settle, then the counter flies into its spot
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            playNudgeFlight()
+        }
+    }
+
+    /// A copy of the first counter moves from its card into the nudge's widget spot
+    private func playNudgeFlight() {
+        guard nudgeFlight == nil, showsGuideCard else { return }
+        guard !reduceMotion, let from = firstCardFrame, let to = nudgeSlotFrame else {
+            // Reduce Motion: the widget just fades into its spot
+            nudgeWidgetPlaced = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { nudgeWidgetPlaced = true }
+            return
+        }
+        nudgeWidgetPlaced = false
+        nudgeFlight = NudgeFlight(from: from, to: to)
+        HapticManager.shared.light()
+        DispatchQueue.main.async {
+            // Moving across the screen: a strong ease-in-out
+            withAnimation(.timingCurve(0.77, 0, 0.175, 1, duration: 0.7)) {
+                nudgeFlight?.landed = true
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.72) {
+            // The copy has landed exactly on the spot: swap it for the widget in the
+            // same frame, so the spot never blinks empty between the two
+            var swap = Transaction()
+            swap.disablesAnimations = true
+            withTransaction(swap) {
+                nudgeWidgetPlaced = true
+                nudgeFlight = nil
+            }
         }
     }
 
@@ -338,6 +374,7 @@ struct EventListView: View {
         selectedEvent = nil
         addFlow.dismissImmediately()
         guard !showingWidgetGuide else { return }
+        widgetGuidePlace = .homeScreen
         // A sheet can't open while another is still closing
         DispatchQueue.main.asyncAfter(deadline: .now() + (wasShowingSomething ? 0.5 : 0)) {
             showingWidgetGuide = true
@@ -347,6 +384,13 @@ struct EventListView: View {
     private func showSuccessToast(title: String) {
         ToastManager.shared.show("Deleted “\(title)”", icon: "trash", kind: .destructive)
     }
+}
+
+/// The first counter on its way into the widget nudge
+private struct NudgeFlight {
+    let from: CGRect
+    let to: CGRect
+    var landed = false
 }
 
 private struct AddEventPlaceholderCard: View {

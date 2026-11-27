@@ -81,6 +81,25 @@ struct MainTabView: View {
                 AddEventOverlay(viewModel: viewModel)
             }
         }
+        // Delete or archive, from a long press on a home card: the event
+        // page's card, growing out of the home card
+        .overlay {
+            if let event = addFlow.deleting {
+                FloatingCardHost(source: addFlow.cardFrames[event.id] ?? .zero, sourceRadius: 24, onDismissed: { addFlow.deleting = nil }) { close in
+                    DeleteCard(event: event, close: close) { archive in
+                        let title = event.title
+                        if archive {
+                            viewModel.archiveEvent(event)
+                            ToastManager.shared.show("Archived “\(title)”", icon: "archivebox", kind: .info)
+                        } else {
+                            viewModel.deleteEvent(event)
+                            ToastManager.shared.show("Deleted “\(title)”", icon: "trash", kind: .destructive)
+                        }
+                    }
+                }
+                .id(event.id)
+            }
+        }
         // A milestone or goal reached since the app last looked: home dims and
         // that card counts up to it, then confetti
         .overlay {

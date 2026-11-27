@@ -302,6 +302,9 @@ struct EventPageView: View {
 
     private func bold(_ s: String) -> Text { Text(s).font(.allo(24, weight: .semibold)).foregroundColor(CardText.word) }
 
+    /// A bold word that can be tapped, dotted underneath like a link
+    private func link(_ s: String) -> Text { bold(s).underline(true, pattern: .dot, color: CardText.connector) }
+
     private var line1: Text {
         let best = bestBefore
         guard localEvent.hasBeenReset else { return Text("Your first run, and ") + bold("going strong") + Text(".") }
@@ -317,7 +320,7 @@ struct EventPageView: View {
 
     private var line2: Text {
         let r = localEvent.reminderSettings
-        guard r.isEnabled else { return Text("No reminders. ") + bold("Remind me") + Text("?") }
+        guard r.isEnabled else { return Text("No reminders. ") + link("Remind me") + Text("?") }
         let when: String
         switch r.reminderType {
         case .daily: when = "every day"
@@ -325,7 +328,7 @@ struct EventPageView: View {
             let names = r.weeklyDays.map { Calendar.current.shortWeekdaySymbols[$0.rawValue - 1] }
             when = r.weeklyDays.count == 7 ? "every day" : "on " + names.formatted(.list(type: .and))
         }
-        return Text("Remind me ") + bold(when) + Text(" at ") + bold(r.dailyReminderTime.formatted(date: .omitted, time: .shortened)) + Text(".")
+        return Text("Remind me ") + link(when) + Text(" at ") + link(r.dailyReminderTime.formatted(date: .omitted, time: .shortened)) + Text(".")
     }
 
     // MARK: Runs

@@ -45,6 +45,9 @@ final class AddFlow: ObservableObject {
     /// A name the add card starts with, like an idea tapped on the empty home
     var presetName: String?
 
+    /// The counter whose delete-or-archive card is open over home
+    @Published var deleting: SinceEvent?
+
     func present(name: String? = nil) {
         guard !isPresented else { return }
         presetName = name

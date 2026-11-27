@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget Nudge Lock Screen</title>
+<link rel="stylesheet" href="nudge.css">
+<style>
+  .lockcard { overflow: hidden; padding: 0; }
+  .lock { position: relative; height: 190px; background: radial-gradient(120% 90% at 30% 10%, #4a5578, #1f2236 60%, #141522); color: #fff; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
+  .lock .dim { position: absolute; inset: 0; background: #000; opacity: .82; z-index: 2; pointer-events: none; }
+  .lock .date { font: 500 14px var(--allo); opacity: .8; }
+  .lock .time { font: 600 64px/1 var(--allo); letter-spacing: -.03em; margin-top: 2px; }
+  .lock .lw { display: flex; gap: 8px; margin-top: 14px; }
+  .lock .circ { width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,.16); display: grid; place-items: center; font: 600 17px/1 var(--allo); position: relative; }
+  .lock .circ small { font-size: 10px; }
+  .lock .circ svg { position: absolute; inset: 3px; }
+  .lock .rect { height: 54px; padding: 0 14px; border-radius: 16px; background: rgba(255,255,255,.16); display: flex; flex-direction: column; justify-content: center; font: 500 12px/1.25 var(--allo); }
+  .lock .rect b { font: 600 18px var(--allo); }
+  .lock .lw > * { opacity: 0; transform: translateY(8px); }
+  .lock .lw > .on { opacity: 1; transform: none; transition: opacity .3s var(--ease-out), transform .4s var(--ease-out); }
+  .copy { padding: 16px 20px 14px; }
+  .btns { padding: 0 14px 14px; }
+  .x i { background: rgba(255,255,255,.16); }
+  .x svg { stroke: #fff; }
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div class="stage">
+  <div class="device-wrap"><div class="device"><div class="screen" id="screen"></div></div></div>
+  <div class="notes">
+    <p class="eyebrow">Direction C</p>
+    <h1>Lock Screen</h1>
+    <p>Sells the moment people actually check: picking up the phone. A little Lock Screen wakes up inside the nudge and the counter appears under the clock.</p>
+    <h2>What changes</h2>
+    <ul>
+      <li><b>The payoff, not the chore.</b> Instead of "add a widget", it shows the count waiting for you every time you glance at the time.</li>
+      <li><b>Lock Screen first.</b> It's the quickest widget to add and the one seen most; the guide can still offer the Home Screen sizes.</li>
+      <li>Copy in Sinced's voice: "See <b>No sugar</b> every time you check the time."</li>
+    </ul>
+    <h2>Motion</h2>
+    <ul>
+      <li>Slot opens like A. Then the screen "wakes": the dark overlay lifts over 500ms, ease-out.</li>
+      <li>The two widgets rise 8px and fade in, 60ms apart, 400ms ease-out; the ring fills to the first milestone.</li>
+      <li>Reduced motion: fades only.</li>
+    </ul>
+  </div>
+</div>
+<script src="nudge.js"></script>
+<script>
+  const N = Nudge;
+  N.mount("c-lock.html", {
+    async play(_, cancelled) {
+      const day = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+      const nudge = N.html(`
+        <div class="nudge nudge-in lockcard">
+          <button class="x" aria-label="Dismiss"><i>${N.X}</i></button>
+          <div class="lock"><div class="dim"></div><span class="date">${day}</span><span class="time">9:41</span>
+            <div class="lw">
+              <div class="circ"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="3"/><circle class="arc" cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="132" stroke-dashoffset="132" transform="rotate(-90 24 24)"/></svg><span>0<small>d</small></span></div>
+              <div class="rect"><b>0 days</b>since ${N.event.title}</div>
+            </div>
+          </div>
+          <div class="copy"><p class="h"><span class="c">See</span> ${N.event.title} <span class="c">every time you check the time</span></p>
+            <p class="sub">Add it to your Lock Screen. It takes a few seconds.</p></div>
+          <div class="btns"><button class="btn ghost later">Later</button><button class="btn how">Show me how</button></div>
+        </div>`);
+      N.openSlot(nudge);
+      nudge.querySelector(".x").onclick = () => N.closeSlot();
+      nudge.querySelector(".later").onclick = () => N.closeSlot();
+      nudge.querySelector(".how").onclick = () => N.toast("Opens the Lock Screen guide");
+      await N.wait(520); if (cancelled()) return;
+      nudge.querySelector(".dim").animate([{ opacity: .82 }, { opacity: 0 }], { duration: N.ms(500), easing: N.EASE_OUT, fill: "forwards" });
+      await N.wait(260); if (cancelled()) return;
+      [...nudge.querySelectorAll(".lw > *")].forEach((el, k) => setTimeout(() => {
+        el.style.transitionDuration = N.ms(300) / 1000 + "s, " + N.ms(400) / 1000 + "s"; el.classList.add("on");
+      }, N.ms(k * 60)));
+      // A sliver of progress towards the first milestone, so the ring reads as a ring
+      nudge.querySelector(".arc").animate([{ strokeDashoffset: 132 }, { strokeDashoffset: 118 }], { duration: N.ms(600), delay: N.ms(200), easing: N.EASE_OUT, fill: "forwards" });
+    },
+  });
+</script>
+</body>
+</html>
