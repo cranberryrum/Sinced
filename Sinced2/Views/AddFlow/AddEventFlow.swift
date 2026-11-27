@@ -93,6 +93,7 @@ struct EventDraft {
     var start = Date()
     var goal = 0
     var theme: CardTheme
+    var style: CardStyle = .classic
     var imageData: Data?
     /// A photo was picked here, so an unchanged photo isn't saved again
     var pickedNewImage = false
@@ -107,6 +108,7 @@ struct EventDraft {
         name = event.title
         start = event.startedAt
         theme = event.cardTheme
+        style = event.cardStyle
         imageData = event.cardTheme == .custom ? event.imageData : nil
         var goal = event.goalDays ?? 0
         if openGoal {
@@ -132,7 +134,8 @@ struct EventDraft {
             startedAt: min(start, Date()),
             goalDays: goal > 0 ? goal : nil,
             imageData: resolvedTheme == .custom ? imageData : nil,
-            cardTheme: resolvedTheme
+            cardTheme: resolvedTheme,
+            cardStyle: style
         )
     }
 
@@ -140,6 +143,7 @@ struct EventDraft {
         trimmedName != event.title
             || abs(start.timeIntervalSince(event.startedAt)) >= 1
             || resolvedTheme != event.cardTheme
+            || style != event.cardStyle
             || pickedNewImage
             || goal != (event.goalDays ?? 0)
     }
@@ -154,6 +158,7 @@ struct EventDraft {
             updated.startedAt = min(start, Date())
         }
         updated.cardTheme = resolvedTheme
+        updated.cardStyle = style
         updated.goalDays = goal > 0 ? goal : nil
         if resolvedTheme != .custom {
             updated.imageData = nil

@@ -253,6 +253,8 @@ struct SinceEvent: Identifiable, Codable, Hashable {
     var widgetTimeUnit: WidgetTimeUnit // Time unit for widget display
     var reminderSettings: ReminderSettings // Reminder notification settings
     var cardTheme: CardTheme // Theme for the large card on home screen
+    /// How the home card lays out its count
+    var cardStyle: CardStyle
     
     /// Computed property for time elapsed since the event started
     var elapsedTime: TimeInterval {
@@ -343,7 +345,8 @@ struct SinceEvent: Identifiable, Codable, Hashable {
         imageData: Data? = nil,
         widgetTimeUnit: WidgetTimeUnit = .days,
         reminderSettings: ReminderSettings = ReminderSettings(),
-        cardTheme: CardTheme = .mosaic
+        cardTheme: CardTheme = .mosaic,
+        cardStyle: CardStyle = .classic
     ) {
         self.id = id
         self.title = title
@@ -356,6 +359,7 @@ struct SinceEvent: Identifiable, Codable, Hashable {
         self.widgetTimeUnit = widgetTimeUnit
         self.reminderSettings = reminderSettings
         self.cardTheme = cardTheme
+        self.cardStyle = cardStyle
     }
     
     /// Older builds saved each reset with `at` = when the reset streak had
@@ -376,7 +380,7 @@ struct SinceEvent: Identifiable, Codable, Hashable {
     
     private enum CodingKeys: String, CodingKey {
         case id, title, startedAt, colorHex, goalDays, history, isArchived
-        case imageData, widgetTimeUnit, reminderSettings, cardTheme
+        case imageData, widgetTimeUnit, reminderSettings, cardTheme, cardStyle
     }
     
     // Tolerant decoding: only id/title/startedAt are required. Anything else
@@ -401,6 +405,8 @@ struct SinceEvent: Identifiable, Codable, Hashable {
         reminderSettings = (try? container.decodeIfPresent(ReminderSettings.self, forKey: .reminderSettings)) ?? ReminderSettings()
         let themeRaw = (try? container.decodeIfPresent(String.self, forKey: .cardTheme)) ?? nil
         cardTheme = themeRaw.flatMap(CardTheme.init(rawValue:)) ?? .mosaic
+        let styleRaw = (try? container.decodeIfPresent(String.self, forKey: .cardStyle)) ?? nil
+        cardStyle = styleRaw.flatMap(CardStyle.init(rawValue:)) ?? .classic
     }
     
     /// Generate notification title (e.g., "10 days")
